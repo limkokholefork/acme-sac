@@ -1,0 +1,27 @@
+<../../mkconfig
+
+DIRS=\
+	convcs\
+	crypt\
+	ecmascript\
+	encoding\
+	spki\
+	styxconv\
+
+SRC=`{ls *.b}
+TARG=${SRC:%.b=%.dis}
+
+MODULES=
+
+SYSMODULES= `{grep '^include "' *.b | sed 's/.*"([^"]+)";.*$/\1/' |sort |uniq |grep -v 'utils.m|tcl.m'}
+
+DISBIN=$ROOT/dis/lib
+
+<$ROOT/mkfiles/mkdis
+<$ROOT/mkfiles/mksubdirs
+
+$DISBIN/arg.dis: arg.dis
+	rm -f $DISBIN/arg.dis && cat arg.dis > $DISBIN/arg.dis
+
+$DISBIN/readdir.dis: readdir.dis
+	rm -f $DISBIN/readdir.dis && cat readdir.dis > $DISBIN/readdir.dis

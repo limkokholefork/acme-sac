@@ -1,0 +1,16 @@
+<../../mkconfig
+
+DIRS=\
+
+SRC=`{ls *.b}
+TARG=${SRC:%.b=%.dis}
+
+MODULES=\
+	wmdeb.m\
+
+SYSMODULES=`{grep '^include "' *.b | sed 's/.*"([^"]+)";.*$/\1/' |sort |uniq|grep -v 'wmdeb|smenu|poly'}
+
+DISBIN=$ROOT/dis/wm
+
+<$ROOT/mkfiles/mkdis
+<$ROOT/mkfiles/mksubdirs

@@ -1,0 +1,27 @@
+<../../../mkconfig
+
+DIRS=\
+	ppp\
+#	nppp\
+
+TARG=\
+	bootpd.dis\
+	ping.dis\
+	rip.dis\
+	tftpd.dis\
+	virgild.dis\
+	obootpd.dis\
+
+SYSMODULES=\
+	sys.m\
+	draw.m\
+	bufio.m\
+	attrdb.m\
+	ip.m\
+	ipattr.m\
+	ether.m\
+
+DISBIN=$ROOT/dis/ip
+
+<$ROOT/mkfiles/mkdis
+<$ROOT/mkfiles/mksubdirs

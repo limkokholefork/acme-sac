@@ -1,0 +1,29 @@
+<../../mkconfig
+
+DIRS=\
+	auth\
+	auxi\
+	disk\
+	install\
+	ip\
+	limbo\
+	mk\
+	ndb\
+	sh\
+	spki\
+
+SRC=`{ls *.b}
+TARG=${SRC:%.b=%.dis}
+
+MODULES=\
+
+SYSMODULES=`{grep '^include "' *.b | sed 's/.*"([^"]+)";.*$/\1/' |sort |uniq}
+
+DISBIN=$ROOT/dis
+
+<$ROOT/mkfiles/mkdis
+<$ROOT/mkfiles/mksubdirs
+
+auhdr.dis: auplay.dis
+	rm -f auhdr.dis && cp auplay.dis auhdr.dis
+
