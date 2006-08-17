@@ -2,7 +2,10 @@ implement Sort;
 
 include "sys.m";
 	sys: Sys;
+	fprint, fildes, remove: import sys;
 include "bufio.m";
+	bufio: Bufio;
+	Iobuf: import bufio;
 include "draw.m";
 include "arg.m";
 
@@ -17,7 +20,7 @@ usage()
 	raise "fail:usage";
 }
 
-Nline: con 100000;
+Nline: con 10000;
 Nmerge: con 10;
 Incr: con 2000;		# growth quantum for record array
 
@@ -26,13 +29,15 @@ nline := 0;
 lines: array of string;
 lineno := 0;
 
+stdout: ref Iobuf;
+
 init(nil : ref Draw->Context, args : list of string)
 {
 	bio : ref Bufio->Iobuf;
 
 	sys = load Sys Sys->PATH;
 	stderr := sys->fildes(2);
-	bufio := load Bufio Bufio->PATH;
+	bufio = load Bufio Bufio->PATH;
 	if (bufio == nil) {
 		sys->fprint(stderr, "sort: cannot load %s: %r\n", Bufio->PATH);
 		raise "fail:bad module";
@@ -69,30 +74,15 @@ init(nil : ref Draw->Context, args : list of string)
 	}
 	else
 		bio = bufio->fopen(sys->fildes(0), Bufio->OREAD);
-	a := array[Incr] of string;
-	n := 0;
-	while ((s := bio.gets('\n')) != nil) {
-		if (n >= len a) {
-			b := array[len a + Incr] of string;
-			b[0:] = a;
-			a = b;
-		}
-		a[n++] = s;
-	}
-	if (nflag)
-		mergesortnumeric(a, array[n] of string, n);
-	else
-		mergesort(a, array[n] of string, n);
-
-	stdout := bufio->fopen(sys->fildes(1), Bufio->OWRITE);
-	if (rflag) {
-		for (i := n-1; i >= 0; i--)
-			stdout.puts(a[i]);
-	} else {
-		for (i := 0; i < n; i++)
-			stdout.puts(a[i]);
-	}
+	dofile(bio);
+	stdout = bufio->fopen(sys->fildes(1), Bufio->OWRITE);
+	if(ntemp){
+		tempout();
+		mergeout(stdout);
+	}else
+		printout(stdout);
 	stdout.close();
+	done(nil);
 }
 
 mergesort(a, b: array of string, r: int)
@@ -160,6 +150,14 @@ dofile(bio: ref Iobuf)
 	}
 }
 
+printout(b: ref Iobuf)
+{
+	mergesort(lines, array[nline] of string, nline);
+	for (i := 0; i < nline; i++)
+		b.puts(lines[i]);
+	nline = 0;
+}
+
 tempout()
 {
 	mergesort(lines, array[nline] of string, nline);
@@ -171,7 +169,7 @@ tempout()
 		exit;
 	}
 	for (i := 0; i < nline; i++)
-		f.puts(a[i]);
+		f.puts(lines[i]);
 	nline = 0;
 	f.close();
 }
@@ -204,7 +202,7 @@ Merge: adt {
 
 mergefiles(t, n: int, b: ref Iobuf)
 {
-	mp := array[n] of ref Merge;
+	mp := array[n] of { * => ref Merge};
 	mmp := array[n] of ref Merge;
 	m: array of ref Merge;
 	nn := 0;
@@ -212,7 +210,7 @@ mergefiles(t, n: int, b: ref Iobuf)
 	m = mp[0:];
 
 	for(i := 0; i < n; i++) {
-		tf = tempfile(t+i);
+		tf := tempfile(t+i);
 		f := bufio->open(tf, Bufio->OREAD);
 		if(f == nil){
 			fprint(fildes(2), "sort:create %s: %r\n", tf);
@@ -230,17 +228,16 @@ mergefiles(t, n: int, b: ref Iobuf)
 		m = m[1:];
 	}
 
-	ok := 0;
 	for(;;){
-		sort(mmp, nn);
+		sort(mmp, array[nn] of ref Merge, nn);
 		m = mmp[0:];
 		if(nn == 0)
 			break;
 		for(;;){
-			l = m[0].line;
-			stdout.puts(l);
+			l := m[0].line;
+			b.puts(l);
 			l = m[0].fd.gets('\n');
-			if(l == 0){
+			if(l == nil){
 				nn--;
 				mmp[0] = mmp[nn];
 				break;
@@ -254,5 +251,34 @@ mergefiles(t, n: int, b: ref Iobuf)
 
 	m = mp[0:];
 	for(i = 0; i < n; i++)
-		m[i].f.close();
+		m[i].fd.close();
+}
+
+sort(a, b: array of ref Merge, r: int)
+{
+	if (r > 1) {
+		m := (r-1)/2 + 1;
+		sort(a[0:m], b[0:m], m);
+		sort(a[m:r], b[m:r], r-m);
+		b[0:] = a[0:r];
+		for ((i, j, k) := (0, m, 0); i < m && j < r; k++) {
+			if (b[i].line > b[j].line)
+				a[k] = b[j++];
+			else
+				a[k] = b[i++];
+		}
+		if (i < m)
+			a[k:] = b[i:m];
+		else if (j < r)
+			a[k:] = b[j:r];
+	}
+}
+
+done(xs: string)
+{
+	for(i := 0; i < ntemp; i++)
+		remove(tempfile(i));
+	if(xs != nil)
+		fprint(fildes(2), "%s\n", xs);
+	exit;
 }
