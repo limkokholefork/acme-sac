@@ -202,8 +202,50 @@ grid/registry already practically does what we want with monitoring the number o
 Tasks
 1. Implement External Sorter
 2. Implement Resource partition gatherer
-3. Modify grid/register* commands to update registry with number of connections and
-other resource usage.
+3. Modify grid/register* commands to update registry with number of connections and other resource usage.
 4. Write generic worker and come up with filesystem interface
 5. Write code to split large set of files into equal size chunks
 6. Write Masterfs to spawn and monitor workers
+
+
+Gather is really just cat. we can script a lot of this.
+mapred needs to call a script to gather and sort the files.
+Mapworkers and Reduceworkers are also standalone commands.
+
+The result of a mapworker is a list of files.
+The input to a mapworker is a list of filesplits.
+	the input also includes a config file that specifies the mapper and reader
+	modules.
+
+The input to a reduceworker is the list of intermediate files.
+	it calls the gather and sort command to create a local file
+	for it to reduce. the gathersort manages mounting the fs
+	as needed.
+
+The output of reduceworker is the reduce file.
+
+We need a filesplitter that can create a set of mapworker config files.
+It walks a fs calculates total size and splits on a set quanta.
+Much like du.
+
+Create netcat that takes as stdin
+	tcp!host!port	/path/file
+
+it builds a hash of network address and mounts one at a time
+and cats the /path/file
+
+assuming the full list of filenames can be stored in memory.
+or we can just do a fresh mount for each file.
+
+no bottlenecks, keep the data moving. the reduce worker
+can be running concurrently with the mapworkers, because
+the sorting can happen while we are receiving intermediate
+file names from finished mapworkers.
+
+netcat < files |sort |reduceworker cfgfile > out
+
+
+we will end up with a Family of mapreduce programs
+for different scales of data and grids.
+
+Implement a Reader for tar.gz files.
