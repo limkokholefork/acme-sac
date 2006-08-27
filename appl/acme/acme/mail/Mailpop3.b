@@ -7,6 +7,8 @@ include "daytime.m";
 include "sh.m";
 include "pop3.m";
 include "acmewin.m";
+include "arg.m";
+	arg: Arg;
 
 mailpop3 : module {
 	init : fn(ctxt : ref Draw->Context, argl : list of string);
@@ -126,7 +128,7 @@ stdout, stderr : ref FD;
 
 killing : int = 0;
 
-init(ctxt : ref Context, nil : list of string)
+init(ctxt : ref Context, args : list of string)
 {
 	mailctxt = ctxt;
 	sys = load Sys Sys->PATH;
@@ -134,9 +136,16 @@ init(ctxt : ref Context, nil : list of string)
 	daytime = load Daytime Daytime->PATH;
 	pop3 = load Pop3 Pop3->PATH;
 	acmewin = load Acmewin Acmewin->PATH;
+	arg = load Arg Arg->PATH;
 	acmewin->init();
 	stdout = fildes(1);
 	stderr = fildes(2);
+	arg->init(args);
+	while((c := arg->opt()) != 0)
+	case c {
+	'u'  => user = arg->earg();
+	}
+	args = arg->argv();
 	main();
 }
 
@@ -521,9 +530,8 @@ main()
 	date = time();
 	if(date==nil)
 		error("can't get current time");
-	user = getuser();
 	if(user == nil)
-		user = "Wile.E.Coyote";
+		user = getuser();
 	readonly = False;
 	pop3lock = Lock.init();
 	mbox = mbox.read(readonly);

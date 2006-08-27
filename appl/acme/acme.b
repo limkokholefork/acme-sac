@@ -212,6 +212,8 @@ main(argl : list of string)
 		fontnames[1] = f;
 	arg = arginit(argl);
 	while(ac = argopt(arg)) case(ac){
+	'a' =>
+		dat->globalautoindent = TRUE;
 	'b' =>
 		dat->bartflag = TRUE;
 	'c' =>

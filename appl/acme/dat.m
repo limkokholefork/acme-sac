@@ -247,6 +247,7 @@ Dat : module {
 		}
 	};
 
+	globalautoindent: int;
 	seq : int;
 	maxtab : int;
 	mouse : ref Draw->Pointer;

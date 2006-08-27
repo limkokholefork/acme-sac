@@ -676,6 +676,8 @@ Text.typex(t : self ref Text, r : int, echomode : int)
 	q0, q1 : int;
 	nnb, nb, n, i : int;
 	u : ref Text;
+	rp : string;
+	rp[0] = r;
 
 	if(alphabet != ALPHA_LATIN)
 		r = transc(r, alphabet);
@@ -690,29 +692,52 @@ Text.typex(t : self ref Text, r : int, echomode : int)
 	if(t.what!=Body && r=='\n')
 		return;
 	case(r){
-		Kdown or Keyboard->Down =>
+		Keyboard->Down =>
 			n = t.frame.maxlines/2;
 			q0 = t.org+frcharofpt(t.frame, (t.frame.r.min.x, t.frame.r.min.y+n*t.frame.font.height));
 			t.setorigin(q0, FALSE);
 			return;
-		Kup or Keyboard->Up =>
+		Keyboard->Up =>
 			n = t.frame.maxlines/2;
 			q0 = t.backnl(t.org, n);
 			t.setorigin(q0, FALSE);
 			return;
-		Kleft or Keyboard->Left =>
+		Keyboard->Left =>
 			t.commit(TRUE);
 			if(t.q0 != t.q1)
 				t.show(t.q0, t.q0);
 			else if(t.q0 != 0)
 				t.show(t.q0-1, t.q0-1);
 			return;
-		Kright or Keyboard->Right =>
+		Keyboard->Right =>
 			t.commit(TRUE);
 			if(t.q0 != t.q1)
 				t.show(t.q1, t.q1);
 			else if(t.q1 != t.file.buf.nc)
 				t.show(t.q1+1, t.q1+1);
+			return;
+		 16r10 or Keyboard->Home =>
+			t.commit(TRUE);
+			t.show(0,0);
+			return;
+		 16r11 or Keyboard->End=>
+			t.commit(TRUE);
+			t.show(t.file.buf.nc,t.file.buf.nc);
+			return;
+		16r01 => # ^A: beginning of line
+			t.commit(TRUE);
+			# go to where ^U would erase, if not already at BOL
+			nnb=0;
+			if (t.q0 > 0 && (t.readc(t.q0-1) != '\n'))
+				nnb = t.bswidth(16r15);
+			t.show (t.q0-nnb, t.q0-nnb);
+			return;
+		16r05 => # ^E: end of line
+			t.commit(TRUE);
+			q0 = t.q0;
+			while (q0 < t.file.buf.nc && (t.readc(q0) != '\n'))
+				q0++;
+			t.show (q0, q0);
 			return;
 	}
 	if(t.what == Body){
@@ -781,6 +806,19 @@ if(0)	# DEBUGGING
 		for(i=0; i<t.file.ntext; i++)
 			t.file.text[i].fill();
 		return;
+	 '\n' =>
+		if (t.w.autoindent) {
+			# find beginning of previous line using backspace code
+			nnb = t.bswidth(16r15); # ^U case
+			rp[0] = r;
+			for (i=0; i<nnb; i++){
+				r = t.readc(t.q0-nnb+i);
+				if (r != ' ' && r != '\t')
+					break;
+				rp[len rp] = r;
+			}
+		}
+		break; # fall through to normal code
 	16r7f or Keyboard->Del =>
 		# Delete character - forward delete
 		t.commit(TRUE);
@@ -823,19 +861,20 @@ if(0)	# DEBUGGING
 			u.cq0 = t.q0;
 		else if(t.q0 != u.cq0+u.ncache)
 			error("text.type cq1");
-		str := "Z";
-		str[0] = r;
-		u.insert(t.q0, str, 1, FALSE, echomode);
-		str = nil;
+		u.insert(t.q0, rp, len rp, FALSE, echomode);
 		if(u != t)
 			u.setselect(u.q0, u.q1);
-		if(u.ncache == u.ncachealloc){
-			u.ncachealloc += 10;
-			u.cache += "1234567890";
+		if(u.ncache + len rp >= u.ncachealloc){
+			u.ncachealloc += len rp + 10;
+			u.cache += (stralloc(len rp)).s + "1234567890";
 		}
-		u.cache[u.ncache++] = r;
+
+		for (i=0; i < len rp; i++)
+			u.cache[u.ncache+i] = rp[i];
+		u.ncache += len rp;
+		#sys->print("insert nnb:%d rp[%d]:%s.\n", nnb, len rp, r	}
 	}
-	t.setselect(t.q0+1, t.q0+1);
+	t.setselect(t.q0+len rp, t.q0+len rp);
 	if(r=='\n' && t.w!=nil)
 		t.w.commit(t);
 }

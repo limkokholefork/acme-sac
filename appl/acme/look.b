@@ -683,11 +683,14 @@ openfile(t : ref Text, e : Expand) : (ref Window, Expand)
 		t.w.dirty = FALSE;
 		t.w.settag();
 		t.w.tag.setselect(t.w.tag.file.buf.nc, t.w.tag.file.buf.nc);
-		if(ow != nil)
+		if(ow != nil){
 			for(i=ow.nincl; --i>=0; ){
 				n = len ow.incl[i];
 				w.addincl(ow.incl[i], n);	# really do want to copy here
 			}
+			w.autoindent = ow.autoindent;
+		}else
+			w.autoindent = dat->globalautoindent;
 	}
 	if(e.a1 == e.a0)
 		eval = FALSE;

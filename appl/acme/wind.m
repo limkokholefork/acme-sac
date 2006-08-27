@@ -13,6 +13,7 @@ Windowm : module {
 		isscratch : int;
 		filemenu : int;
 		dirty : int;
+		autoindent: int;
 		id : int;
 		addr : Dat->Range;
 		limit : Dat->Range;

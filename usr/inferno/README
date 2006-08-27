@@ -1,0 +1,41 @@
+Welcome to Acme.  
+
+Right click on manual references, e.g., intro(1) or acme(1), 
+to read a manual page. You should read acme(1) before 
+using this editor.
+
+Drag the mouse while holding down the middle mouse 
+button to execute some text, e.g.,
+
+	lookman intro
+
+Right-click on pathnames to open a window on the 
+file or directory, e.g. 
+	/appl/acme
+
+Change the acme namespace by prefixing mount and 
+bind commands with 'Local'. Mount the plan9 source for 
+browsing by middle-selecting this text then right-click 
+the pathname /n/sources.
+
+	Local mount -A tcp!sources.cs.bell-labs.com!9fs /n/sources
+
+Read and edit the Inferno wiki,
+
+	Local mount -A tcp!canto.hopto.org!wiki /mnt/wiki
+	Wiki
+
+Join other inferno users on #inferno IRC channel,
+
+	airc -n acmeuser irc.freenode.net
+
+You'll probably want to work on files in your host system,
+
+	Local bind -c '#UC:/' /n/c
+	Local bind -c '#UD:/' /n/d
+
+Browse the web: middle-click on the command 
+
+	charon 
+
+then right-click on words that have a superscript number.
