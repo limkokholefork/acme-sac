@@ -497,6 +497,7 @@ errorwin(dir : string, ndir : int, incl : array of string, nincl : int) : ref Wi
 	r = nil;
 	for(i=nincl; --i>=0; )
 		w.addincl(incl[i], n);
+	w.autoindent = dat->globalautoindent;
 	return w;
 }
 

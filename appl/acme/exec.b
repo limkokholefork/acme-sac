@@ -22,7 +22,7 @@ editm: Edit;
 Dir, OREAD, OWRITE : import Sys;
 EVENTSIZE, QWaddr, QWdata, QWevent, Astring, CHAPPEND : import dat;
 Lock, Reffont, Ref, seltext, seq, row : import dat;
-warning, error, skipbl, findbl, stralloc, strfree, exec : import utils;
+warning, error, skipbl, findbl, stralloc, strfree, strncmp, exec : import utils;
 dirname : import lookx;
 Body, Text : import textm;
 File : import filem;
@@ -66,7 +66,7 @@ Exectab : adt {
 	flag2 : int;
 };
 
-F_ALPHABET, F_CUT, F_DEL, F_DELCOL, F_DUMP, F_EDIT, F_EXITX, F_FONTX, F_GET, F_ID, F_INCL, F_KILL, F_LIMBO, F_LINENO, F_LOCAL, F_LOOK, F_NEW, F_NEWCOL, F_PASTE, F_PUT, F_PUTALL, F_UNDO, F_SEND, F_SORT, F_TAB, F_ZEROX : con iota;
+F_ALPHABET, F_CUT, F_DEL, F_DELCOL, F_DUMP, F_EDIT, F_EXITX, F_FONTX, F_GET, F_ID, F_INCL, F_INDENT, F_KILL, F_LIMBO, F_LINENO, F_LOCAL, F_LOOK, F_NEW, F_NEWCOL, F_PASTE, F_PUT, F_PUTALL, F_UNDO, F_SEND, F_SORT, F_TAB, F_ZEROX : con iota;
 
 exectab := array[] of {
 	Exectab ( "Alphabet",	F_ALPHABET,	FALSE,	XXX,		XXX		),
@@ -81,6 +81,7 @@ exectab := array[] of {
 	Exectab ( "Get",			F_GET,		FALSE,	TRUE,	XXX		),
 	Exectab ( "ID",			F_ID,		FALSE,	XXX,		XXX		),
 	Exectab ( "Incl",		F_INCL,		FALSE,	XXX,		XXX		),
+	Exectab ( "Indent",		F_INDENT,	FALSE,	XXX,		XXX		),
 	Exectab ( "Kill",			F_KILL,		FALSE,	XXX,		XXX		),
 	Exectab ( "Limbo",		F_LIMBO,		FALSE,	XXX,		XXX   	),
 	Exectab ( "Lineno",		F_LINENO,	FALSE,	XXX,		XXX		),
@@ -116,6 +117,7 @@ runfun(fun : int, et, t, argt : ref Text, flag1, flag2 : int, arg : string, narg
 		F_GET 		=> get(et, t, argt, flag1, arg, narg);
 		F_ID 		=> id(et);
 		F_INCL 		=> incl(et, argt, arg, narg);
+		F_INDENT	=> indent(et, argt, arg, narg);
 		F_KILL 		=> kill(argt, arg, narg);
 		F_LIMBO		=> limbo(et);
 		F_LINENO		=> lineno(et);
@@ -1063,6 +1065,53 @@ incl(et : ref Text, argt : ref Text, arg : string, narg : int)
 		warning(nil, "\n");
 	}
 }
+
+IGlobal, IError, Ion, Ioff: con (iota-2);
+
+indentval (s : string, n: int) : int
+{
+	if (n < 2)
+		return IError;
+	if (strncmp(s, "ON", n) == 0){
+		dat->globalautoindent = TRUE;
+		warning(nil, "Indent ON\n");
+		return IGlobal;
+	}
+	if (strncmp(s, "OFF", n) == 0){
+		dat->globalautoindent = FALSE;
+		warning(nil, "Indent OFF\n");
+		return IGlobal;
+	}
+	return strncmp(s, "on", n) == 0;
+}
+
+indent(et : ref Text, argt : ref Text, arg : string, narg : int)
+{
+	a, r : string;
+	w : ref Window;
+	na, leng, autoindent : int;
+
+	if(et==nil || et.w==nil)
+		return;
+	w = et.w;
+	autoindent = IError;
+	(nil, r, leng) = getarg(argt, FALSE, TRUE);
+
+	if(r!=nil && leng>0)
+		autoindent = indentval(r, leng);
+	else{
+		(a, na) = findbl(arg, narg);
+		if(a != arg)
+			autoindent = indentval(arg, narg-na);
+	}
+	if(w != nil){
+		case (autoindent) {
+			Ion or Ioff => w.autoindent = autoindent;
+			IGlobal => w.autoindent = dat->globalautoindent;
+		}
+	}
+}
+
 
 tab(et : ref Text, argt : ref Text, arg : string, narg : int)
 {

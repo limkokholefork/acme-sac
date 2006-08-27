@@ -120,8 +120,10 @@ Window.init(w : self ref Window, clone : ref Window, r : Rect)
 	draw(mainwin, br, button, nil, button.r.min);
 	w.filemenu = TRUE;
 	w.maxlines = w.body.frame.maxlines;
+	w.autoindent = dat->globalautoindent;
 	if(clone != nil){
 		w.dirty = clone.dirty;
+		w.autoindent = clone.autoindent;
 		w.body.setselect(clone.body.q0, clone.body.q1);
 		w.settag();
 	}

@@ -1,0 +1,20 @@
+#archfs -b -m / 1152020512
+mount -ac {mntgen} /n
+runas inferno {
+	load std
+	prompt='% ' ''
+	fn % {$*}
+	autoload=std
+	if {ftest -d /tmp } {} {mkdir /tmp}
+	run /lib/sh/profile
+	home=/usr/^"{cat /dev/user}
+	bind -a '#w' /dev
+	bind -c '#s' /chan
+	bind -a '#^' /chan
+	ndb/cs
+	if {ftest -f $home/lib/profile} {run $home/lib/profile} {}
+	plumber
+	auth/factotum
+	acme -f /fonts/lucidasans/unicode.8.font /usr/inferno/README
+}
+sh -i
