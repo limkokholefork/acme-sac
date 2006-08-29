@@ -1,0 +1,5 @@
+<../mkconfig
+
+DIRS=port
+
+</mkfiles/mksubdirs

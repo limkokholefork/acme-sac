@@ -1,0 +1,16 @@
+<mkconfig
+
+DIRS=\
+	lib9\
+	libdraw\
+	libinterp\
+	libkeyring\
+	libmath\
+	libmemdraw\
+	libmemlayer\
+	libmp\
+	libsec\
+	libtk\
+	emu\
+
+</mkfiles/mksubdirs

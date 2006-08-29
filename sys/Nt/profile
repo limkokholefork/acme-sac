@@ -1,0 +1,108 @@
+load arg
+
+fn awk {
+	os awk $*
+}
+
+fn file2url {
+	sysname:=`{cat /dev/sysname}
+	url:='http://'$sysname
+	for (i in $*) {
+		f := `{cleanname -d `pwd $i}
+		echo $f  |sed 's@/n/d@file:///D:@
+s@/services/httpd/root@'^$url^'@'
+	}
+}
+
+fn file2host {
+	for (i in $*) {
+		f := `{cleanname -d `pwd $i}
+		echo $f  |sed 's@/n/d@D:@
+				s@/n/h@file:///H:@
+				s@/n/c@file:///C:@'
+	}
+}
+
+fn 9c {
+	load arg
+	args := $*
+	flags=''
+	(arg
+		I+ {flags = $flags  -I ^ `{file2root $arg}}
+		D+ {flags = $flags -$opt ^ $arg}
+		'*' {echo unknown option $opt}
+		- $args
+	)
+	cc=cl
+	cwd=`{echo $emuroot ^ `pwd | sed 's/\//\\/g'}
+	cflags=(-c 
+		-nologo
+		-W3 
+		-Zi
+		-Yd
+		-MT
+#		'-DROOT='$emuroot
+#		-DEMU
+		'-D_WIN32_WINNT=0x0400'
+		-I$cwd
+		-I$emuroot\sys\Nt\386\include
+		-I$emuroot\sys\include
+		-I$emuroot\sys\libinterp
+		-I$emuroot\sys\emu\port
+		-I'C:\Program Files\Microsoft Platform SDK\Include'
+		-I'C:\Program Files\Microsoft Visual C++ Toolkit 2003\include'
+		-Fo$cwd\
+		)
+	file=$1
+	file=`{cleanname -d `pwd $file}
+	file=`{echo $emuroot ^ $file |sed 's/\//\\/g'}
+#	echo os $cc $cflags $file 
+	os $cc $cflags $flags $file 
+}
+
+fn 9l {
+	ld=link
+	ldflags=(-nologo
+		-incremental:no
+		-map
+		-subsystem:console 
+		-entry:WinMainCRTStartup )
+	syslibs=(wsock32.lib 
+			user32.lib 
+			gdi32.lib 
+			advapi32.lib 
+			winmm.lib 
+			mpr.lib)
+	
+	file=$1
+	file=`{cleanname -d `pwd $file}
+	file=`{echo $emuroot ^ $file |sed 's/\//\\/g'}
+	args = ${tl $*}
+#	echo os $ld $ldflags -out:$file `{file2root $args}
+	os $ld $ldflags -out:$file `{file2root $args} '/libpath:C:\Program Files\Microsoft Platform SDK\lib' '/libpath:C:\Program Files\Microsoft Visual C++ Toolkit 2003\lib' $syslibs
+}
+
+fn file2root {
+	args = $*
+	for (i in $args) {
+		i = `{cleanname -d `pwd $i}
+		echo $emuroot ^ $i |sed 's/\//\\/g'
+	}
+}
+
+fn 9ar {
+	ar=link /lib
+	cwd=`{echo $emuroot ^ `pwd | sed 's/\//\\/g'}
+	arflags=-nologo
+	file=$1
+	file=`{cleanname -d `pwd $file}
+	file=`{echo $emuroot ^ $file |sed 's/\//\\/g'}
+	args = ${tl $*}
+#	echo os $ar $arflags -out:$file  `{file2root $args}
+	os $ar $arflags -out:$file `{file2root $args}
+}
+
+fn svn {
+	args = ${tl $*}
+	os svn $1 `{file2root $args}
+}
