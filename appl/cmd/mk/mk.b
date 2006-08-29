@@ -433,6 +433,8 @@ mktemp(t: array of byte)
 		return;
 	pid := libc0->s2ab(string sys->pctl(0, nil));
 	for(i := 'a'; i <= 'z'; i++){
+		if(len x == 0)
+			return;
 		x[0] = byte i;
 		x = x[1: ];
 		libc0->strncpy(x, pid, libc0->strlen(x));

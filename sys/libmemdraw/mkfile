@@ -1,0 +1,33 @@
+<../mkconfig
+
+LIB=libmemdraw.a
+
+COMMONFILES=\
+	arc.$O\
+	cmap.$O\
+	cread.$O\
+	defont.$O\
+	ellipse.$O\
+	fillpoly.$O\
+	hwdraw.$O\
+	icossin.$O\
+	icossin2.$O\
+	iprint.$O\
+	line.$O\
+	openmemsubfont.$O\
+	poly.$O\
+	read.$O\
+	string.$O\
+	subfont.$O\
+	write.$O\
+
+<mkfile-$SYSTARG		#sets $SYSFILES based on target OS architecture
+
+OFILES=$COMMONFILES $SYSFILES
+
+HFILES=	../include/draw.h\
+	../include/memdraw.h\
+
+<../mksyslib
+
+%-x11.$O:	xmem.h
