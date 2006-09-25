@@ -2186,6 +2186,8 @@ gettop(): ref Layout->Frame
 	return top;
 }
 
+sync: chan of int;
+pid: int;
 dumptext()
 {
 	sys->pctl(Sys->NEWPGRP, nil);
@@ -2195,17 +2197,13 @@ dumptext()
 		acmewin = load Acmewin Acmewin->PATH;
 		acmewin->init();
 	}
-	w := Win.wnew();
-	lay := top.layout;
-	title := top.doc.doctitle;
-	for(i:=0;i<len title;i++)
-		if(title[i] == ' ')
-			title[i] = '_';
-	w.wname("/charon/" + title);
-	w.wtagwrite("Url ");
-	dumplay(w, lay);
-	w.wclean();
-	spawn awin(w, top.doc.anchors);
+	if(pid == 0){
+		w := Win.wnew();
+		sync = chan of int;
+		spawn awin(w, sync);
+		pid =<-sync;
+	}
+	sync<-=1;
 }
 
 dumplay(w: ref Acmewin->Win, lay: ref L->Lay)
@@ -2267,17 +2265,21 @@ i2suf(d: int): string
 	return s;
 }
 
-awin(w: ref Win, anchors: list of ref Build->Anchor)
+awin(w: ref Win, sync: chan of int)
 {
 	c := chan of Acmewin->Event;
 	na: int;
 	ea: Acmewin->Event;
 	s: string;
 
+	sync <-= sys->pctl(0, nil);;
 	w.ctlwrite("clean");
+	w.wtagwrite("Url Back Fwd");
 	spawn w.wslave(c);
 	loop: for(;;){
 		alt {
+		<- sync =>
+			doexec(w, "Get");
 		e := <- c =>
 			if(e.c1 != 'M')
 				continue;
@@ -2316,7 +2318,7 @@ awin(w: ref Win, anchors: list of ref Build->Anchor)
 					if(n>0 && (t == len s || s[t]==' ' || s[t]=='\t' || s[t]=='\n')){
 						anchorid := n;
 						a : ref Build->Anchor = nil;
-						for(al := anchors; al != nil; al = tl al) {
+						for(al := top.doc.anchors; al != nil; al = tl al) {
 							a = hd al;
 							if(a.index == anchorid)
 								break;
@@ -2336,6 +2338,7 @@ awin(w: ref Win, anchors: list of ref Build->Anchor)
 		}
 	}
 	w.wdel(1);
+	pid = 0;
 	postnote(1, sys->pctl(0, nil), "kill");
 }
 
@@ -2376,11 +2379,26 @@ strtoi(s : string) : (int, int)
 	return (m, t);	
 }
 
-doexec(nil: ref Win, cmd: string): int
+doexec(w: ref Win, cmd: string): int
 {
 	(nil, f) := sys->tokenize(cmd, " \t\r\n");
 	case hd f {
+	"Get" =>
+		lay := top.layout;
+		title := top.doc.doctitle;
+		for(i:=0;i<len title;i++)
+			if(title[i] == ' ')
+				title[i] = '_';
+		w.wname("/charon/" + title);
+		w.wreplace(",", "");
+		dumplay(w, lay);
+		w.wclean();
+	"Back" =>
+		E->evchan <-= ref Event.Eback(0);
+	"Fwd" =>
+		E->evchan <-= ref Event.Efwd(0);
 	"Del" or "Delete" =>
+		E->evchan <-= ref Event.Equit(0);
 		return -1;
 	"Entry" =>
 		f = tl f;
