@@ -566,7 +566,7 @@ setkbdfocus(new: ref Client)
 
 makescreen(img: ref Image): ref Screen
 {
-	screen = Screen.allocate(img,display.colormix(Draw->Paleyellow, Draw->Grey), 0);
+	screen = Screen.allocate(img, img.display.color(Background), 0);
 	img.draw(img.r, screen.fill, nil, screen.fill.r.min);
 	return screen;
 }

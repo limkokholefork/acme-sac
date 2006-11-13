@@ -1,6 +1,12 @@
 # these are in order from most specific to least,
 # since first rule that fires wins.
 
+# Microsoft Windows file names
+kind is text
+data matches '(^[a-zA-Z]):(.*)'
+plumb alwaysstart acme
+plumb start /dis/sh.dis -c 'plumb -d edit /n/^`{echo $1 | tr A-Z a-z}^`{echo $2 | tr \ /}'
+
 # image files go to wm/view
 kind is text
 data matches '[a-zA-Z0-9_\-./]+'

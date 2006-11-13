@@ -1,5 +1,5 @@
 env
-	LDFLAGS=	-subsystem:console -entry:WinMainCRTStartup $LDFLAGS
+	LDFLAGS=	-subsystem:windows -entry:WinMainCRTStartup $LDFLAGS
 
 dev
 	root

@@ -1,3 +1,4 @@
 docookies=1
 doscripts=1
 starturl=http://www.google.com/
+doacme=1

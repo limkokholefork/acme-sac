@@ -789,6 +789,7 @@ substitute(c: ref Sedcom.S, s: string) : (bool, string)
 	sflag = true;
 	start := 0;
 
+	# Beware of infinite loops: 's/$/i/g', 's/a/aa/g', 's/^/a/g'
 	do {
 		se := (start, len s);
 		if ((m := regex->executese(c.re, s, se, true, true)) == nil)
@@ -816,7 +817,9 @@ substitute(c: ref Sedcom.S, s: string) : (bool, string)
 			}
 		}
 		s = s[0:l] + rep + s[r:];
-		start++;
+		start = l + len rep;
+		if((r - l) == 0)
+			start++;
 	} while (c.gfl);
 	return (true, s);
 }
