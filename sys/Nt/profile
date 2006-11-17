@@ -65,7 +65,7 @@ fn 9l {
 	ldflags=(-nologo
 		-incremental:no
 		-map
-		-subsystem:windows 
+		-subsystem:console 
 		-entry:WinMainCRTStartup )
 	syslibs=(wsock32.lib 
 			user32.lib 
