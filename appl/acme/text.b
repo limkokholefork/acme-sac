@@ -132,6 +132,9 @@ Kleft : con KF | 16r11;
 Kright : con KF | 16r12;
 Kdown : con 16r80;
 
+Kscrollup: con Keyboard->Spec|16r50;
+Kscrolldown: con Keyboard->Spec|16r51;
+
 nulltext : Text;
 
 newtext() : ref Text
@@ -692,12 +695,22 @@ Text.typex(t : self ref Text, r : int, echomode : int)
 	if(t.what!=Body && r=='\n')
 		return;
 	case(r){
-		Keyboard->Down =>
+		Kscrolldown=>
+			n = 2;
+			q0 = t.org+frcharofpt(t.frame, (t.frame.r.min.x, t.frame.r.min.y+n*t.frame.font.height));
+			t.setorigin(q0, FALSE);
+			return;
+		Kscrollup =>
+			n = 4;
+			q0 = t.backnl(t.org, n);
+			t.setorigin(q0, FALSE);
+			return;
+		Keyboard->Down=>
 			n = t.frame.maxlines/2;
 			q0 = t.org+frcharofpt(t.frame, (t.frame.r.min.x, t.frame.r.min.y+n*t.frame.font.height));
 			t.setorigin(q0, FALSE);
 			return;
-		Keyboard->Up =>
+		Keyboard->Up=>
 			n = t.frame.maxlines/2;
 			q0 = t.backnl(t.org, n);
 			t.setorigin(q0, FALSE);
