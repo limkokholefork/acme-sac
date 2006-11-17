@@ -402,6 +402,13 @@ WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		else if(wparam == VK_MENU)
 			gkbdputc(gkbdq, Latin);
 		break;
+	case WM_MOUSEWHEEL:
+		if(GET_WHEEL_DELTA_WPARAM(wparam) > 0)
+			wparam = Spec|0x50;
+		else
+			wparam = Spec|0x51;
+		gkbdputc(gkbdq, wparam);
+		break;
 	case WM_KEYDOWN:
 		if(gkscanq) {
 			scancode(wparam, lparam, 0);
