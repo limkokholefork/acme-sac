@@ -696,11 +696,16 @@ Text.typex(t : self ref Text, r : int, echomode : int)
 		return;
 	case(r){
 		Kscrolldown=>
+			#TODO: implement Tag policy here
+			if(t.what != Body)
+				return;
 			n = 2;
 			q0 = t.org+frcharofpt(t.frame, (t.frame.r.min.x, t.frame.r.min.y+n*t.frame.font.height));
 			t.setorigin(q0, FALSE);
 			return;
 		Kscrollup =>
+			if(t.what != Body)
+				return;
 			n = 4;
 			q0 = t.backnl(t.org, n);
 			t.setorigin(q0, FALSE);

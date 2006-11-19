@@ -204,6 +204,9 @@ init(cu: CharonUtils)
 	J = cu->J;
 	B = cu->B;
 	display = G->display;
+	if((CU->config).doacme)
+		for(i := 0; i < len fonts; i++)
+			fonts[i] = ("/fonts/lucidasans/euro.8.font", nil, 0);
 
 	# make sure default and control fonts are loaded
 	getfont(DefFnt);
