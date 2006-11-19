@@ -17,6 +17,6 @@ runas inferno {
 	if {ftest -f $home/lib/profile} {run $home/lib/profile} {}
 	plumber
 	auth/factotum
-	acme -a -f /fonts/lucidasans/unicode.8.font /usr/inferno/README
+	acme -a /usr/inferno/README
 }
 sh -i
