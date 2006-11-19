@@ -1,4 +1,7 @@
 docookies=1
 doscripts=1
-starturl=http://www.google.com/
+starturl=http://cm.bell-labs.com/plan9/
 doacme=1
+defaultwidth=512
+x=240
+imagelvl=0
