@@ -393,7 +393,8 @@ s2mtype(s: string): int
 makewins()
 {
 	if((CU->config).doacme){
-		mainwin = display.newimage(display.image.r, display.image.chans, 0, D->White);
+	# TODO this is a crummy hack. The width should be taken from config
+		mainwin = display.newimage(Rect(display.image.r.min, ((CU->config).defaultwidth, display.image.r.max.y)), display.image.chans, 0, D->White);
 		return;
 	if(mainwin == nil)
 		CU->raisex(sys->sprint("EXFatal: can't initialize windows: %r"));
