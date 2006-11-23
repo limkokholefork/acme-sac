@@ -2387,7 +2387,7 @@ doexec(w: ref Win, cmd: string): int
 		lay := top.layout;
 		title := top.doc.doctitle;
 		for(i:=0;i<len title;i++)
-			if(title[i] == ' ')
+			if(title[i] == ' ' || title[i] == '|')
 				title[i] = '_';
 		w.wname("/charon/" + title);
 		w.wreplace(",", "");

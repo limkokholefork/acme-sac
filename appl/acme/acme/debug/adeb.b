@@ -762,7 +762,7 @@ refresh(k: ref Kid, domod: int)
 #		if(err != "")
 #			alert(err);
 		if(s[i].name != "unknown fn")
-			k.w.wwritebody(sys->sprint("\nstackv %d.%s.module\n", k.prog.id, s[i].name));
+			k.w.wwritebody(sys->sprint("\nstackv -r 1 %d.%s.module\n", k.prog.id, s[i].name));
 		k.w.wwritebody(s[i].name + "(");
 		vs := s[i].expand();
 		if(verbose && vs != nil){
@@ -796,7 +796,7 @@ refresh(k: ref Kid, domod: int)
 			sfile := dism->src(dis);
 			src := s[i].src();
 			# kid.w.wwritebody(sprint("%s:%d\n", sfile, src.start.line));
-			if(src != nil)
+			if(src != nil && i == 0)
 				highlight(sfile, string src.start.line);
 		}
 	}
