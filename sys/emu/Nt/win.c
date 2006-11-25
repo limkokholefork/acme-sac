@@ -613,7 +613,7 @@ winproc(LPVOID x)
 		window = CreateWindowExW(
 			0,			/* extended style */
 			L"inferno",		/* class */
-			L"Inferno",		/* caption */
+			L"Acme SAC",		/* caption */
 			ws,	/* style */
 			CW_USEDEFAULT,		/* init. x pos */
 			CW_USEDEFAULT,		/* init. y pos */
@@ -629,7 +629,7 @@ winproc(LPVOID x)
 		window = CreateWindowExA(
 			0,			/* extended style */
 			"inferno",		/* class */
-			"Inferno",		/* caption */
+			"Acme SAC",		/* caption */
 			ws,	/* style */
 			CW_USEDEFAULT,		/* init. x pos */
 			CW_USEDEFAULT,		/* init. y pos */

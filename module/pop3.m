@@ -9,7 +9,7 @@ Pop3: module
          # open a connection with the pop3 server
          # requires the email server's name or address or nil if a default server is to be used
 	# returns (status, errror string)
-         open: fn(user, password, server: string) : (int, string);
+         open: fn(user, password, server: string, usessl: int) : (int, string);
 
 	# stat the user's mailbox 
 	# returns (status, error string, no. messages, total no. bytes)

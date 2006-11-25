@@ -13,13 +13,13 @@ extern	char*	hosttype;
 char*	tkfont;	/* for libtk/utils.c */
 int	tkstylus;	/* libinterp/tk.c */
 extern	int	mflag;
-	int	dflag;
+	int	dflag = 1;
 	int vflag;
 	int	vflag;
 	Procs	procs;
 	char	*eve;
-	int	Xsize	= 640;
-	int	Ysize	= 480;
+	int	Xsize	= 1280;
+	int	Ysize	= 1024;
 	int	sflag;
 	int	qflag;
 	int	xtblbit;
