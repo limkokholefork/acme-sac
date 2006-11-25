@@ -127,6 +127,9 @@ mailctxt : ref Context;
 stdout, stderr : ref FD;
 
 killing : int = 0;
+usessl := 0;
+
+server: string;
 
 init(ctxt : ref Context, args : list of string)
 {
@@ -144,6 +147,8 @@ init(ctxt : ref Context, args : list of string)
 	while((c := arg->opt()) != 0)
 	case c {
 	'u'  => user = arg->earg();
+	't' => usessl = 1;
+	's' => server = arg->earg();
 	}
 	args = arg->argv();
 	main();
@@ -387,7 +392,7 @@ pop3open(lck : int)
 	if (lck)
 		pop3lock.lock();
 	if (!pop3conn) {
-		(ok, s) := pop3->open(user, pwd, nil);
+		(ok, s) := pop3->open(user, pwd, server, usessl);
 		if (ok < 0) {
 			if (!pop3bad) {
 				fprint(stderr, "mail: could not connect to POP3 mail server : %s\n", s);

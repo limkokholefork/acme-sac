@@ -9,6 +9,48 @@ include "timers.m";
 	timers: Timers;
 	Timer: import timers;
 include "pop3.m";
+include "keyring.m";
+include "asn1.m";
+include "pkcs.m";
+include "sslsession.m";
+include "ssl3.m";
+	ssl3: SSL3;
+	Context: import ssl3;
+# Inferno supported cipher suites: RSA_EXPORT_RC4_40_MD5
+ssl_suites := array [] of {
+	byte 0, byte 16r03,	# RSA_EXPORT_WITH_RC4_40_MD5
+	byte 0, byte 16r04,	# RSA_WITH_RC4_128_MD5
+	byte 0, byte 16r05,	# RSA_WITH_RC4_128_SHA
+	byte 0, byte 16r06,	# RSA_EXPORT_WITH_RC2_CBC_40_MD5
+	byte 0, byte 16r07,	# RSA_WITH_IDEA_CBC_SHA
+	byte 0, byte 16r08,	# RSA_EXPORT_WITH_DES40_CBC_SHA
+	byte 0, byte 16r09,	# RSA_WITH_DES_CBC_SHA
+	byte 0, byte 16r0A,	# RSA_WITH_3DES_EDE_CBC_SHA
+	
+	byte 0, byte 16r0B,	# DH_DSS_EXPORT_WITH_DES40_CBC_SHA
+	byte 0, byte 16r0C,	# DH_DSS_WITH_DES_CBC_SHA
+	byte 0, byte 16r0D,	# DH_DSS_WITH_3DES_EDE_CBC_SHA
+	byte 0, byte 16r0E,	# DH_RSA_EXPORT_WITH_DES40_CBC_SHA
+	byte 0, byte 16r0F,	# DH_RSA_WITH_DES_CBC_SHA
+	byte 0, byte 16r10,	# DH_RSA_WITH_3DES_EDE_CBC_SHA
+	byte 0, byte 16r11,	# DHE_DSS_EXPORT_WITH_DES40_CBC_SHA
+	byte 0, byte 16r12,	# DHE_DSS_WITH_DES_CBC_SHA
+	byte 0, byte 16r13,	# DHE_DSS_WITH_3DES_EDE_CBC_SHA
+	byte 0, byte 16r14,	# DHE_RSA_EXPORT_WITH_DES40_CBC_SHA
+	byte 0, byte 16r15,	# DHE_RSA_WITH_DES_CBC_SHA
+	byte 0, byte 16r16,	# DHE_RSA_WITH_3DES_EDE_CBC_SHA
+	
+	byte 0, byte 16r17,	# DH_anon_EXPORT_WITH_RC4_40_MD5
+	byte 0, byte 16r18,	# DH_anon_WITH_RC4_128_MD5
+	byte 0, byte 16r19,	# DH_anon_EXPORT_WITH_DES40_CBC_SHA
+	byte 0, byte 16r1A,	# DH_anon_WITH_DES_CBC_SHA
+	byte 0, byte 16r1B,	# DH_anon_WITH_3DES_EDE_CBC_SHA
+	
+	byte 0, byte 16r1C,	# FORTEZZA_KEA_WITH_NULL_SHA
+	byte 0, byte 16r1D,	# FORTEZZA_KEA_WITH_FORTEZZA_CBC_SHA
+	byte 0, byte 16r1E,	# FORTEZZA_KEA_WITH_RC4_128_SHA
+};
+ssl_comprs := array [] of {byte 0};
 
 FD, Connection: import sys;
 Iobuf : import bufio;
@@ -21,11 +63,14 @@ rpid : int = -1;
 cread : chan of (int, string);
 
 DEBUG : con 0;
+usessl:= 0;
+sslx : ref Context;
 
-open(user, password, server : string): (int, string)
+
+open(user, password, server : string, usesslarg: int): (int, string)
 {
 	s : string;
- 
+ 	usessl = usesslarg;
 	if (!inited) {
 		sys = load Sys Sys->PATH;
 		bufio = load Bufio Bufio->PATH;
@@ -40,16 +85,51 @@ open(user, password, server : string): (int, string)
 		if (server == nil)
 			return (-1, "no default mail server");
 	}
-	(ok, c) := sys->dial ("tcp!" + server + "!110", nil);
+	addr: string;
+	if(usessl)
+		addr = "tcp!" + server + "!995";
+	else
+		addr = "tcp!" + server + "!110";
+	(ok, c) := sys->dial (addr, nil);
 	if (ok < 0)
 		return (-1, "dialup failed");
-	ibuf = bufio->fopen(c.dfd, Bufio->OREAD);
-	obuf = bufio->fopen(c.dfd, Bufio->OWRITE);
-	if (ibuf == nil || obuf == nil)
-		return (-1, "failed to open bufio");
-	cread = chan of (int, string);
-	spawn mreader(cread);
-	(rpid, nil) = <- cread;
+	if(usessl){
+		# read server greeting, send STLS, initiate TLS, continue as normal
+#		buf := array[512] of byte;
+#		nb := sys->read(c.dfd, buf, len buf);
+#		if(DEBUG)
+#			sys->print("%s\n", string buf[:nb]);
+#		stls := "STLS\r\n";
+#		b := array of byte stls;
+#		sys->write(c.dfd, b, len b);
+#		nb = sys->read(c.dfd, buf, len buf);
+#		if(DEBUG)
+#			sys->print("%s\n", string buf[:nb]);
+		ssl3 = load SSL3 SSL3->PATH;
+		ssl3->init();
+		sslx = ssl3->Context.new();
+#		sslx.use_devssl();
+		vers := 3;
+		e: string;
+		info := ref SSL3->Authinfo(ssl_suites, ssl_comprs, nil, 0, nil, nil, nil);
+		(e, vers) = sslx.client(c.dfd, addr, vers, info);
+		if(e != "") {
+			return (-1, s);
+		}
+		if(DEBUG)
+			sys->print("SSL HANDSHAKE completed\n");
+		cread = chan of (int, string);
+		spawn tlsreader(cread);
+		(rpid, nil) = <- cread;
+	}else{
+		ibuf = bufio->fopen(c.dfd, Bufio->OREAD);
+		obuf = bufio->fopen(c.dfd, Bufio->OWRITE);
+		if (ibuf == nil || obuf == nil)
+			return (-1, "failed to open bufio");
+		cread = chan of (int, string);
+		spawn mreader(cread);
+		(rpid, nil) = <- cread;
+	}
  	(ok, s) = mread();
 	if (ok < 0)
 		return (-1, s);
@@ -119,7 +199,7 @@ msgnolist() : (int, string, list of int)
 		if (ok < 0)
 			return (-1, s, nil);
 		if (len s < 3) {
-			if (len s > 0 && s[0] == '.')
+			if (len s > 0 && s[0] == '.' && ls != nil)
 				return (1, nil, rev1(ls));
 			else
 				return (-1, s, nil);
@@ -184,8 +264,10 @@ close(): (int, string)
 		return (-1, "connection not open");
 	ok := mwrite("QUIT");
 	kill(rpid);
-	ibuf.close();
-	obuf.close();
+	if(!usessl){
+		ibuf.close();
+		obuf.close();
+	}
 	conn = 0;
 	if (ok < 0)
 		return (-1, "failed to close connection");
@@ -236,8 +318,13 @@ mwrite(s : string): int
 		sys->print("mwrite : %s", s);
 	b := array of byte s;
 	l := len b;
-	nb := obuf.write(b, l);
-	obuf.flush();
+	nb: int;
+	if(!usessl){
+		nb = obuf.write(b, l);
+		obuf.flush();
+	}else{
+		nb = sslx.write(b,l);
+	}
 	if (nb != l)
 		return -1;
 	return 1;
@@ -298,4 +385,32 @@ kill(pid : int) : int
 	if (fd == nil || sys->fprint(fd, "kill") < 0)
 		return -1;
 	return 0;
+}
+
+tlsreader(c : chan of (int, string))
+{
+	buf := array[1] of byte;
+	lin := array[1024] of byte;
+	c <- = (sys->pctl(0, nil), nil);
+	k := 0;
+	for (;;) {
+		n := sslx.read(buf, len buf);
+		if(n < 0){
+			c <- = (-1, "could not read response from server");
+			continue;
+		}
+		lin[k++] = buf[0];
+		if(DEBUG)
+			sys->print("%c", int buf[0]);
+		if(int buf[0] == '\n'){
+			line := string lin[0:k];
+			if (DEBUG)
+				sys->print("tlsreader : %s", line);
+			l := len line - 1;
+			if (line[l-1] == '\r')
+				l--;
+			c <- = (1, line[0:l]);
+			k = 0;
+		}
+	}
 }

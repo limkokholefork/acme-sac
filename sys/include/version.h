@@ -1,1 +1,1 @@
-#define VERSION	"Fourth Edition/acme-sac (20061116)"
+#define VERSION	"Fourth Edition/acme-sac (20061124)"

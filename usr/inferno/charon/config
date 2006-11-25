@@ -1,7 +1,6 @@
-docookies=1
-doscripts=1
+docookies=0
+doscripts=0
 starturl=http://cm.bell-labs.com/plan9/
 doacme=1
-defaultwidth=512
-x=240
+defaultwidth=420
 imagelvl=0
