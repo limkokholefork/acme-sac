@@ -44,7 +44,7 @@ Dat : module {
 
 	EM_NORMAL, EM_RAW, EM_MASK : con iota;
 
-	Qdir,Qacme,Qcons,Qconsctl,Qdraw,Qeditout,Qindex,Qlabel,Qnew,QWaddr,QWbody,QWconsctl,QWctl,QWdata,QWeditout,QWevent,QWrdsel,QWwrsel,QWtag,QMAX : con iota;
+	Qdir,Qacme,Qcons,Qconsctl,Qdraw,Qeditout,Qindex,Qlabel,Qnew,QWaddr,QWbody,QWconsctl,QWctl,QWdata,QWedit,QWeditout,QWevent,QWrdsel,QWwrsel,QWtag,QMAX : con iota;
 
 	Blockincr : con 256;
 	Maxblock : con 8*1024;
