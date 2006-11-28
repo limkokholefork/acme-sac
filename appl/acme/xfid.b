@@ -27,7 +27,7 @@ Smsg0 : import Dat;
 TRUE, FALSE, XXX, BUFSIZE, MAXRPC : import Dat;
 EM_NORMAL, EM_RAW, EM_MASK : import Dat;
 Qdir, Qcons, Qlabel, Qindex, Qeditout : import Dat;
-QWaddr, QWdata, QWevent, QWconsctl, QWctl, QWbody, QWeditout, QWtag, QWrdsel, QWwrsel : import Dat;
+QWaddr, QWdata, QWevent, QWconsctl, QWctl, QWbody, QWedit, QWeditout, QWtag, QWrdsel, QWwrsel : import Dat;
 seq, cxfidfree, Lock, Ref, Range, Mntdir, Astring : import dat;
 error, warning, max, min, stralloc, strfree, strncmp : import utils;
 address : import regx;
@@ -197,17 +197,21 @@ Xfid.open(x : self ref Xfid)
 		w.lock('E');
 		q = FILE(x.f.qid);
 		case(q){
-		QWaddr or QWdata or QWevent =>
+		QWaddr =>
 			if(w.nopen[q]++ == byte 0){
-				if(q == QWaddr){
-					w.addr = (Range)(0,0);
-					w.limit = (Range)(-1,-1);
-				}
-				if(q==QWevent && !w.isdir && w.col!=nil){
+				w.addr = (Range)(0,0);
+				w.limit = (Range)(-1,-1);
+			}
+		QWdata or QWedit =>
+			w.nopen[q]++;
+			seq++;
+			t.file.mark();
+		QWevent =>
+			if(w.nopen[q]++ == byte 0)
+				if(!w.isdir && w.col!=nil){
 					w.filemenu = FALSE;
 					w.settag();
 				}
-			}
 		QWrdsel =>
 			#
 			# Use a temporary file.
@@ -301,12 +305,12 @@ Xfid.close(x : self ref Xfid)
 				w.ctlfid = ~0;
 				w.ctllock.unlock();
 			}
-		QWdata or QWaddr or QWevent =>	
+		QWdata or QWaddr or QWedit or QWevent =>	
 			# BUG: do we need to shut down Xfid?
-			if (q == QWdata)
+			if (q == QWdata || q == QWedit)
 				w.nomark = FALSE;
 			if(--w.nopen[q] == byte 0){
-				if(q == QWdata)
+				if(q == QWdata || q == QWedit)
 					w.nomark = FALSE;
 				if(q==QWevent && !w.isdir && w.col!=nil){
 					w.filemenu = TRUE;
@@ -489,6 +493,17 @@ Xfid.write(x : self ref Xfid)
 			break;
 		}
 		w.addr = a;
+		fc.count = count(x.fcall);
+		respond(x, fc, nil);
+	QWedit =>
+		r = string data(x.fcall);
+		nr = len r;
+		t = w.body;
+		w.commit(t);
+		if(w.nomark == FALSE)
+			seq++;
+		editm->editcmd(t, r, nr);
+		r = nil;
 		fc.count = count(x.fcall);
 		respond(x, fc, nil);
 	Qeditout or
