@@ -25,7 +25,7 @@ OFILES=\
 	runt.$O\
 	sign.$O\
 	stack.$O\
-	tk.$O\
+#	tk.$O\
 	validstk.$O\
 	xec.$O\
 	das-$OBJTYPE.$O\

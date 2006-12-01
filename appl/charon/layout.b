@@ -204,10 +204,10 @@ init(cu: CharonUtils)
 	J = cu->J;
 	B = cu->B;
 	display = G->display;
+
 	if((CU->config).doacme)
 		for(i := 0; i < len fonts; i++)
-			fonts[i] = ("/fonts/lucidasans/euro.8.font", nil, 0);
-
+			fonts[i] = Fontinfo("/fonts/lucidasans/euro.8.font", nil, 0);
 	# make sure default and control fonts are loaded
 	getfont(DefFnt);
 	fnt := fonts[DefFnt].f;
@@ -2023,6 +2023,8 @@ checkffsize(f: ref Frame, i: ref Item, ff: ref Formfield)
 
 drawall(f: ref Frame)
 {
+	if((CU->config).doacme)
+		return;		# in acme mode don't bother
 	oclipr := f.cim.clipr;
 	origin := f.lptosp(zp);
 	clipr := f.dirtyr.addpt(origin);
