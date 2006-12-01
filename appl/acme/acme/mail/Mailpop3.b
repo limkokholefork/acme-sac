@@ -9,7 +9,8 @@ include "pop3.m";
 include "acmewin.m";
 include "arg.m";
 	arg: Arg;
-
+include "encoding.m";
+	enc: Encoding;
 mailpop3 : module {
 	init : fn(ctxt : ref Draw->Context, argl : list of string);
 };
@@ -57,6 +58,7 @@ Mesg : adt {
 	isopen : int;
 	posted : int;
 	deleted : int;
+	encoding: string;
 
 	read : fn(b : ref Box) : ref Mesg;
 	open : fn(m : self ref Mesg);
@@ -548,7 +550,7 @@ main()
 timeslave(b : ref Box, c : chan of int)
 {
 	for(;;){
-		sleep(30*1000);
+		sleep(60*3*1000);
 		pop3open(1);
 		leng := pop3stat(b);
 		pop3close(1);
@@ -557,7 +559,7 @@ timeslave(b : ref Box, c : chan of int)
 	}
 }
 
-None,Unknown,Ignore,CC,From,ReplyTo,Sender,Subject,Re,To, Date, Received : con iota;
+None,Unknown,Ignore,CC,From,ReplyTo,Sender,Subject,Re,To, Date, Received, TransferEncoding : con iota;
 NHeaders : con 200;
 
 Hdrs : adt {
@@ -575,6 +577,7 @@ hdrs := array[NHeaders+1] of {
 	Hdrs ( "Re:",				Re ),
 	Hdrs ( "To:",				To ),
 	Hdrs ( "Date:",				Date),
+	Hdrs ("Content-Transfer-Encoding:", TransferEncoding),
  * => Hdrs ( "",					0 ),
 };
 
@@ -690,6 +693,10 @@ loop:
 		Date =>
 			m.date = mktime(s[5:]);
 			break;
+		TransferEncoding =>
+			m.encoding = s[26:];
+			if(m.encoding == " base64")
+				enc = load Encoding Encoding->BASE64PATH;
 		}
 		m.realhdr += s;
 		if(typex != Ignore && typex != Unknown)
@@ -698,6 +705,8 @@ loop:
 	# read body 
 	for(;;){
 		s = b.readline();
+		if(enc != nil)
+			s = string enc->dec(s);
 		n = len s;
 		if(n <= 0)
 			break;

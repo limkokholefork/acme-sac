@@ -95,6 +95,15 @@ init(ctxt: ref Draw->Context, cu: CharonUtils): ref Draw->Context
 	D = load Draw Draw->PATH;
 	CU = cu;
 	E = cu->E;
+	if((CU->config).doacme){
+		display=ctxt.display;
+		makewins();
+		progress = chan of Progressmsg;
+		pidc := chan of int;
+		spawn doacmeprogmon(pidc);
+		<- pidc;
+		return ctxt;
+	}
 	tk = load Tk Tk->PATH;
 	tkclient = load Tkclient Tkclient->PATH;
 	if(tkclient == nil)
@@ -109,10 +118,7 @@ init(ctxt: ref Draw->Context, cu: CharonUtils): ref Draw->Context
 	buttons := parsebuttons((CU->config).buttons);
 	winopts := parsewinopts((CU->config).framework);
 
-	if((CU->config).doacme)
-		(tktop, wmctl) = tkclient->toplevel(ctxt, "", (CU->config).wintitle, tkclient->Plain);
-	else
-		(tktop, wmctl) = tkclient->toplevel(ctxt, "", (CU->config).wintitle, buttons);
+	(tktop, wmctl) = tkclient->toplevel(ctxt, "", (CU->config).wintitle, buttons);
 
 	ctxt = tktop.ctxt.ctxt;
 	drawctxt = ctxt;
@@ -125,17 +131,10 @@ init(ctxt: ref Draw->Context, cu: CharonUtils): ref Draw->Context
 	tkcmds(tktop, framebinds);
 	w := (CU->config).defaultwidth;
 	h := (CU->config).defaultheight;
-	if((CU->config).doacme){
-		tk->cmd(tktop, ". configure -width " + string w + " -height " + string h);
-		tkupdate();
-#		tkclient->onscreen(tktop, "exact");
-#		tkclient->startinput(tktop, "ptr" :: nil);
-	}else{
-		tk->cmd(tktop, ". configure -width " + string w + " -height " + string h);
-		tk->cmd(tktop, "update");
-		tkclient->onscreen(tktop, nil);
-		tkclient->startinput(tktop, "kbd"::"ptr"::nil);
-	}
+	tk->cmd(tktop, ". configure -width " + string w + " -height " + string h);
+	tk->cmd(tktop, "update");
+	tkclient->onscreen(tktop, nil);
+	tkclient->startinput(tktop, "kbd"::"ptr"::nil);
 	makewins();
 	mask = display.opaque;
 	progress = chan of Progressmsg;
@@ -215,6 +214,14 @@ clientr(t: ref Tk->Toplevel, wname: string): Rect
 	w := int tk->cmd(t, wname + " cget -actwidth");
 	h := int tk->cmd(t, wname + " cget -actheight");
 	return Rect((x,y),(x+w,y+h));
+}
+
+doacmeprogmon(pidc: chan of int)
+{
+	pidc <-= sys->pctl(0, nil);
+	for (;;) {
+		<- progress;
+	}
 }
 
 progmon(pidc: chan of int)
@@ -393,11 +400,10 @@ s2mtype(s: string): int
 makewins()
 {
 	if((CU->config).doacme){
-	# TODO this is a crummy hack. The width should be taken from config
 		mainwin = display.newimage(Rect(display.image.r.min, ((CU->config).defaultwidth, display.image.r.max.y)), display.image.chans, 0, D->White);
 		return;
-	if(mainwin == nil)
-		CU->raisex(sys->sprint("EXFatal: can't initialize windows: %r"));
+		if(mainwin == nil)
+			CU->raisex(sys->sprint("EXFatal: can't initialize windows: %r"));
 	}
 	if(tktop.image == nil)
 		return;
@@ -416,22 +422,30 @@ makewins()
 
 hidewins()
 {
+	if((CU->config).doacme)
+		return;
 	tk->cmd(tktop, ". unmap");
 }
 
 snarfput(s: string)
 {
+	if((CU->config).doacme)
+		return;
 	tkclient->snarfput(s);
 }
 
 setstatus(s: string)
 {
+	if((CU->config).doacme)
+		return;
 	tk->cmd(tktop, ".status.status configure -text " + tk->quote(s));
 	tkupdate();
 }
 
 seturl(s: string)
 {
+	if((CU->config).doacme)
+		return;
 	tk->cmd(tktop, ".ctlf.url delete 0 end");
 	tk->cmd(tktop, ".ctlf.url insert 0 " + tk->quote(s));
 	tkupdate();
@@ -460,6 +474,8 @@ sys->print("CONFIRM:%s\n", msg);
 
 prompt(msg, nil: string): (int, string)
 {
+	if((CU->config).doacme)
+		return (-1, "");
 	if(dialog == nil){
 		dialog = load Dialog Dialog->PATH;
 		dialog->init();
@@ -470,6 +486,8 @@ prompt(msg, nil: string): (int, string)
 
 stopbutton(enable: int)
 {
+	if((CU->config).doacme)
+		return;
 	state: string;
 	if (enable) {
 		tk->cmd(tktop, ".ctlf.stop configure -bg red -activebackground red -activeforeground white");
@@ -484,6 +502,8 @@ stopbutton(enable: int)
 
 backbutton(enable: int)
 {
+	if((CU->config).doacme)
+		return;
 	state: string;
 	if (enable) {
 		tk->cmd(tktop, ".ctlf.back configure -bg lime -activebackground lime -activeforeground red");
@@ -498,6 +518,8 @@ backbutton(enable: int)
 
 fwdbutton(enable: int)
 {
+	if((CU->config).doacme)
+		return;
 	state: string;
 	if (enable) {
 		tk->cmd(tktop, ".ctlf.fwd  configure -bg lime -activebackground lime -activeforeground red");
@@ -512,6 +534,8 @@ fwdbutton(enable: int)
 
 flush(r: Rect)
 {
+	if((CU->config).doacme)
+		return;
 	if(realwin != nil) {
 		oclipr := mainwin.clipr;
 		mainwin.clipr = r;
@@ -523,6 +547,8 @@ flush(r: Rect)
 
 clientfocus()
 {
+	if((CU->config).doacme)
+		return;
 	tk->cmd(tktop, "focus .f");
 	tkupdate();
 }
@@ -543,31 +569,6 @@ tkupdate()
 getpopup(nil: Rect): ref Popup
 {
 	return nil;
-#	cancelpopup();
-##	img := screen.newwindow(r, D->White);
-#	img := display.newimage(r, screen.image.chans, 0, D->White);
-#	if (img == nil)
-#		return nil;
-#	winr := r.addpt(offset);	# race for offset
-#
-#	pos := "-x " + string winr.min.x + " -y " + string winr.min.y;
-#	(top, nil) := tkclient->toplevel(drawctxt, pos, nil, Tkclient->Plain);
-#	tk->namechan(top, gctl, "gctl");
-#	tk->cmd(top, "frame .f -bd 0 -bg white -width " + string r.dx() + " -height " + string r.dy());
-#	tkcmds(top, framebinds);
-#	tk->cmd(top, "pack .f; update");
-#	tkclient->onscreen(tktop, "onscreen");
-#	tkclient->startinput(tktop, "kbd"::"ptr"::nil);
-#	win := screen.newwindow(winr, D->Refbackup, D->White);
-#	if (win == nil)
-#		return nil;
-#	win.origin(r.min, winr.min);
-#
-#	popuptk = top;
-#	popup = ref Popup(r, img, win);
-## XXXX need to start a thread to feed mouse/kbd events from popup,
-## but we need to know when to tear it down.
-#	return popup;
 }
 
 cancelpopup(): int

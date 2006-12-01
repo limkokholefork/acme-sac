@@ -623,7 +623,7 @@ lookfile(s : string, n : int) : ref Window
 			w = c.w[i];
 			t = w.body;
 			k = len t.file.name;
-			if(k>0 && t.file.name[k-1] == '/')
+			if(k>1 && t.file.name[k-1] == '/')
 				k--;
 			if(t.file.name[0:k] == s[0:n]){
 				w = w.body.file.curtext.w;

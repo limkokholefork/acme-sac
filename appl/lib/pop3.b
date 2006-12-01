@@ -400,8 +400,6 @@ tlsreader(c : chan of (int, string))
 			continue;
 		}
 		lin[k++] = buf[0];
-		if(DEBUG)
-			sys->print("%c", int buf[0]);
 		if(int buf[0] == '\n'){
 			line := string lin[0:k];
 			if (DEBUG)

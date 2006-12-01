@@ -34,7 +34,9 @@ Textm : module {
 		redraw : fn(t : self ref Text, r : Draw->Rect, f : ref Draw->Font, b : ref Draw->Image, n : int);
 		insert : fn(t : self ref Text, n : int, s : string, p : int, q : int, r : int);
 		bsinsert : fn(t : self ref Text, n : int, s : string, p : int, q : int) : (int, int);
+		complete : fn(t : self ref Text): string;
 		delete : fn(t : self ref Text, n : int, p : int, q : int);
+		filewidth : fn(t: self ref Text, q0, oneelement: int): int;
 		loadx : fn(t : self ref Text, n : int, b : string, q : int) : int;
 		typex : fn(t : self ref Text, r : int, echomode : int);
 		select : fn(t : self ref Text, d : int);

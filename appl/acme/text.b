@@ -2,6 +2,7 @@ implement Textm;
 
 include "common.m";
 include "keyboard.m";
+include "complete.m";
 
 sys : Sys;
 utils : Utils;
@@ -17,8 +18,11 @@ filem : Filem;
 columnm : Columnm;
 windowm : Windowm;
 exec : Exec;
+lookx : Look;
+complete: Complete;
 
 Dir, sprint : import sys;
+dirname : import lookx;
 frgetmouse : import acme;
 min, warning, error, stralloc, strfree, isalnum : import utils;
 Frame, frinsert, frdelete, frptofchar, frcharofpt, frselect, frdrawsel, frdrawsel0, frtick : import framem;
@@ -121,6 +125,10 @@ init(mods : ref Dat->Mods)
 	columnm = mods.columnm;
 	windowm = mods.windowm;
 	exec = mods.exec;
+	lookx = mods.look;
+	
+	complete = load Complete Complete->PATH;
+	complete->init();
 }
 
 TABDIR : con 3;	# width of tabs in directory windows
@@ -674,6 +682,78 @@ Text.bswidth(t : self ref Text, c : int) : int
 	return t.q0-q;
 }
 
+Text.filewidth(t: self ref Text, q0, oneelement: int): int
+{
+	q: int;
+	r: int;
+	
+	q = q0;
+	while(q > 0){
+		r = t.readc(q-1);
+		if(r <= ' ')
+			break;
+		if(oneelement && r == '/')
+			break;
+		--q;
+	}
+	return q0-q;
+}
+
+Text.complete(t: self ref Text): string
+{
+
+	if(t.q0<t.file.buf.nc && t.readc(t.q0) > ' ')
+		return nil;
+	nstr := t.filewidth(t.q0, 1);
+	npath := t.filewidth(t.q0-nstr, 0);
+	
+	q := t.q0-nstr;
+	str := "";
+	path := "";
+	for(i:=0; i<nstr; i++)
+		str[i] = t.readc(q++);
+	q = t.q0-nstr-npath;
+	for(i=0; i<npath; i++)
+		path[i] = t.readc(q++);
+	n : int;
+	if(npath>0 && path[0]=='/')
+		dir:=path;
+	else{
+		(dir, n) = dirname(t, nil, 0);
+		if(len dir == 0)
+			dir = ".";
+		dir = dir + "/" + path;
+		(dir, nil) = lookx->cleanname(dir, len dir);
+	}
+	c := complete->complete(dir, str);
+	if(c == nil){
+		warning(nil, sprint("error attempting complete: %r\n"));
+		return nil;
+	}
+	if(!c.advance){
+		if(len dir > 0 && dir[len dir - 1] != '/')
+			s := "/";
+		else
+			s = "";
+		
+		if(c.nmatch)
+			match := "";
+		else
+			match = ": no matches in:";
+			
+		warning(nil, sprint("%s%s%s*%s\n",dir, s, str, match));
+		for(i=0; i<c.nfile; i++)
+			warning(nil, sprint(" %s\n", c.filename[i]));
+	}
+
+	if(c.advance)
+		return c.str;
+	else
+		return nil;
+	
+	return nil;
+}
+
 Text.typex(t : self ref Text, r : int, echomode : int)
 {
 	q0, q1 : int;
@@ -734,6 +814,11 @@ Text.typex(t : self ref Text, r : int, echomode : int)
 			else if(t.q1 != t.file.buf.nc)
 				t.show(t.q1+1, t.q1+1);
 			return;
+		16r06 or Keyboard->Ins =>
+			rp = t.complete();
+			if(rp == nil)
+				return;
+			break;
 		 16r10 or Keyboard->Home =>
 			t.commit(TRUE);
 			t.show(0,0);
