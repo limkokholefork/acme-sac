@@ -56,15 +56,15 @@ init(nil: ref Draw->Context, args: list of string)
 	}
 	sql = chan of string;
 	sqlwin = w := Win.wnew();
-	w.wname("/usr/" + getuser() + "/" + fullname + "@" + servername + "/guide");
+	w.wname("/usr/" + getuser() + "/sql/" + fullname + "/" + servername + "/guide");
 	w.wtagwrite("Run");
 	w.ctlwrite("get\n");
 	w.openbody(OWRITE);
 	spawn mainwin(w);
 	
 	w = resultwin = Win.wnew();
-	w.wname("/usr/" + getuser() + "/" + fullname + "@" + servername + "/+Errors");
-	w.wtagwrite("More Font Edit ,|table");
+	w.wname("/usr/" + getuser() + "/sql/" + fullname + "/" + servername + "/+Errors");
+	w.wtagwrite("More");
 	w.openbody(OWRITE);
 	outwin(w);
 }
