@@ -694,8 +694,8 @@ loop:
 			m.date = mktime(s[5:]);
 			break;
 		TransferEncoding =>
-			m.encoding = s[26:];
-			if(m.encoding == " base64")
+			m.encoding = s[27:];
+			if(len m.encoding >= 6 && m.encoding[0:6] == "base64")
 				enc = load Encoding Encoding->BASE64PATH;
 		}
 		m.realhdr += s;
@@ -705,13 +705,18 @@ loop:
 	# read body 
 	for(;;){
 		s = b.readline();
-		if(enc != nil)
-			s = string enc->dec(s);
 		n = len s;
 		if(n <= 0)
 			break;
+		if(enc != nil){
+			if(len s > 1 && s[len s - 1] == '\n')
+				s = s[:len s - 1];
+			if(len s > 1)
+				s = string enc->dec(s);
+		}
 		m.text += s;
 	}
+	enc = nil;
 	m.box = b;
 	return m;
 }

@@ -347,7 +347,7 @@ ncomp(s: string, t: string): int
 		if(is[--i] != '0')
 			return -ssgn;
 	while(j > 0)
-		if(it[--i] != '0')
+		if(it[--j] != '0')
 			return tsgn;
 	if(a)
 		return sgn(a)*ssgn;
