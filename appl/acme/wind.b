@@ -17,7 +17,7 @@ acme : Acme;
 
 sprint : import sys;
 FALSE, TRUE, XXX, Astring : import Dat;
-Reffont, reffont, Lock, Ref, button, modbutton : import dat;
+Reffont, reffont, Lock, Ref, button, modbutton, mouse : import dat;
 Point, Rect, Image : import drawm;
 min, max, error, warning, stralloc, strfree : import utils;
 font, draw : import graph;
@@ -129,16 +129,54 @@ Window.init(w : self ref Window, clone : ref Window, r : Rect)
 	}
 }
 
+taglines(w: ref Window, r: Rect): int
+{
+	if(!w.tagexpand)
+		return 1;
+	w.tag.frame.noredraw = 1;
+	w.tag.reshape(r);
+	w.tag.frame.noredraw = 0;
+
+	if(w.tag.frame.nlines >= w.tag.frame.maxlines)
+		return w.tag.frame.maxlines;
+	rune := ref Astring;
+	n := w.tag.frame.nlines;
+	w.tag.file.buf.read(w.tag.file.buf.nc - 1, rune, 0, 1);
+	if(rune.s[0] == '\n')
+		n++;
+	return n;
+}
+
 Window.reshape(w : self ref Window, r : Rect, safe : int) : int
 {
 	r1, br : Rect;
-	y : int;
+	y, oy : int;
+	tagresized, mouseintag : int;
 	b : ref Image;
+	p : Point;
+
+	w.tagtop = r;
+	w.tagtop.max.y = r.min.y+font.height;
+	
+# TAG If necessary, recompute the number of lines that should
+# be in the tag;
 
 	r1 = r;
-	r1.max.y = r1.min.y + font.height;
+	r1.max.y = min(r.max.y, r1.min.y + w.taglines*font.height);
 	y = r1.max.y;
-	if(!safe || !w.tag.frame.r.eq(r1)){
+	mouseintag = mouse.xy.in(w.tag.all);
+	if(!safe || !w.tagsafe || ! w.tag.all.eq(r1)){
+		w.taglines = taglines(w, r);
+		w.tagsafe = TRUE;
+	}
+# END TAG
+
+	r1 = r;
+	r1.max.y = min(r.max.y, r1.min.y + w.taglines*font.height);
+	y = r1.max.y;
+	tagresized = 0;
+	if(1 || !safe || !w.tag.frame.r.eq(r1)){
+		tagresized = 1;
 		y = w.tag.reshape(r1);
 		b = button;
 		if(w.body.file.mod && !w.isdir && !w.isscratch)
@@ -147,26 +185,34 @@ Window.reshape(w : self ref Window, r : Rect, safe : int) : int
 		br.max.x = br.min.x + b.r.dx();
 		br.max.y = br.min.y + b.r.dy();
 		draw(mainwin, br, b, nil, b.r.min);
+# TAG
+		if(mouseintag && !mouse.xy.in(w.tag.all)){
+			p = mouse.xy;
+			p.y = w.tag.all.max.y-3;
+			graph->cursorset(p);
+		}
+# END TAG
 	}
-	if(!safe || !w.body.frame.r.eq(r1)){
-		if(y+1+font.height > r.max.y){		# no body 
+	
+	r1 = r;
+	r1.min.y = y;
+	if(tagresized || !safe || !w.body.frame.r.eq(r1)){
+		oy = y;
+		if(y+1+w.body.frame.font.height <= r.max.y ){ # no body was > r.max.y
+			r1.min.y = y;
+			r1.max.y = y + 1;
+			draw(mainwin, r1, tagcols[BORD], nil, (0, 0));
+			y++;
+			r1.min.y = min(y, r.max.y);
+			r1.max.y = r.max.y;
+		}else{
 			r1.min.y = y;
 			r1.max.y = y;
-			w.body.reshape(r1);
-			w.r = r;
-			w.r.max.y = y;
-			return y;
 		}
-		r1 = r;
-		r1.min.y = y;
-		r1.max.y = y + 1;
-		draw(mainwin, r1, tagcols[BORD], nil, (0, 0));
-		r1.min.y = y + 1;
-		r1.max.y = r.max.y;
-		y = w.body.reshape(r1);
 		w.r = r;
-		w.r.max.y = y;
+		w.r.max.y = w.body.reshape(r1);
 		scrdraw(w.body);
+		w.body.all.min.y = oy;
 	}
 	w.maxlines = min(w.body.frame.nlines, max(w.maxlines, w.body.frame.maxlines));
 	return w.r.max.y;
