@@ -43,6 +43,10 @@ Windowm : module {
 		utflastqid : int;
 		utflastboff : int;
 		utflastq : int;
+		tagsafe : int;
+		tagexpand : int;
+		taglines : int;
+		tagtop : Draw->Rect;
 
 		init : fn(w : self ref Window, w0 : ref Window, r : Draw->Rect);
 		lock : fn(w : self ref Window, n : int);

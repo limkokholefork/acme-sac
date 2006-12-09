@@ -334,7 +334,7 @@ xfrredraw(f : ref Frame, pt : Point)
 	for(nb = 0; nb < f.nbox; nb++) {
 		b := f.box[nb];
 		pt = xfrcklinewrap(f, pt, b);
-		if(b.nrune >= 0)
+		if(!f.noredraw && b.nrune >= 0)
 			graph->stringx(f.b, pt, f.font, b.ptr, f.cols[TEXT]);
 		pt.x += b.wid;
 	}

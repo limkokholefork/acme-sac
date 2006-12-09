@@ -1,5 +1,5 @@
-mount -ac {mntgen} /n
 runas inferno {
+	mount -ac {mntgen} /n
 	bind -c /dis /dis
 	load std
 	prompt='% ' ''

@@ -8,6 +8,5 @@ DIRS=\
 	lib\
 	math\
 	svc\
-	wm\
 
 <$ROOT/mkfiles/mksubdirs

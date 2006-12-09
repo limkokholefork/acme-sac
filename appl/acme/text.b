@@ -772,11 +772,46 @@ Text.typex(t : self ref Text, r : int, echomode : int)
 		}
 		return;
 	}
-	if(t.what!=Body && r=='\n')
+
+#TAG
+# Used to disallow \n in tag here.
+# Also if typing in tag, mark that resize might be necessary.
+
+	if(t.what!=Body && t.what != Tag && r=='\n')
 		return;
+	if(t.what == Tag)
+		t.w.tagsafe = FALSE;
+# END TAG
+
+	if(t.what == Tag)
+	case(r){
+		Keyboard->Down or Kscrolldown=>
+			if(t.what == Tag){
+				if(!t.w.tagexpand){
+					t.w.tagexpand = TRUE;
+					t.w.reshape(t.w.r, FALSE);
+				}
+				return;
+			}
+		Keyboard->Up or Kscrollup =>
+			if(t.what == Tag){
+				if(t.w.tagexpand){
+					t.w.tagexpand = FALSE;
+					t.w.taglines = 1;
+					p := mouse.xy;
+					if(p.in(t.w.tag.all)
+						&& !p.in(t.w.tagtop)){
+						p.y = t.w.tagtop.min.y = t.w.tagtop.dy()/2;
+						graph->cursorset(p);
+					}
+					t.w.reshape(t.w.r, FALSE);
+				}
+				return;
+			}
+	}
+	
 	case(r){
 		Kscrolldown=>
-			#TODO: implement Tag policy here
 			if(t.what != Body)
 				return;
 			n = 2;
