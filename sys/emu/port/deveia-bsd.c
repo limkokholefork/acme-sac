@@ -33,8 +33,7 @@ rdxtra(int port, struct termios *ts, char *str)
 {
 	int fd = eia[port].fd;
 	int line;
-	char err[ERRMAX];
-	struct flagmap *lp;
+//	struct flagmap *lp;
 	char *s = str;
 
 	USED(ts);

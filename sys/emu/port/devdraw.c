@@ -1978,6 +1978,18 @@ drawlsetrefresh(ulong qidpath, int id, void *reffn, void *refx)
 }
 
 void
+drawqlock(void)
+{
+	qlock(&sdraw.q);
+}
+
+void
+drawqunlock(void)
+{
+	qunlock(&sdraw.q);
+}
+
+void
 drawxflush(Rectangle r)	/* used by X11 only */
 {
 	qlock(&sdraw.q);
