@@ -69,6 +69,8 @@ Window.init(w : self ref Window, clone : ref Window, r : Rect)
 	w.refx = Ref.init();
 	w.tag = textm->newtext();
 	w.tag.w = w;
+	w.taglines = 1;
+	w.tagexpand = TRUE;
 	w.body = textm->newtext();
 	w.body.w = w;
 	w.id = ++winid;
@@ -76,6 +78,10 @@ Window.init(w : self ref Window, clone : ref Window, r : Rect)
 	w.ctlfid = ~0;
 	w.utflastqid = -1;
 	r1 = r;
+	
+	w.tagtop = r;
+	w.tagtop.max.y = r.min.y + font.height;
+	
 	r1.max.y = r1.min.y + font.height;
 	reffont.r.inc();
 	f = dummy.addtext(w.tag);
@@ -94,7 +100,7 @@ Window.init(w : self ref Window, clone : ref Window, r : Rect)
 		w.tag.setselect(nc, nc);
 	}
 	r1 = r;
-	r1.min.y += font.height + 1;
+	r1.min.y += w.taglines*font.height + 1;
 	if(r1.max.y < r1.min.y)
 		r1.max.y = r1.min.y;
 	f = nil;
@@ -134,7 +140,7 @@ taglines(w: ref Window, r: Rect): int
 	if(!w.tagexpand)
 		return 1;
 	w.tag.frame.noredraw = 1;
-	w.tag.reshape(r);
+	w.tag.reshape(r, TRUE);
 	w.tag.frame.noredraw = 0;
 
 	if(w.tag.frame.nlines >= w.tag.frame.maxlines)
@@ -147,7 +153,7 @@ taglines(w: ref Window, r: Rect): int
 	return n;
 }
 
-Window.reshape(w : self ref Window, r : Rect, safe : int) : int
+Window.reshape(w : self ref Window, r : Rect, safe : int, keepextra: int) : int
 {
 	r1, br : Rect;
 	y, oy : int;
@@ -175,9 +181,10 @@ Window.reshape(w : self ref Window, r : Rect, safe : int) : int
 	r1.max.y = min(r.max.y, r1.min.y + w.taglines*font.height);
 	y = r1.max.y;
 	tagresized = 0;
-	if(1 || !safe || !w.tag.frame.r.eq(r1)){
+	if(1|| !safe || !w.tag.frame.r.eq(r1)){
 		tagresized = 1;
-		y = w.tag.reshape(r1);
+		w.tag.reshape(r1, TRUE);
+		y = w.tag.frame.r.max.y;
 		b = button;
 		if(w.body.file.mod && !w.isdir && !w.isscratch)
 			b = modbutton;
@@ -210,7 +217,7 @@ Window.reshape(w : self ref Window, r : Rect, safe : int) : int
 			r1.max.y = y;
 		}
 		w.r = r;
-		w.r.max.y = w.body.reshape(r1);
+		w.r.max.y = w.body.reshape(r1, keepextra);
 		scrdraw(w.body);
 		w.body.all.min.y = oy;
 	}
@@ -453,7 +460,9 @@ Window.settag1(w : self ref Window)
 		if(w.body.file.seq == 0)
 			new += " Look ";
 	}
+	resize := 0;
 	if(new != old.s[0:k]){
+		resize = 1;
 		n = k;
 		if(n > len new)
 			n = len new;
@@ -492,6 +501,10 @@ Window.settag1(w : self ref Window)
 	br.max.x = br.min.x + b.r.dx();
 	br.max.y = br.min.y + b.r.dy();
 	draw(mainwin, br, b, nil, b.r.min);
+	if(resize){
+		w.tagsafe = 0;
+		w.reshape(w.r, TRUE, TRUE);
+	}
 }
 
 Window.commit(w : self ref Window, t : ref Text)

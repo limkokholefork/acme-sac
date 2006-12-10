@@ -695,6 +695,7 @@ loop:
 			break;
 		TransferEncoding =>
 			m.encoding = s[27:];
+#			sys->print("%s", m.encoding);
 			if(len m.encoding >= 6 && m.encoding[0:6] == "base64")
 				enc = load Encoding Encoding->BASE64PATH;
 		}
@@ -716,6 +717,7 @@ loop:
 		}
 		m.text += s;
 	}
+	sys->print("END");
 	enc = nil;
 	m.box = b;
 	return m;

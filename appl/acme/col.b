@@ -112,7 +112,7 @@ Column.add(c : self ref Column, w : ref Window, clone : ref Window, y : int) : r
 		r1 = r;
 		y = min(y, t-(v.tag.frame.font.height+v.body.frame.font.height+Border+1));
 		r1.max.y = min(y, v.body.frame.r.min.y+v.body.frame.nlines*v.body.frame.font.height);
-		r1.min.y = v.reshape(r1, FALSE);
+		r1.min.y = v.reshape(r1, FALSE, FALSE);
 		r1.max.y = r1.min.y+Border;
 		draw(mainwin, r1, black, nil, (0, 0));
 		r.min.y = r1.max.y;
@@ -124,7 +124,7 @@ Column.add(c : self ref Column, w : ref Window, clone : ref Window, y : int) : r
 		w.init(clone, r);
 	}else{
 		w.col = c;
-		w.reshape(r, FALSE);
+		w.reshape(r, FALSE, TRUE);
 	}
 	w.tag.col = c;
 	w.tag.row = c.row;
@@ -187,7 +187,7 @@ Column.close(c : self ref Column, w : ref Window, dofree : int)
 	}
 	draw(mainwin, r, textcols[BACK], nil, (0, 0));
 	if(c.safe)
-		w.reshape(r, FALSE);
+		w.reshape(r, FALSE, TRUE);
 }
 
 Column.closeall(c : self ref Column)
@@ -222,7 +222,7 @@ Column.reshape(c : self ref Column, r : Rect)
 	clearmouse();
 	r1 = r;
 	r1.max.y = r1.min.y + c.tag.frame.font.height;
-	c.tag.reshape(r1);
+	c.tag.reshape(r1, TRUE);
 	draw(mainwin, c.tag.scrollr, colbutton, nil, colbutton.r.min);
 	r1.min.y = r1.max.y;
 	r1.max.y += Border;
@@ -239,7 +239,7 @@ Column.reshape(c : self ref Column, r : Rect)
 		r2.max.y = r2.min.y+Border;
 		draw(mainwin, r2, black, nil, (0, 0));
 		r1.min.y = r2.max.y;
-		r1.min.y = w.reshape(r1, FALSE);
+		r1.min.y = w.reshape(r1, FALSE, i==c.nw-1);
 	}
 	c.r = r;
 }
@@ -322,7 +322,7 @@ Column.sort(c : self ref Column)
 		r1.max.y = r1.min.y+Border;
 		draw(mainwin, r1, black, nil, (0, 0));
 		r.min.y = r1.max.y;
-		y = w.reshape(r, FALSE);
+		y = w.reshape(r, FALSE, i==c.nw-1);
 	}
 	rp = nil;
 	c.w = wp;
@@ -348,7 +348,7 @@ Column.grow(c : self ref Column, w : ref Window, but : int, mv : int)
 			r.max.y = cr.max.y;
 		else
 			r.max.y = c.w[i+1].r.min.y;
-		w.reshape(r, FALSE);
+		w.reshape(r, FALSE, TRUE);
 		return;
 	}
 	cr.min.y = c.w[0].r.min.y;
@@ -359,7 +359,7 @@ Column.grow(c : self ref Column, w : ref Window, but : int, mv : int)
 			c.w[i] = v;
 		}
 		draw(mainwin, cr, textcols[BACK], nil, (0, 0));
-		w.reshape(cr, FALSE);
+		w.reshape(cr, FALSE, TRUE);
 		for(i=1; i<c.nw; i++)
 			c.w[i].body.frame.maxlines = 0;
 		c.safe = FALSE;
@@ -419,7 +419,7 @@ Column.grow(c : self ref Column, w : ref Window, but : int, mv : int)
 			r.max.y += 1 + nl[j]*v.body.frame.font.height;
 		if(!c.safe || !v.r.eq(r)){
 			draw(mainwin, r, textcols[BACK], nil, (0, 0));
-			v.reshape(r, c.safe);
+			v.reshape(r, c.safe, FALSE);
 		}
 		r.min.y = v.r.max.y;
 		r.max.y += Border;
@@ -450,7 +450,7 @@ Column.grow(c : self ref Column, w : ref Window, but : int, mv : int)
 	# draw window 
 	if(!c.safe || !w.r.eq(r)){
 		draw(mainwin, r, textcols[BACK], nil, (0, 0));
-		w.reshape(r, c.safe);
+		w.reshape(r, c.safe, TRUE);
 	}
 	if(i < c.nw-1){
 		r.min.y = r.max.y;
@@ -470,7 +470,7 @@ Column.grow(c : self ref Column, w : ref Window, but : int, mv : int)
 			r.max.y += 1 + nl[j]*v.body.frame.font.height;
 		if(!c.safe || !v.r.eq(r)){
 			draw(mainwin, r, textcols[BACK], nil, (0, 0));
-			v.reshape(r, c.safe);
+			v.reshape(r, c.safe, j+1==c.nw);
 		}
 		if(j < c.nw-1){	# no border on last window 
 			r.min.y = v.r.max.y;
@@ -517,6 +517,9 @@ Column.dragwin(c : self ref Column, w : ref Window, but : int)
 	if (i == c.nw)
 		error("can't find window");
 
+# TAG
+#	w.taglines = 1;
+# END TAG
 	p = mouse.xy;
 	if(abs(p.x-op.x)<5 && abs(p.y-op.y)<5){
 		c.grow(w, but, 1);
@@ -559,7 +562,7 @@ Column.dragwin(c : self ref Column, w : ref Window, but : int)
 	}
 	if(!r.eq(v.r)){
 		draw(mainwin, r, textcols[BACK], nil, (0, 0));
-		v.reshape(r, c.safe);
+		v.reshape(r, c.safe, FALSE);
 	}
 	r.min.y = v.r.max.y;
 	r.max.y = r.min.y+Border;
@@ -572,7 +575,7 @@ Column.dragwin(c : self ref Column, w : ref Window, but : int)
 	# r.max.y = w.r.max.y;
 	if(!r.eq(w.r)){
 		draw(mainwin, r, textcols[BACK], nil, (0, 0));
-		w.reshape(r, c.safe);
+		w.reshape(r, c.safe, TRUE);
 	}
 	c.safe = TRUE;
     	w.mousebut();

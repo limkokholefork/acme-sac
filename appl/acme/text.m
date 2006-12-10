@@ -50,7 +50,7 @@ Textm : module {
 		setorigin : fn(t : self ref Text, p : int, q : int);
 		readc : fn(t : self ref Text, n : int) : int;
 		reset : fn(t : self ref Text);
-		reshape : fn(t : self ref Text, r : Draw->Rect) : int;
+		reshape : fn(t : self ref Text, r : Draw->Rect, keepextra: int) : int;
 		close : fn(t : self ref Text);
 		framescroll : fn(t : self ref Text, n : int);
 		select23 : fn(t : self ref Text, p : int, q : int, i, it : ref Draw->Image, n : int) : (int, int, int);

@@ -173,7 +173,7 @@ Text.redraw(t : self ref Text, r : Rect, f : ref Draw->Font, b : ref Image, odx 
 {
 	framem->frinit(t.frame, r, f, b, t.frame.cols);
 	rr := t.frame.r;
-	rr.min.x -= Scrollwid;	# back fill to scroll bar
+	rr.min.x -= Scrollwid+Scrollgap;	# back fill to scroll bar
 	draw(t.frame.b, rr, t.frame.cols[Framem->BACK], nil, (0, 0));
 	# use no wider than 3-space tabs in a directory
 	maxt := dat->maxtab;
@@ -184,10 +184,6 @@ Text.redraw(t : self ref Text, r : Rect, f : ref Draw->Font, b : ref Image, odx 
 			maxt = t.tabstop;
 	}
 	t.frame.maxtab = maxt*charwidth(f, '0');
-	# c = '0';
-	# if(t.what==Body && t.w!=nil && t.w.isdir)
-	#	c = ' ';
-	# t.frame.maxtab = Dat->Maxtab*charwidth(f, c);
 	if(t.what==Body && t.w.isdir && odx!=t.all.dx()){
 		if(t.frame.maxlines > 0){
 			t.reset();
@@ -200,24 +196,26 @@ Text.redraw(t : self ref Text, r : Rect, f : ref Draw->Font, b : ref Image, odx 
 	}
 }
 
-Text.reshape(t : self ref Text, r : Rect) : int
+Text.reshape(t : self ref Text, r : Rect, keepextra: int) : int
 {
-	odx : int;
-
-	if(r.dy() > 0)
-		r.max.y -= r.dy()%t.frame.font.height;
-	else
+	if(r.dy() <= 0)
 		r.max.y = r.min.y;
-	odx = t.all.dx();
+	if(!keepextra)
+		r.max.y -= r.dy()%t.frame.font.height;
 	t.all = r;
 	t.scrollr = r;
 	t.scrollr.max.x = r.min.x+Scrollwid;
 	t.lastsr = dat->nullrect;
 	r.min.x += Scrollwid+Scrollgap;
 	framem->frclear(t.frame, 0);
-	# t.redraw(r, t.frame.font, t.frame.b, odx);
-	t.redraw(r, t.frame.font, mainwin, odx);
-	return r.max.y;
+	t.redraw(r, t.frame.font, mainwin, t.all.dx());
+	if(keepextra && t.frame.r.max.y < t.all.max.y){
+		r.min.x -= Scrollgap;
+		r.min.y = t.frame.r.max.y;
+		r.max.y = t.all.max.y;
+		mainwin.draw(r, t.frame.cols[BACK], nil, (0,0));
+	}
+	return t.all.max.y;
 }
 
 Text.close(t : self ref Text)
@@ -430,7 +428,7 @@ Text.loadx(t : self ref Text, q0 : int, file : string, setqid : int) : int
 			if(u != t){
 				if(u.org > u.file.buf.nc)	# will be 0 because of reset(), but safety first 
 					u.org = 0;
-				u.reshape(u.all);
+				u.reshape(u.all, TRUE);
 				u.backnl(u.org, 0);	# go to beginning of line 
 			}
 			u.setselect(q0, q0);
@@ -786,28 +784,24 @@ Text.typex(t : self ref Text, r : int, echomode : int)
 	if(t.what == Tag)
 	case(r){
 		Keyboard->Down or Kscrolldown=>
-			if(t.what == Tag){
-				if(!t.w.tagexpand){
-					t.w.tagexpand = TRUE;
-					t.w.reshape(t.w.r, FALSE);
-				}
-				return;
+			if(!t.w.tagexpand){
+				t.w.tagexpand = TRUE;
+				t.w.reshape(t.w.r, FALSE, TRUE);
 			}
+			return;
 		Keyboard->Up or Kscrollup =>
-			if(t.what == Tag){
-				if(t.w.tagexpand){
-					t.w.tagexpand = FALSE;
-					t.w.taglines = 1;
-					p := mouse.xy;
-					if(p.in(t.w.tag.all)
-						&& !p.in(t.w.tagtop)){
-						p.y = t.w.tagtop.min.y = t.w.tagtop.dy()/2;
-						graph->cursorset(p);
-					}
-					t.w.reshape(t.w.r, FALSE);
+			if(t.w.tagexpand){
+				t.w.tagexpand = FALSE;
+				t.w.taglines = 1;
+				p := mouse.xy;
+				if(p.in(t.w.tag.all)
+					&& !p.in(t.w.tagtop)){
+					p.y = t.w.tagtop.min.y = t.w.tagtop.dy()/2;
+					graph->cursorset(p);
 				}
-				return;
+				t.w.reshape(t.w.r, FALSE, TRUE);
 			}
+			return;
 	}
 	
 	case(r){
@@ -999,6 +993,15 @@ if(0)	# DEBUGGING
 			u.cq0 = t.q0;
 		else if(t.q0 != u.cq0+u.ncache)
 			error("text.type cq1");
+		
+		# Change the tag before we add to ncache,
+		# so that if the window body is resized the
+		# commit will not find anything in ncache.
+		if(u.what==Body && u.ncache == 0){
+#			u.needundo = TRUE;
+#			t.w.settag();
+#			u.needundo=FALSE;
+		}
 		u.insert(t.q0, rp, len rp, FALSE, echomode);
 		if(u != t)
 			u.setselect(u.q0, u.q1);

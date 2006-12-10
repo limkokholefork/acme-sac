@@ -162,7 +162,7 @@ Row.reshape(row : self ref Row, r : Rect)
 	row.r = r;
 	r1 = r;
 	r1.max.y = r1.min.y + font.height;
-	row.tag.reshape(r1);
+	row.tag.reshape(r1, TRUE);
 	r1.min.y = r1.max.y;
 	r1.max.y += Border;
 	draw(mainwin, r1, black, nil, (0, 0));
@@ -328,6 +328,16 @@ Row.typex(row : self ref Row, r : int, p : Point) : ref Text
 		else{
 			w.lock('K');
 			w.typex(t, r);
+# TAG If we typed in the tag, might need to make it
+# bigger to show text.  \n causes tag to expand.
+			if(t.what == Tag){
+				t.w.tagsafe = FALSE;
+				if(r == '\n'){
+					t.w.tagexpand = TRUE;
+					w.reshape(w.r, TRUE, TRUE);
+				}
+			}
+# END TAG
 			w.unlock();
 		}
 	}
