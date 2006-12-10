@@ -1,0 +1,100 @@
+load arg
+
+fn awk {
+	os awk $*
+}
+
+fn file2url {
+	sysname:=`{cat /dev/sysname}
+	url:='http://'$sysname
+	for (i in $*) {
+		f := `{cleanname -d `pwd $i}
+		echo $f  |sed 's@/n/d@file:///D:@
+s@/services/httpd/root@'^$url^'@'
+	}
+}
+
+fn file2host {
+	for (i in $*) {
+		f := `{cleanname -d `pwd $i}
+		echo $f  |sed 's@/n/d@D:@
+				s@/n/h@file:///H:@
+				s@/n/c@file:///C:@'
+	}
+}
+
+fn 9c {
+	load arg
+	args := $*
+	flags=''
+	(arg
+		I+ {flags = $flags  -I ^ `{file2root $arg}}
+		D+ {flags = $flags -$opt ^ $arg}
+		'*' {echo unknown option $opt}
+		- $args
+	)
+	cwd=`{echo $emuroot ^ `pwd}
+	cflags=(
+		-O2
+		-c
+		-Wall
+		-Wno-parentheses
+		-Wno-missing-braces
+		-Wno-switch
+		-Wno-comment
+		-Wno-sign-compare
+		-Wno-unknown-pragmas
+		-fno-omit-frame-pointer
+		-I$cwd
+		-I$emuroot/sys/Linux/386/include
+		-I$emuroot/sys/include
+		-I$emuroot/sys/libinterp
+		-I$emuroot/sys/emu/port)
+	file=$1
+	ofile = `{basename $file .c}
+	ofile = `{echo $emuroot ^ `{cleanname -d `pwd $ofile^.o}}
+	file=`{cleanname -d `pwd $file}
+	file=`{echo $emuroot ^ $file}
+	cmd = `{echo os gcc -o $ofile $cflags $file }
+#	echo $cmd
+#	$cmd
+	os `{echo gcc -o $ofile $cflags $flags $file }
+}
+
+fn 9l {
+	ld=gcc
+	ldflags=( )
+	syslibs=( -lm -lX11 -lXext)
+	
+#	file=$1
+#	file=`{cleanname -d `pwd $file}
+#	file=`{echo $emuroot ^ $file}
+	args = $*
+	echo os $ld $ldflags  `{file2root $args} $syslibs
+	os `{echo $ld $ldflags  `{file2root $args} $syslibs }
+}
+
+fn file2root {
+	args = $*
+	for (i in $args) {
+		i = `{cleanname -d `pwd $i}
+		echo $emuroot ^ $i 
+	}
+}
+
+fn 9ar {
+	ar=ar
+	cwd=`{echo $emuroot ^ `pwd }
+	arflags=
+	file=$1
+	file=`{cleanname -d `pwd $file}
+	file=`{echo $emuroot ^ $file }
+	args = ${tl $*}
+#	echo os $ar $arflags $file  `{file2root $args}
+	os `{echo ar -r $arflags $file `{file2root $args}}
+}
+
+fn svn {
+	args = ${tl $*}
+	os svn $1 `{file2root $args}
+}
