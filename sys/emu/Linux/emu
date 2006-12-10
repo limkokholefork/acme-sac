@@ -17,6 +17,7 @@ dev
 	draw
 	pointer
 	snarf
+	wmsz
 
 	ip	ipif-posix ipaux
 	eia
@@ -25,7 +26,7 @@ dev
 
 lib
 	interp
-	tk
+#	tk
 #	freetype
 	math
 	draw
@@ -43,7 +44,7 @@ link
 mod
 	sys
 	draw
-	tk
+#	tk
 	math
 	srv	srv
 	keyring

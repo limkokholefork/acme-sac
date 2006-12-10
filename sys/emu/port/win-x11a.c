@@ -91,6 +91,7 @@ static int 		infernobtox11[256]; /* Values for mapping between */
 static int		triedscreen;
 static XDrawable		xdrawable;
 static void		xexpose(XEvent*);
+static void		xresize(XEvent*);
 static void		xmouse(XEvent*);
 static void		xkeyboard(XEvent*);
 static void		xsetcursor(XEvent*);
@@ -500,6 +501,7 @@ xproc(void *arg)
 		xselect(&event, xd);
 		xmouse(&event);
 		xexpose(&event);
+		xresize(&event);
 		xdestroy(&event);
 	}
 }
@@ -937,6 +939,20 @@ creategc(XDrawable d)
 	gcv.function = GXcopy;
 	gcv.graphics_exposures = False;
 	return XCreateGC(xdisplay, d, GCFunction|GCGraphicsExposures, &gcv);
+}
+
+static void
+xresize(XEvent *e)
+{
+	int width, height;
+	XConfigureEvent *xe;
+
+	if(e->type != ConfigureNotify)
+		return;
+	xe = (XConfigureEvent*)e;
+	width = xe->width;
+	height = xe->height;
+	wmtrack(0, width, height, 0);
 }
 
 static void
