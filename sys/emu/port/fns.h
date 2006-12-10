@@ -56,6 +56,8 @@ Walkqid*	devwalk(Chan*, Chan*, char**, int, Dirtab*, int, Devgen*);
 void		disfault(void*, char*);
 void		disinit(void*);
 int		domount(Chan**, Mhead**);
+void	drawqlock(void);
+void	drawqunlock(void);
 Fgrp*	dupfgrp(Fgrp*);
 void		egrpcpy(Egrp*, Egrp*);
 int		emptystr(char*);

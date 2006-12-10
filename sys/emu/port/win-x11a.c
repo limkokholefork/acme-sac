@@ -12,91 +12,51 @@
 #define _GNU_SOURCE 1
 #include "dat.h"
 #include "fns.h"
+#undef log2
+#include <draw.h>
 #include "cursor.h"
 #include "keyboard.h"
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
 
+#define Colormap	XColormap
+#define Cursor		XCursor
+#define Display		XDisplay
+#define Drawable	XDrawable
+#define Font		XFont
+#define GC		XGC
+#define Point		XPoint
+#define Rectangle	XRectangle
+#define Screen		XScreen
+#define Visual		XVisual
+#define Window		XWindow
+
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
 #include <X11/Xutil.h>
 #include <X11/keysym.h>
+#include <X11/extensions/XShm.h>
 
 #include "keysym2ucs.h"
 
+#undef Colormap
+#undef Cursor
+#undef Display
+#undef XDrawable
+#undef Font
+#undef GC
+#undef Point
+#undef Rectangle
+#undef Screen
+#undef Visual
+#undef Window
+
 #include <sys/ipc.h>
 #include <sys/shm.h>
-#include <X11/extensions/XShm.h>
-
-/*
- * image channel descriptors - copied from draw.h as it clashes with Linux header files on many things
- */
-enum {
-	CRed = 0,
-	CGreen,
-	CBlue,
-	CGrey,
-	CAlpha,
-	CMap,
-	CIgnore,
-	NChan,
-};
-
-#define __DC(type, nbits)	((((type)&15)<<4)|((nbits)&15))
-#define CHAN1(a,b)	__DC(a,b)
-#define CHAN2(a,b,c,d)	(CHAN1((a),(b))<<8|__DC((c),(d)))
-#define CHAN3(a,b,c,d,e,f)	(CHAN2((a),(b),(c),(d))<<8|__DC((e),(f)))
-#define CHAN4(a,b,c,d,e,f,g,h)	(CHAN3((a),(b),(c),(d),(e),(f))<<8|__DC((g),(h)))
-
-#define NBITS(c) ((c)&15)
-#define TYPE(c) (((c)>>4)&15)
-
-enum {
-	GREY1	= CHAN1(CGrey, 1),
-	GREY2	= CHAN1(CGrey, 2),
-	GREY4	= CHAN1(CGrey, 4),
-	GREY8	= CHAN1(CGrey, 8),
-	CMAP8	= CHAN1(CMap, 8),
-	RGB15	= CHAN4(CIgnore, 1, CRed, 5, CGreen, 5, CBlue, 5),
-	RGB16	= CHAN3(CRed, 5, CGreen, 6, CBlue, 5),
-	RGB24	= CHAN3(CRed, 8, CGreen, 8, CBlue, 8),
-	RGBA32	= CHAN4(CRed, 8, CGreen, 8, CBlue, 8, CAlpha, 8),
-	ARGB32	= CHAN4(CAlpha, 8, CRed, 8, CGreen, 8, CBlue, 8),	/* stupid VGAs */
-	XRGB32  = CHAN4(CIgnore, 8, CRed, 8, CGreen, 8, CBlue, 8),
-};
 
 static int displaydepth;
 extern ulong displaychan;
-
-/*
- * alias defs for image types to overcome name conflicts
- */
-typedef struct ICursor		ICursor;
-typedef struct IPoint		IPoint;
-typedef struct IRectangle	IRectangle;
-typedef struct CRemapTbl	CRemapTbl;
-struct ICursor
-{
-	int	w;
-	int	h;
-	int	hotx;
-	int	hoty;
-	char	*src;
-	char	*mask;
-};
-
-struct IPoint
-{
-	int	x;
-	int	y;
-};
-
-struct IRectangle
-{
-	IPoint	min;
-	IPoint	max;
-};
 
 enum
 {
@@ -104,71 +64,72 @@ enum
 };
 
 /* screen data .... */
-static unsigned char *gscreendata;
-static unsigned char *xscreendata;
+static uchar*	gscreendata;
+static uchar*	xscreendata;
 
-XColor			map[256];	/* Inferno colormap array */
-XColor			mapr[256];	/* Inferno red colormap array */
-XColor			mapg[256];	/* Inferno green colormap array */
-XColor			mapb[256];	/* Inferno blue colormap array */
-XColor			map7[128];	/* Inferno colormap array */
-uchar			map7to8[128][2];
+XColor	map[256];	/* Inferno colormap array */
+XColor	mapr[256];	/* Inferno red colormap array */
+XColor	mapg[256];	/* Inferno green colormap array */
+XColor	mapb[256];	/* Inferno blue colormap array */
+XColor	map7[128];	/* Inferno colormap array */
+uchar	map7to8[128][2];
 
 /* for copy/paste, lifted from plan9ports via drawterm */
-Atom clipboard; 
-Atom utf8string;
-Atom targets;
-Atom text;
-Atom compoundtext;
+static Atom clipboard; 
+static Atom utf8string;
+static Atom targets;
+static Atom text;
+static Atom compoundtext;
 
-static Colormap		xcmap;		/* Default shared colormap  */
+static Atom cursorchange;
+
+static XColormap		xcmap;		/* Default shared colormap  */
 static int 		infernotox11[256]; /* Values for mapping between */
 static int 		infernortox11[256]; /* Values for mapping between */
 static int 		infernogtox11[256]; /* Values for mapping between */
 static int 		infernobtox11[256]; /* Values for mapping between */
 static int		triedscreen;
-static XModifierKeymap *modmap;
-static int		keypermod;
-static Drawable		xdrawable;
+static XDrawable		xdrawable;
 static void		xexpose(XEvent*);
 static void		xmouse(XEvent*);
 static void		xkeyboard(XEvent*);
-static void		xmapping(XEvent*);
+static void		xsetcursor(XEvent*);
+static void		xkbdproc(void*);
 static void		xdestroy(XEvent*);
-static void		xselect(XEvent*, Display*);
+static void		xselect(XEvent*, XDisplay*);
 static void		xproc(void*);
 static void		xinitscreen(int, int, ulong, ulong*, int*);
-static void		initmap(Window, ulong, ulong*, int*);
-static GC		creategc(Drawable);
+static void		initmap(XWindow, ulong, ulong*, int*);
+static XGC		creategc(XDrawable);
 static void		graphicsgmap(XColor*, int);
 static void		graphicscmap(XColor*);
 static void		graphicsrgbmap(XColor*, XColor*, XColor*);
 static int		xscreendepth;
-static	Display*	xdisplay;	/* used holding draw lock */
-static	Display*	xkmcon;	/* used only in xproc */
-static	Display*	xsnarfcon;	/* used holding clip.lk */
-static Visual		*xvis;
-static GC		xgc;
+static	XDisplay*	xdisplay;	/* used holding draw lock */
+static	XDisplay*	xmcon;	/* used only in xproc */
+static	XDisplay*	xkbdcon;	/* used only in xkbdproc */
+static	XDisplay*	xsnarfcon;	/* used holding clip.lk */
+static XVisual		*xvis;
+static XGC		xgc;
 static XImage 		*img;
 static int              is_shm;
 static XShmSegmentInfo	*shminfo;
 
 static int putsnarf, assertsnarf;
 
-extern int	bytesperline(IRectangle, int);
-extern void	drawxflush(IRectangle);
-
-/* The documentation for the XSHM extension implies that if the server
-   supports XSHM but is not the local machine, the XShm calls will
-   return False; but this turns out not to be the case.  Instead, the
-   server throws a BadAccess error.  So, we need to catch X errors
-   around all of our XSHM calls, sigh.  */
+/*
+ * The documentation for the XSHM extension implies that if the server
+ * supports XSHM but is not the local machine, the XShm calls will
+ * return False; but this turns out not to be the case.  Instead, the
+ * server throws a BadAccess error.  So, we need to catch X errors
+ * around all of our XSHM calls, sigh.
+ */
 static int shm_got_x_error = False;
 static XErrorHandler old_handler = 0;
 static XErrorHandler old_io_handler = 0;
 
 static int
-shm_ehandler(Display *dpy, XErrorEvent *error)
+shm_ehandler(XDisplay *dpy, XErrorEvent *error)
 {
 	shm_got_x_error = 1;
 	return 0;
@@ -178,18 +139,19 @@ static void
 clean_errhandlers(void)
 {
 	/* remove X11 error handler(s) */
-	if (old_handler)
+	if(old_handler)
 		XSetErrorHandler(old_handler); 
 	old_handler = 0;
-	if (old_io_handler)
+	if(old_io_handler)
 		XSetErrorHandler(old_io_handler); 
 	old_io_handler = 0;
 }
 
 uchar*
-attachscreen(IRectangle *r, ulong *chan, int *d, int *width, int *softscreen)
+attachscreen(Rectangle *r, ulong *chan, int *d, int *width, int *softscreen)
 {
 	ulong c;
+	int depth;
 
 	Xsize &= ~0x3;	/* ensure multiple of 4 */
 
@@ -205,9 +167,9 @@ attachscreen(IRectangle *r, ulong *chan, int *d, int *width, int *softscreen)
 	if(!triedscreen){
 		xinitscreen(Xsize, Ysize, c, chan, d);
 		/*
-		  * moved xproc from here to end since it could cause an expose event and
-		  * hence a flushmemscreen before xscreendata is initialized
-		  */
+		 * moved xproc from here to end since it could cause an expose event and
+		 * hence a flushmemscreen before xscreendata is initialized
+		 */
 	}
 	else{
 		*chan = displaychan;
@@ -222,9 +184,9 @@ attachscreen(IRectangle *r, ulong *chan, int *d, int *width, int *softscreen)
 	/* check for X Shared Memory Extension */
 	is_shm = XShmQueryExtension(xdisplay);
 	
-	if (is_shm) {
+	if(is_shm) {
 		shminfo = malloc(sizeof(XShmSegmentInfo));
-		if (shminfo == nil) {
+		if(shminfo == nil) {
 			fprint(2, "emu: cannot allocate XShmSegmentInfo\n");
 			cleanexit(0);
 		}
@@ -232,9 +194,9 @@ attachscreen(IRectangle *r, ulong *chan, int *d, int *width, int *softscreen)
 		/* setup to catch X11 error(s) */
 		XSync(xdisplay, 0); 
 		shm_got_x_error = 0; 
-		if (old_handler != shm_ehandler)
+		if(old_handler != shm_ehandler)
 			old_handler = XSetErrorHandler(shm_ehandler);
-		if (old_io_handler != shm_ehandler)
+		if(old_io_handler != shm_ehandler)
 			old_io_handler = XSetErrorHandler(shm_ehandler);
 
 		img = XShmCreateImage(xdisplay, xvis, xscreendepth, ZPixmap, 
@@ -242,7 +204,7 @@ attachscreen(IRectangle *r, ulong *chan, int *d, int *width, int *softscreen)
 		XSync(xdisplay, 0);
 
 		/* did we get an X11 error? if so then try without shm */
-		if (shm_got_x_error) {
+		if(shm_got_x_error) {
 			is_shm = 0;
 			free(shminfo);
 			shminfo = NULL;
@@ -250,7 +212,7 @@ attachscreen(IRectangle *r, ulong *chan, int *d, int *width, int *softscreen)
 			goto next;
 		}
 		
-		if (!img) {
+		if(img == nil) {
 			fprint(2, "emu: can not allocate virtual screen buffer\n");
 			cleanexit(0);
 		}
@@ -260,25 +222,23 @@ attachscreen(IRectangle *r, ulong *chan, int *d, int *width, int *softscreen)
 		shminfo->shmaddr = img->data = shmat(shminfo->shmid, 0, 0);
 		shminfo->readOnly = True;
 
-		if (!XShmAttach(xdisplay, shminfo)) {
+		if(!XShmAttach(xdisplay, shminfo)) {
 			fprint(2, "emu: cannot allocate virtual screen buffer\n");
 			cleanexit(0);
 		}
 		XSync(xdisplay, 0);
 
-		/* Delete the shared segment right now; the segment
-		   won't actually go away until both the client and
-		   server have deleted it.  The server will delete it
-		   as soon as the client disconnects, so we should
-		   delete our side early in case of abnormal
-		   termination.  (And note that, in the context of
-		   xscreensaver, abnormal termination is the rule
-		   rather than the exception, so this would leak like
-		   a sieve if we didn't do this...)  */
+		/*
+		 * Delete the shared segment right now; the segment
+		 * won't actually go away until both the client and
+		 * server have deleted it.  The server will delete it
+		 * as soon as the client disconnects, so we might as
+		 * well delete our side now as later.
+		 */
 		shmctl(shminfo->shmid, IPC_RMID, 0);
 
 		/* did we get an X11 error? if so then try without shm */
-		if (shm_got_x_error) {
+		if(shm_got_x_error) {
 			is_shm = 0;
 			XDestroyImage(img);
 			XSync(xdisplay, 0);
@@ -289,18 +249,16 @@ attachscreen(IRectangle *r, ulong *chan, int *d, int *width, int *softscreen)
 		}
 
 		gscreendata = malloc(Xsize * Ysize * (displaydepth >> 3));
-		if (gscreendata == nil) {
+		if(gscreendata == nil) {
 			fprint(2, "emu: cannot allocate screen buffer (%dx%d)\n", Xsize*Ysize);
 			cleanexit(0);
 		}
-		xscreendata = img->data;
+		xscreendata = (uchar*)img->data;
 		
 		clean_errhandlers();
 	}
  next:
-	if (!is_shm) {
-		int depth;
-
+	if(!is_shm) {
 		depth = xscreendepth;
 		if(depth == 24)
 			depth = 32;
@@ -308,13 +266,13 @@ attachscreen(IRectangle *r, ulong *chan, int *d, int *width, int *softscreen)
 		/* allocate virtual screen */	
 		gscreendata = malloc(Xsize * Ysize * (displaydepth >> 3));
 		xscreendata = malloc(Xsize * Ysize * (depth >> 3));
-		if (!gscreendata || !xscreendata) {
+		if(!gscreendata || !xscreendata) {
 			fprint(2, "emu: can not allocate virtual screen buffer\n");
 			return 0;
 		}
 		img = XCreateImage(xdisplay, xvis, xscreendepth, ZPixmap, 0, 
-				   xscreendata, Xsize, Ysize, 8, Xsize * (depth >> 3));
-		if (!img) {
+				   (char*)xscreendata, Xsize, Ysize, 8, Xsize * (depth >> 3));
+		if(img == nil) {
 			fprint(2, "emu: can not allocate virtual screen buffer\n");
 			return 0;
 		}
@@ -323,40 +281,38 @@ attachscreen(IRectangle *r, ulong *chan, int *d, int *width, int *softscreen)
 
 	if(!triedscreen){
 		triedscreen = 1;
-		if(kproc("xproc", xproc, nil, 0) < 0) {
-			fprint(2, "emu: win-x11 can't make X proc\n");
-			return 0;
-		}
+		kproc("xproc", xproc, xmcon, 0);
+		kproc("xkbdproc", xkbdproc, xkbdcon, KPX11);	/* silly stack size for bloated X11 */
 	}
 
 	return gscreendata;
 }
 
 void
-flushmemscreen(IRectangle r)
+flushmemscreen(Rectangle r)
 {
 	int x, y, width, height, dx;
-	unsigned char *p, *ep, *cp;
+	uchar *p, *ep, *cp;
 
 	// Clip to screen
-	if (r.min.x < 0)
+	if(r.min.x < 0)
 		r.min.x = 0;
-	if (r.min.y < 0)
+	if(r.min.y < 0)
 		r.min.y = 0;
-	if (r.max.x >= Xsize)
+	if(r.max.x >= Xsize)
 		r.max.x = Xsize - 1;
-	if (r.max.y >= Ysize)
+	if(r.max.y >= Ysize)
                 r.max.y = Ysize - 1;
 
 	// is there anything left ...	
 	width = r.max.x-r.min.x;
 	height = r.max.y-r.min.y;
-	if ((width < 1) | (height < 1))
+	if((width < 1) | (height < 1))
 		return;
 
 	// Blit the pixel data ...
 	if(displaydepth == 32){
-		unsigned int v, w, *dp, *wp, *edp;
+		u32int v, w, *dp, *wp, *edp;
 	
 		dx = Xsize - width;
 		dp = (unsigned int *)(gscreendata + (r.min.y * Xsize + r.min.x) * 4);
@@ -376,15 +332,15 @@ flushmemscreen(IRectangle r)
 		}
 	}
 	else if(displaydepth == 8){
-		if (xscreendepth == 24 || xscreendepth == 32) {
-			unsigned int *wp;
+		if(xscreendepth == 24 || xscreendepth == 32) {
+			u32int *wp;
 	
 			dx = Xsize - width;
 			p = gscreendata + r.min.y * Xsize + r.min.x;
-			wp = (unsigned int *)(xscreendata + (r.min.y * Xsize + r.min.x) * 4);
+			wp = (u32int *)(xscreendata + (r.min.y * Xsize + r.min.x) * 4);
 			ep = gscreendata + r.max.y * Xsize + r.max.x;
 			while (p < ep) {
-				const unsigned char *lp = p + width;
+				const uchar *lp = p + width;
 
 				while (p < lp) 
 					*wp++ = infernotox11[*p++];
@@ -393,7 +349,7 @@ flushmemscreen(IRectangle r)
 				wp += dx;
 			}
 
-		} else if (xscreendepth == 24) {
+		} else if(xscreendepth == 24) {
 			int v;
 
 			dx = Xsize - width;
@@ -401,7 +357,7 @@ flushmemscreen(IRectangle r)
 			cp = xscreendata + (r.min.y * Xsize + r.min.x) * 3;
 			ep = gscreendata + r.max.y * Xsize + r.max.x;
 			while (p < ep) {
-				const unsigned char *lp = p + width;
+				const uchar *lp = p + width;
 
 				while (p < lp){
 					v = infernotox11[*p++];
@@ -415,15 +371,15 @@ flushmemscreen(IRectangle r)
 				cp += 3*dx;
 			}
 
-		} else if (xscreendepth == 16) {
-			unsigned short *sp;
+		} else if(xscreendepth == 16) {
+			u16int *sp;
 	
 			dx = Xsize - width;
 			p = gscreendata + r.min.y * Xsize + r.min.x;
 			sp = (unsigned short *)(xscreendata + (r.min.y * Xsize + r.min.x) * 2);
 			ep = gscreendata + r.max.y * Xsize + r.max.x;
 			while (p < ep) {
-				const unsigned char *lp = p + width;
+				const uchar *lp = p + width;
 
 				while (p < lp) 
 					*sp++ = infernotox11[*p++];
@@ -432,14 +388,14 @@ flushmemscreen(IRectangle r)
 				sp += dx;
 			}
 
-		} else if (xscreendepth == 8) {
+		} else if(xscreendepth == 8) {
 
                 		dx = Xsize - width;
                 		p = gscreendata + r.min.y * Xsize + r.min.x;
                 		cp = xscreendata + r.min.y * Xsize + r.min.x;
                 		ep = gscreendata + r.max.y * Xsize + r.max.x;
                 		while (p < ep) {
-                        		const unsigned char *lp = p + width;
+                        		const uchar *lp = p + width;
 
                         		while (p < lp)
                                 		*cp++ = infernotox11[*p++];
@@ -463,7 +419,7 @@ flushmemscreen(IRectangle r)
 	}
 
 	/* Display image on X11 */
-	if (is_shm)
+	if(is_shm)
 		XShmPutImage(xdisplay, xdrawable, xgc, img, r.min.x, r.min.y, r.min.x, r.min.y, width, height, 0);
 	else
 		XPutImage(xdisplay, xdrawable, xgc, img, r.min.x, r.min.y, r.min.x, r.min.y, width, height);
@@ -487,106 +443,31 @@ revbyte(int b)
 	return r;
 }
 
-static void
-gotcursor(ICursor c)
-{
-	Cursor xc;
-	XColor fg, bg;
-	Pixmap xsrc, xmask;
-	static Cursor xcursor;
-
-	if(c.src == nil){
-		if(xcursor != 0) {
-			XFreeCursor(xdisplay, xcursor);
-			xcursor = 0;
-		}
-		XUndefineCursor(xdisplay, xdrawable);
-		XFlush(xdisplay);
-		return;
-	}
-	xsrc = XCreateBitmapFromData(xdisplay, xdrawable, c.src, c.w, c.h);
-	xmask = XCreateBitmapFromData(xdisplay, xdrawable, c.mask, c.w, c.h);
-
-	fg = map[0];	/* was 255 */
-	bg = map[255];	/* was 0 */
-	fg.pixel = infernotox11[0];	/* was 255 */
-	bg.pixel = infernotox11[255];	/* was 0 */
-	xc = XCreatePixmapCursor(xdisplay, xsrc, xmask, &fg, &bg, -c.hotx, -c.hoty);
-	if(xc != 0) {
-		XDefineCursor(xdisplay, xdrawable, xc);
-		if(xcursor != 0)
-			XFreeCursor(xdisplay, xcursor);
-		xcursor = xc;
-	}
-	XFreePixmap(xdisplay, xsrc);
-	XFreePixmap(xdisplay, xmask);
-	XFlush(xdisplay);
-	free(c.src);
-}
-
-void
-setcursor(IPoint p)
-{
-	XWarpPointer(xdisplay, None, xdrawable, 0, 0, 0, 0, p.x, p.y);
-	XFlush(xdisplay);
-}
-
 void
 setpointer(int x, int y)
 {
+	drawqlock();
 	XWarpPointer(xdisplay, None, xdrawable, 0, 0, 0, 0, x, y);
 	XFlush(xdisplay);
+	drawqunlock();
 }
 
-void
-drawcursor(Drawcursor* c)
+static void
+xkbdproc(void *arg)
 {
-	ICursor ic;
-	IRectangle ir;
-	uchar *bs, *bc;
-	int i, j;
-	int h = 0, bpl = 0;
-	char *src, *mask, *csrc, *cmask;
+	XEvent event;
+	XDisplay *xd;
 
-	/* Set the default system cursor */
-	src = nil;
-	mask = nil;
-	if(c->data != nil){
-		h = (c->maxy-c->miny)/2;
-		ir.min.x = c->minx;
-		ir.min.y = c->miny;
-		ir.max.x = c->maxx;
-		ir.max.y = c->maxy;
-		/* passing IRectangle to Rectangle is safe */
-		bpl = bytesperline(ir, 1);
+	xd = arg;
 
-		i = h*bpl;
-		src = malloc(2*i);
-		if(src == nil)
-			return;
-		mask = src + i;
+	/* BEWARE: the value of up is not defined for this proc on some systems */
 
-		csrc = src;
-		cmask = mask;
-		bc = c->data;
-		bs = c->data + h*bpl;
-		for(i = 0; i < h; i++){
-			for(j = 0; j < bpl; j++) {
-				*csrc++ = revbyte(bs[j]);
-				*cmask++ = revbyte(bs[j] | bc[j]);
-			}
-			bs += bpl;
-			bc += bpl;
-		}
+	XSelectInput(xd, xdrawable, KeyPressMask);		
+	for(;;){
+		XNextEvent(xd, &event);
+		xkeyboard(&event);
+		xsetcursor(&event);
 	}
-	ic.w = 8*bpl;
-	ic.h = h;
-	ic.hotx = c->hotx;
-	ic.hoty = c->hoty;
-	ic.src = src;
-	ic.mask = mask;
-
-	gotcursor(ic);
 }
 
 static void
@@ -594,14 +475,15 @@ xproc(void *arg)
 {
 	ulong mask;
 	XEvent event;
+	XDisplay *xd;
 
 	closepgrp(up->env->pgrp);
 	closefgrp(up->env->fgrp);
 	closeegrp(up->env->egrp);
 	closesigs(up->env->sigs);
 
-	mask = 	KeyPressMask|
-		ButtonPressMask|
+	xd = arg;
+	mask = ButtonPressMask|
 		ButtonReleaseMask|
 		PointerMotionMask|
 		Button1MotionMask|
@@ -612,27 +494,176 @@ xproc(void *arg)
 		ExposureMask|
 		StructureNotifyMask;
 
-	XSelectInput(xkmcon, xdrawable, mask);		
-	for(;;) {
-		//XWindowEvent(xkmcon, xdrawable, mask, &event);
-		XNextEvent(xkmcon, &event);
-		xselect(&event, xkmcon);
-		xkeyboard(&event);
+	XSelectInput(xd, xdrawable, mask);		
+	for(;;){
+		XNextEvent(xd, &event);
+		xselect(&event, xd);
 		xmouse(&event);
 		xexpose(&event);
-		xmapping(&event);
 		xdestroy(&event);
 	}
+}
+
+/*
+ * this crud is here because X11 can put huge amount of data
+ * on the stack during keyboard translation and cursor changing(!).
+ * we do both in a dedicated process with lots of stack, perhaps even enough.
+ */
+
+enum {
+	CursorSize=	32	/* biggest cursor size */
+};
+
+typedef struct ICursor ICursor;
+struct ICursor {
+	ulong	inuse;
+	int	modify;
+	int	hotx;
+	int	hoty;
+	int	w;
+	int	h;
+	uchar	src[(CursorSize/8)*CursorSize];	/* image and mask bitmaps */
+	uchar	mask[(CursorSize/8)*CursorSize];
+};
+static ICursor icursor;
+
+static void
+xcurslock(void)
+{
+	while(_tas(&icursor.inuse) != 0)
+		osyield();
+}
+
+static void
+xcursunlock(void)
+{
+	icursor.inuse = 0;
+}
+
+static void
+xcursnotify(void)
+{
+	XClientMessageEvent e;
+
+	memset(&e, 0, sizeof e);
+	e.type = ClientMessage;
+	e.window = xdrawable;
+	e.message_type = cursorchange;
+	e.format = 8;
+	XSendEvent(xkbdcon, xdrawable, True, KeyPressMask, (XEvent*)&e);
+	XFlush(xkbdcon);
+}
+
+void
+drawcursor(Drawcursor* c)
+{
+	uchar *bs, *bc, *ps, *pm;
+	int i, j, w, h, bpl;
+
+	if(c->data == nil){
+		drawqlock();
+		if(icursor.h != 0){
+			xcurslock();
+			icursor.h = 0;
+			icursor.modify = 1;
+			xcursunlock();
+		}
+		xcursnotify();
+		drawqunlock();
+		return;
+	}
+
+	drawqlock();
+	xcurslock();
+	icursor.modify = 0;	/* xsetcursor will now ignore it */
+	xcursunlock();
+
+	h = (c->maxy-c->miny)/2;	/* image, then mask */
+	bpl = bytesperline(Rect(c->minx, c->miny, c->maxx, c->maxy), 1);
+	w = bpl;
+	if(w > CursorSize/8)
+		w = CursorSize/8;
+
+	ps = icursor.src;
+	pm = icursor.mask;
+	bc = c->data;
+	bs = c->data + h*bpl;
+	for(i = 0; i < h; i++){
+		for(j = 0; j < bpl && j < w; j++) {
+			*ps++ = revbyte(bs[j]);
+			*pm++ = revbyte(bs[j] | bc[j]);
+		}
+		bs += bpl;
+		bc += bpl;
+	}
+	icursor.h = h;
+	icursor.w = w*8;
+	icursor.hotx = c->hotx;
+	icursor.hoty = c->hoty;
+	icursor.modify = 1;
+	xcursnotify();
+	drawqunlock();
+}
+
+static void
+xsetcursor(XEvent *e)
+{
+	ICursor ic;
+	XCursor xc;
+	XColor fg, bg;
+	Pixmap xsrc, xmask;
+	static XCursor xcursor;
+
+	if(e->type != ClientMessage || !e->xclient.send_event || e->xclient.message_type != cursorchange)
+		return;
+
+	xcurslock();
+	if(icursor.modify == 0){
+		xcursunlock();
+		return;
+	}
+	icursor.modify = 0;
+	if(icursor.h == 0){
+		xcursunlock();
+		/* set the default system cursor */
+		if(xcursor != 0) {
+			XFreeCursor(xkbdcon, xcursor);
+			xcursor = 0;
+		}
+		XUndefineCursor(xkbdcon, xdrawable);
+		XFlush(xkbdcon);
+		return;
+	}
+	ic = icursor;
+	xcursunlock();
+
+	xsrc = XCreateBitmapFromData(xkbdcon, xdrawable, (char*)ic.src, ic.w, ic.h);
+	xmask = XCreateBitmapFromData(xkbdcon, xdrawable, (char*)ic.mask, ic.w, ic.h);
+
+	fg = map[0];
+	bg = map[255];
+	fg.pixel = infernotox11[0];
+	bg.pixel = infernotox11[255];
+	xc = XCreatePixmapCursor(xkbdcon, xsrc, xmask, &fg, &bg, -ic.hotx, -ic.hoty);
+	if(xc != 0) {
+		XDefineCursor(xkbdcon, xdrawable, xc);
+		if(xcursor != 0)
+			XFreeCursor(xkbdcon, xcursor);
+		xcursor = xc;
+	}
+	XFreePixmap(xkbdcon, xsrc);
+	XFreePixmap(xkbdcon, xmask);
+	XFlush(xkbdcon);
 }
 
 static void
 xinitscreen(int xsize, int ysize, ulong c, ulong *chan, int *d)
 {
 	char *argv[2];
-	char *disp_val;
-	Window rootwin;
+	char *dispname;
+	XWindow rootwin;
 	XWMHints hints;
-	Screen *screen;
+	XScreen *screen;
 	int rootscreennum;
 	XTextProperty name;
 	XClassHint classhints;
@@ -641,12 +672,12 @@ xinitscreen(int xsize, int ysize, ulong c, ulong *chan, int *d)
  
 	xdrawable = 0;
 
+	dispname = getenv("DISPLAY");
+	if(dispname == nil)
+		dispname = "not set";
 	xdisplay = XOpenDisplay(NULL);
 	if(xdisplay == 0){
-		disp_val = getenv("DISPLAY");
-		if(disp_val == 0)
-			disp_val = "not set";
-		fprint(2, "emu: win-x11 open %r, DISPLAY is %s\n", disp_val);
+		fprint(2, "emu: win-x11 open %r, DISPLAY is %s\n", dispname);
 		cleanexit(0);
 	}
 
@@ -660,7 +691,7 @@ xinitscreen(int xsize, int ysize, ulong c, ulong *chan, int *d)
 	*chan = CMAP8;
 	*d = 8;
 
-	if (xvis->class != StaticColor) {
+	if(xvis->class != StaticColor) {
 		if(TYPE(c) == CGrey)
 			graphicsgmap(map, NBITS(c));
 		else{
@@ -669,9 +700,6 @@ xinitscreen(int xsize, int ysize, ulong c, ulong *chan, int *d)
 		}
 		initmap(rootwin, c, chan, d);
 	}
-
-	if ((modmap = XGetModifierMapping(xdisplay)) != 0)
-		keypermod = modmap->max_keypermod;
 
 	attrs.colormap = xcmap;
 	attrs.background_pixel = 0;
@@ -683,10 +711,10 @@ xinitscreen(int xsize, int ysize, ulong c, ulong *chan, int *d)
 	/*
 	 * set up property as required by ICCCM
 	 */
-	name.value = "inferno";
+	name.value = (uchar*)"inferno";
 	name.encoding = XA_STRING;
 	name.format = 8;
-	name.nitems = strlen(name.value);
+	name.nitems = strlen((char*)name.value);
 	normalhints.flags = USSize|PMaxSize;
 	normalhints.max_width = normalhints.width = xsize;
 	normalhints.max_height = normalhints.height = ysize;
@@ -711,28 +739,21 @@ xinitscreen(int xsize, int ysize, ulong c, ulong *chan, int *d)
 
 	xgc = creategc(xdrawable);
 
-	xkmcon = XOpenDisplay(NULL);
-	if(xkmcon == 0){
-		disp_val = getenv("DISPLAY");
-		if(disp_val == 0)
-			disp_val = "not set";
-		fprint(2, "emu: win-x11 open %r, DISPLAY is %s\n", disp_val);
-		cleanexit(0);
-	}
+	xmcon = XOpenDisplay(NULL);
 	xsnarfcon = XOpenDisplay(NULL);
-	if(xsnarfcon == 0){
-		disp_val = getenv("DISPLAY");
-		if(disp_val == 0)
-			disp_val = "not set";
-		iprint("emu: win-x11 open %r, DISPLAY is %s\n", disp_val);
+	xkbdcon = XOpenDisplay(NULL);
+	if(xmcon == 0 || xsnarfcon == 0 || xkbdcon == 0){
+		fprint(2, "emu: win-x11 open %r, DISPLAY is %s\n", dispname);
 		cleanexit(0);
 	}
 
-	clipboard = XInternAtom(xkmcon, "CLIPBOARD", False);
-	utf8string = XInternAtom(xkmcon, "UTF8_STRING", False);
-	targets = XInternAtom(xkmcon, "TARGETS", False);
-	text = XInternAtom(xkmcon, "TEXT", False);
-	compoundtext = XInternAtom(xkmcon, "COMPOUND_TEXT", False);
+	clipboard = XInternAtom(xmcon, "CLIPBOARD", False);
+	utf8string = XInternAtom(xmcon, "UTF8_STRING", False);
+	targets = XInternAtom(xmcon, "TARGETS", False);
+	text = XInternAtom(xmcon, "TEXT", False);
+	compoundtext = XInternAtom(xmcon, "COMPOUND_TEXT", False);
+
+	cursorchange = XInternAtom(xkbdcon, "TheCursorHasChanged", False);
 
 }
 
@@ -835,7 +856,7 @@ graphicsrgbmap(XColor *mapr, XColor *mapg, XColor *mapb)
  * application.  Inferno gets the best colors here when it has the cursor focus.
  */  
 static void 
-initmap(Window w, ulong cc, ulong *chan, int *d)
+initmap(XWindow w, ulong cc, ulong *chan, int *d)
 {
 	XColor c;
 	int i;
@@ -895,21 +916,6 @@ initmap(Window w, ulong cc, ulong *chan, int *d)
 }
 
 static void
-xmapping(XEvent *e)
-{
-	XMappingEvent *xe;
-
-	if(e->type != MappingNotify)
-		return;
-	xe = (XMappingEvent*)e;
-	if(modmap)
-		XFreeModifiermap(modmap);
-	modmap = XGetModifierMapping(xe->display);
-	if(modmap)
-		keypermod = modmap->max_keypermod;
-}
-
-static void
 xdestroy(XEvent *e)
 {
 	XDestroyWindowEvent *xe;
@@ -921,10 +927,10 @@ xdestroy(XEvent *e)
 }
 
 /*
- * Disable generation of GraphicsExpose/NoExpose events in the GC.
+ * Disable generation of GraphicsExpose/NoExpose events in the XGC.
  */
-static GC
-creategc(Drawable d)
+static XGC
+creategc(XDrawable d)
 {
 	XGCValues gcv;
 
@@ -936,7 +942,7 @@ creategc(Drawable d)
 static void
 xexpose(XEvent *e)
 {
-	IRectangle r;
+	Rectangle r;
 	XExposeEvent *xe;
 
 	if(e->type != Expose)
@@ -946,29 +952,30 @@ xexpose(XEvent *e)
 	r.min.y = xe->y;
 	r.max.x = xe->x + xe->width;
 	r.max.y = xe->y + xe->height;
-	drawxflush(r);
+	drawqlock();
+	flushmemscreen(r);
+	drawqunlock();
 }
 
 static void
 xkeyboard(XEvent *e)
 {
-	int ind;
+	int ind, md;
 	KeySym k;
-	unsigned int md;
 
-	if(e->type == KeyPress && gkscanq != nil) {
-		uchar ch = (KeyCode)e->xkey.keycode;
+	if(e->type == KeyPress && gkscanq != nil){
+		uchar ch = e->xkey.keycode;
 		if(e->xany.type == KeyRelease)
 			ch |= 0x80;
 		qproduce(gkscanq, &ch, 1);
 		return;
 	}
 
-        /*
-         * I tried using XtGetActionKeysym, but it didn't seem to
-         * do case conversion properly
-         * (at least, with Xterminal servers and R4 intrinsics)
-         */
+	/*
+	 * I tried using XtGetActionKeysym, but it didn't seem to
+	 * do case conversion properly
+	 * (at least, with Xterminal servers and R4 intrinsics)
+	 */
 	if(e->xany.type != KeyPress)
 		return;
 
@@ -1115,10 +1122,10 @@ xmouse(XEvent *e)
 
 	if(putsnarf != assertsnarf){
 		assertsnarf = putsnarf;
-		XSetSelectionOwner(xkmcon, XA_PRIMARY, xdrawable, CurrentTime);
+		XSetSelectionOwner(xmcon, XA_PRIMARY, xdrawable, CurrentTime);
 		if(clipboard != None)
-			XSetSelectionOwner(xkmcon, clipboard, xdrawable, CurrentTime);
-		XFlush(xkmcon);
+			XSetSelectionOwner(xmcon, clipboard, xdrawable, CurrentTime);
+		XFlush(xmcon);
 	}
 
 	dbl = 0;
@@ -1187,7 +1194,7 @@ xmouse(XEvent *e)
 		me = (XMotionEvent *) e;
 
 		/* remove excess MotionNotify events from queue and keep last one */
-		while(XCheckTypedWindowEvent(xkmcon, xdrawable, MotionNotify, &motion) == True)
+		while(XCheckTypedWindowEvent(xmcon, xdrawable, MotionNotify, &motion) == True)
 			me = (XMotionEvent *) &motion;
 
 		s = me->state;
@@ -1237,13 +1244,13 @@ Clip clip;
 #undef ulong
 
 static char*
-_xgetsnarf(Display *xd)
+_xgetsnarf(XDisplay *xd)
 {
 	uchar *data, *xdata;
 	Atom clipboard, type, prop;
 	unsigned long len, lastlen, dummy;
 	int fmt, i;
-	Window w;
+	XWindow w;
 
 	qlock(&clip.lk);
 	/*
@@ -1328,7 +1335,7 @@ out:
 }
 
 static void
-_xputsnarf(Display *xd, char *data)
+_xputsnarf(XDisplay *xd, char *data)
 {
 	XButtonEvent e;
 
@@ -1352,7 +1359,7 @@ _xputsnarf(Display *xd, char *data)
 }
 
 static void
-xselect(XEvent *e, Display *xd)
+xselect(XEvent *e, XDisplay *xd)
 {
 	char *name;
 	XEvent r;

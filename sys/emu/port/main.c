@@ -137,8 +137,8 @@ option(int argc, char *argv[], void (*badusage)(void))
 		if(cflag < 0|| cflag > 9)
 			usage();
 		break;
-	case 'I':	/* (temporary option) run without cons */
-		dflag++;
+	case 'I':	/* run with cons */
+		dflag = 0;
 		break;
 	case 'd':		/* run as a daemon */
 		dflag++;

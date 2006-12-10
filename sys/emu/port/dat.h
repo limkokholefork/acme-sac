@@ -425,6 +425,7 @@ enum
 	KPDUPPG		= (1<<0),
 	KPDUPFDG	= (1<<1),
 	KPDUPENVG	= (1<<2),
+	KPX11		= (1<<8),		/* needs silly amount of stack */
 	KPDUP		= (KPDUPPG|KPDUPFDG|KPDUPENVG)
 };
 

@@ -21,6 +21,7 @@ enum
 	DELETE	= 0x7f,
 	CTRLC	= 'C'-'@',
 	NSTACKSPERALLOC = 16,
+	X11STACK=	256*1024
 };
 char *hosttype = "Linux";
 
@@ -64,7 +65,8 @@ pexit(char *msg, int t)
 	kstack = up->kstack;
 	free(up->prog);
 	free(up);
-	stackfreeandexit(kstack);
+	if(kstack != nil)
+		stackfreeandexit(kstack);
 }
 
 void
@@ -120,7 +122,11 @@ kproc(char *name, void (*func)(void*), void *arg, int flags)
 	p->func = func;
 	p->arg = arg;
 
-	p->kstack = stackalloc(p, &tos);
+	if(flags & KPX11){
+		p->kstack = nil;	/* never freed; also up not defined */
+		tos = (char*)mallocz(X11STACK, 0) + X11STACK - sizeof(void*);
+	}else
+		p->kstack = stackalloc(p, &tos);
 
 	lock(&procs.l);
 	if(procs.tail != nil) {
