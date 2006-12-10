@@ -26,7 +26,7 @@ dev
 lib
 	interp
 	tk
-	freetype
+#	freetype
 	math
 	draw
 
@@ -43,13 +43,12 @@ link
 mod
 	sys
 	draw
-
 	tk
 	math
 	srv	srv
 	keyring
-	loader
-	freetype
+#	loader
+#	freetype
 
 port
 	alloc
