@@ -58,7 +58,7 @@ Windowm : module {
 		settag : fn(w : self ref Window);
 		settag1 : fn(w : self ref Window);
 		commit : fn(w : self ref Window, t : ref Textm->Text);
-		reshape : fn(w : self ref Window, r : Draw->Rect, n : int) : int;
+		reshape : fn(w : self ref Window, r : Draw->Rect, n : int, keepextra: int) : int;
 		close : fn(w : self ref Window);
 		delete : fn(w : self ref Window);
 		clean : fn(w : self ref Window, n : int, exiting : int) : int;

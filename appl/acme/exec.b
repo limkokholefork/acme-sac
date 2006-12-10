@@ -1141,7 +1141,7 @@ tab(et : ref Text, argt : ref Text, arg : string, narg : int)
 	if(tab > 0){
 		if(w.body.tabstop != tab){
 			w.body.tabstop = tab;
-			w.reshape(w.r, 1);
+			w.reshape(w.r, TRUE, TRUE);
 		}
 	}else
 		warning(nil, sys->sprint("%s: Tab %d\n", w.body.file.name, w.body.tabstop));
