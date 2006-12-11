@@ -176,10 +176,12 @@ Row.reshape(row : self ref Row, r : Rect)
 			r1.max.x = r.max.x;
 		else
 			r1.max.x = r1.min.x+c.r.dx()*dx/odx;
-		r2 = r1;
-		r2.max.x = r2.min.x+Border;
-		draw(mainwin, r2, black, nil, (0, 0));
-		r1.min.x = r2.max.x;
+		if(i > 0){
+			r2 = r1;
+			r2.max.x = r2.min.x+Border;
+			draw(mainwin, r2, black, nil, (0, 0));
+			r1.min.x = r2.max.x;
+		}
 		c.reshape(r1);
 	}
 }
