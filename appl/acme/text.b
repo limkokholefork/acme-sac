@@ -135,13 +135,7 @@ TABDIR : con 3;	# width of tabs in directory windows
 
 # remove eventually
 KF : con 16rF000;
-Kup : con KF | 16r0E;
-Kleft : con KF | 16r11;
-Kright : con KF | 16r12;
-Kdown : con 16r80;
 
-Kscrollup: con Keyboard->Spec|16r50;
-Kscrolldown: con Keyboard->Spec|16r51;
 
 nulltext : Text;
 
@@ -783,13 +777,13 @@ Text.typex(t : self ref Text, r : int, echomode : int)
 
 	if(t.what == Tag)
 	case(r){
-		Keyboard->Down or Kscrolldown=>
+		Keyboard->Down or Dat->Kscrolldown=>
 			if(!t.w.tagexpand){
 				t.w.tagexpand = TRUE;
 				t.w.reshape(t.w.r, FALSE, TRUE);
 			}
 			return;
-		Keyboard->Up or Kscrollup =>
+		Keyboard->Up or Dat->Kscrollup =>
 			if(t.w.tagexpand){
 				t.w.tagexpand = FALSE;
 				t.w.taglines = 1;
@@ -805,14 +799,14 @@ Text.typex(t : self ref Text, r : int, echomode : int)
 	}
 	
 	case(r){
-		Kscrolldown=>
+		Dat->Kscrolldown=>
 			if(t.what != Body)
 				return;
 			n = 2;
 			q0 = t.org+frcharofpt(t.frame, (t.frame.r.min.x, t.frame.r.min.y+n*t.frame.font.height));
 			t.setorigin(q0, FALSE);
 			return;
-		Kscrollup =>
+		Dat->Kscrollup =>
 			if(t.what != Body)
 				return;
 			n = 4;
