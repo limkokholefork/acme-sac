@@ -81,7 +81,7 @@ mousetrack(int b, int x, int y, int isdelta)
 		mouse.lastb = b & 0x1f;
 		mouse.v.msec = msec;
 	}
-	if((b&(1<<8))==0 && x == mouse.v.x && y == mouse.v.y && mouse.v.b == b)
+	if((b&(1<<8))==0 && x == mouse.v.x && y == mouse.v.y && mouse.v.b == b && !(b&(8|16)))
 		return;
 	lastb = mouse.v.b;
 	mouse.v.x = x;

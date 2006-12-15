@@ -1,5 +1,5 @@
 ROOT=
-SYSHOST=Linux
+SYSHOST=Nt
 SYSTARG=$SYSHOST
 OBJTYPE=386
 
@@ -7,7 +7,7 @@ OBJDIR=$SYSTARG/$OBJTYPE
 
 SHELLTYPE=	rc
 SHELLNAME=	rc
-HOSTMODEL=	Linux
+HOSTMODEL=	Nt
 OSTARG=		Inferno
 
 DATA2S=		data2s
@@ -16,11 +16,11 @@ KSIZE=		size
 AWK=		awk
 
 
-TARGMODEL=	Posix
+TARGMODEL=	Nt
 TARGSHTYPE=	sh
 CPUS=		386 sparc mips power amd64
 
-O=		o
+O=		obj
 OS=		v851ok0q2t6
 
 AR=		9ar

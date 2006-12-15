@@ -501,10 +501,10 @@ Window.settag1(w : self ref Window)
 	br.max.x = br.min.x + b.r.dx();
 	br.max.y = br.min.y + b.r.dy();
 	draw(mainwin, br, b, nil, b.r.min);
-	if(resize){
-		w.tagsafe = 0;
-		w.reshape(w.r, TRUE, TRUE);
-	}
+#	if(resize){
+#		w.tagsafe = 0;
+#		w.reshape(w.r, TRUE, TRUE);
+#	}
 }
 
 Window.commit(w : self ref Window, t : ref Text)

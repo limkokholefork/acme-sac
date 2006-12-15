@@ -392,6 +392,13 @@ WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 				b |= 4;  //right button
 		mousetrack(b, x, y, 0);
 		break;
+	case WM_MOUSEWHEEL:
+		if(GET_WHEEL_DELTA_WPARAM(wparam) > 0)
+			b =8;
+		else
+			b = 16;
+		mousetrack(b, 0, 0, 1);
+		break;
 	case WM_SYSKEYDOWN:
 		if(gkscanq)
 			scancode(wparam, lparam, 0);
@@ -401,13 +408,6 @@ WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 			scancode(wparam, lparam, 1);
 		else if(wparam == VK_MENU)
 			gkbdputc(gkbdq, Latin);
-		break;
-	case WM_MOUSEWHEEL:
-		if(GET_WHEEL_DELTA_WPARAM(wparam) > 0)
-			wparam = Spec|0x50;
-		else
-			wparam = Spec|0x51;
-		gkbdputc(gkbdq, wparam);
 		break;
 	case WM_KEYDOWN:
 		if(gkscanq) {

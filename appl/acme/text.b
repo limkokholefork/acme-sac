@@ -192,17 +192,20 @@ Text.redraw(t : self ref Text, r : Rect, f : ref Draw->Font, b : ref Image, odx 
 
 Text.reshape(t : self ref Text, r : Rect, keepextra: int) : int
 {
+	odx : int;
+	
 	if(r.dy() <= 0)
 		r.max.y = r.min.y;
 	if(!keepextra)
 		r.max.y -= r.dy()%t.frame.font.height;
+	odx = t.all.dx();
 	t.all = r;
 	t.scrollr = r;
 	t.scrollr.max.x = r.min.x+Scrollwid;
 	t.lastsr = dat->nullrect;
 	r.min.x += Scrollwid+Scrollgap;
 	framem->frclear(t.frame, 0);
-	t.redraw(r, t.frame.font, mainwin, t.all.dx());
+	t.redraw(r, t.frame.font, mainwin, odx);
 	if(keepextra && t.frame.r.max.y < t.all.max.y){
 		r.min.x -= Scrollgap;
 		r.min.y = t.frame.r.max.y;
