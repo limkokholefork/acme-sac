@@ -21,5 +21,5 @@ runas inferno {
 	acme -a /usr/inferno/README
 	waitid = `{sed '' /prog/*/status | sort -n | grep Acme | sed 1q | sed 's/^ +([0-9]+) +.*/\1/'}
 	read < /prog/^$waitid^/wait
-} > /services/logs/acme.log >[2=1]
+} > /tmp/acme.log >[2=1]
 shutdown -h
