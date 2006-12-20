@@ -24,16 +24,17 @@ plumb alwaysstart auplay
 plumb start /dis/auplay.dis $file
 
 # Simple URLs go to Charon
+# Starting charon doesn't work for acme because it doesn't see the acme namespace
 kind is text
 data matches '(https?|file)://[a-zA-Z0-9_@\-]+([.:][a-zA-Z0-9_@\-]+)*/?[a-zA-Z0-9_?,%#~&/\-+=@]+([:.][@a-zA-Z0-9_?,%#~&/\-+=]+)*'
 plumb to web
 plumb start /dis/charon.dis $0
 
 # URLs go to internet explorer
-kind is text
-data matches '(https?|ftp|file|gopher|mailto|news|nntp|telnet|wais|prospero)://[a-zA-Z0-9_@\-]+([.:][a-zA-Z0-9_@\-]+)*/?[a-zA-Z0-9_?,%#~&/\-+=@]+([:.][@a-zA-Z0-9_?,%#~&/\-+=]+)*'
-plumb alwaysstart winstart
-plumb start /dis/sh.dis -c 'winstart $0'
+#kind is text
+#data matches '(https?|ftp|file|gopher|mailto|news|nntp|telnet|wais|prospero)://[a-zA-Z0-9_@\-]+([.:][a-zA-Z0-9_@\-]+)*/?[a-zA-Z0-9_?,%#~&/\-+=@]+([:.][@a-zA-Z0-9_?,%#~&/\-+=]+)*'
+#plumb alwaysstart winstart
+#plumb start /dis/sh.dis -c 'winstart $0'
 
 # file URLs go to wm/charon
 #kind is text

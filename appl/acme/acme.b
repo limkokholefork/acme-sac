@@ -135,8 +135,6 @@ init(ctxt : ref Draw->Context, argl : list of string)
 	
 		utils->debuginit();
 	
-		if (plumbmsg->init(1, "edit", Dat->PLUMBSIZE) >= 0)
-			plumbed = 1;
 	
 		main(argl);
 	
@@ -284,7 +282,6 @@ main(argl : list of string)
 	sync := chan of int;
 	spawn waitproc(sys->pctl(0, nil), sync);
 	<- sync;
-	spawn plumbproc();
 
 	fsys->fsysinit();
 	dat->disk = (dat->disk).init();
@@ -333,6 +330,9 @@ main(argl : list of string)
 	spawn mousetask();
 	spawn waittask();
 	spawn xfidalloctask();
+	# Run the plumber inside acme, so plumber can start acme clients
+	spawn exec->run(nil, "{bind -bc '#splumber' /chan; plumber > /tmp/plumb.log >[2=1]&}", nil, 0, TRUE, nil, nil, FALSE);
+	spawn plumbproc();
 
 	# notify(shutdown);
 	# waitc := chan of int;
@@ -583,6 +583,9 @@ mousetask()
 					t.eq0 = ~0;
 					t.typex(but, 0);
 					w.unlock();
+					bflush();
+					row.qlock.unlock();
+					break;
 				}
 				if(mouse.xy.in(t.scrollr)){
 					if(but){
@@ -1135,18 +1138,24 @@ plumbproc()
 {
 	plumbpid = sys->pctl(0, nil);
 	for(;;){
-		msg := Msg.recv();
-		if(msg == nil){
-			sys->print("Acme: can't read /chan/plumb.edit: %r\n");
-			plumbpid = 0;
-			plumbed = 0;
-			return;
+		while(plumbmsg->init(1, "edit", Dat->PLUMBSIZE) < 0){
+			sys->sleep(2);
 		}
-		if(msg.kind != "text"){
-			sys->print("Acme: can't interpret '%s' kind of message\n", msg.kind);
-			continue;
+		plumbed = 1;
+		for(;;){
+			msg := Msg.recv();
+			if(msg == nil){
+				sys->print("Acme: can't read /chan/plumb.edit: %r\n");
+				plumbpid = 0;
+				plumbed = 0;
+				break;
+			}
+			if(msg.kind != "text"){
+				sys->print("Acme: can't interpret '%s' kind of message\n", msg.kind);
+				continue;
+			}
+			# sys->print("msg %s\n", string msg.data);
+			cplumb <-= msg;
 		}
-# sys->print("msg %s\n", string msg.data);
-		cplumb <-= msg;
 	}
 }

@@ -107,9 +107,33 @@ xfidkill()
 		utils->postnote(Utils->PNPROC, thispid, xfidtid[i], "kill");
 }
 
+waitproc(pid : int, sync: chan of int)
+{
+	fd : ref Sys->FD;
+	n : int;
+
+	sys->pctl(Sys->FORKFD, nil);
+	w := sprint("#p/%d/wait", pid);
+	fd = sys->open(w, Sys->OREAD);
+	if (fd == nil)
+		error("fd == nil in waitproc");
+	sync <-= 0;
+	buf := array[Sys->WAITLEN] of byte;
+	status := "";
+	for(;;){
+		if ((n = sys->read(fd, buf, len buf))<0)
+			error("bad read in waitproc");
+		status = string buf[0:n];
+		dat->cwait <-= status;
+	}
+}
+
 Xfid.ctl(x : self ref Xfid)
 {
 	x.tid = sys->pctl(0, nil);
+	sync := chan of int;
+	spawn waitproc(x.tid, sync);
+	<-sync;
 	ox := xfidtid;
 	xfidtid = array[nxfidtid+1] of int;
 	xfidtid[0:] = ox[0:nxfidtid];
@@ -444,7 +468,7 @@ Xfid.write(x : self ref Xfid)
 
 	qid = FILE(x.f.qid);
 	w = x.f.w;
-	row.qlock.lock();	# tasks->procs now
+#	row.qlock.lock();	# tasks->procs now
 	if(w != nil){
 		c = 'F';
 		if(qid==QWtag || qid==QWbody)
@@ -452,7 +476,7 @@ Xfid.write(x : self ref Xfid)
 		w.lock(c);
 		if(w.col == nil){
 			w.unlock();
-			row.qlock.unlock();
+#			row.qlock.unlock();
 			respond(x, fc, Edel);
 			return;
 		}
@@ -619,7 +643,7 @@ Xfid.write(x : self ref Xfid)
 	}
 	if(w != nil)
 		w.unlock();
-	row.qlock.unlock();
+#	row.qlock.unlock();
 }
 
 Xfid.ctlwrite(x : self ref Xfid, w : ref Window)
@@ -863,7 +887,7 @@ loop :
 			err = Ebadevent;
 			break;
 		}
-		# row.qlock.lock();
+		row.qlock.lock();
 		case(c){
 		'x' or 'X' =>
 			exec->execute(t, q0, q1, TRUE, nil);
@@ -873,7 +897,7 @@ loop :
 			err = Ebadevent;
 			break loop;
 		}
-		# row.qlock.unlock();
+		row.qlock.unlock();
 	}
 
 	ab := array of byte r[0:n];
