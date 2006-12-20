@@ -273,6 +273,7 @@ sender(input: ref Input, output: array of ref Output)
 			output[j].queue = tl output[j].queue;
 			if(output[j].queue == nil)
 				outputc[j] = nil;
+			log("sending \n");
 			rc <-= (msg, nil);
 		}
 	}
@@ -335,7 +336,14 @@ start(port: string, startstop: int)
 	for(i:=0; i<len output; i++)
 		if(port == output[i].name){
 			output[i].waiting = 0;
-			output[i].started += startstop;
+			if(startstop == -1){
+				output[i].started = 0;
+				# if a process stopped we might have to flush
+				# the output because there may already be a read
+				# waiting. really the read should be flushed, and the
+				# file2chan should handle it.
+			}else
+				output[i].started += startstop;
 			return;
 		}
 	sys->fprint(stderr, "plumb: \"start\" message from unrecognized port %s\n", port);

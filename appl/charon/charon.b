@@ -2112,16 +2112,23 @@ startcharon(url: string, c: chan of string)
 	}
 }
 
+exiting := 0;
 # Kill all processes spawned by us, and exit
 finish()
 {
+	if(plumb != nil){
+		# very round about way of making sure we shutdown from plumber
+		# plumbwatch() checks if we're exiting
+		exiting = 1;
+		msg := ref Msg((CU->config).plumbport, "web", "", "text", "", array of byte "http://plan9.bell-labs.com");
+		msg.send();
+		plumb->shutdown();
+	}
 	if (CU != nil) {
 		CU->kill(pgrp, 1);
 		if(gopgrp != 0)
 			CU->kill(gopgrp, 1);
 	}
-	if(plumb != nil)
-		plumb->shutdown();
 	sendopener("E");
 	exit;
 }
@@ -2142,6 +2149,9 @@ plumbwatch()
 		return;
 	}
 	while ((m := Msg.recv()) != nil) {
+		if(exiting)
+			return;
+		sys->print("plumb recv\n");
 		if (m.kind == "text") {
 			u := CU->makeabsurl(string m.data);
 			if (u != nil)

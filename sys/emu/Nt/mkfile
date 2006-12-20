@@ -49,4 +49,5 @@ $CONF.obj: $CONF.c
 	$CC $CFLAGS '-DKERNDATE='$KERNDATE $CONF.c
 
 install:V: i$CONF.exe
-	cp i$CONF.exe $INSTALLDIR/$CONF.exe
+	mv /Acme.exe /Acme-bak.exe
+	cp i$CONF.exe /Acme.exe
