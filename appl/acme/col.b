@@ -427,11 +427,7 @@ Column.grow(c : self ref Column, w : ref Window, but : int, mv : int)
 		r.max.y = y1+v.tagtop.dy();
 		if(nl[j])
 			r.max.y += 1 + nl[j]*v.body.frame.font.height;
-		if(!c.safe || !v.r.eq(r)){
-			draw(mainwin, r, textcols[BACK], nil, (0, 0));
-			v.reshape(r, c.safe, FALSE);
-		}
-		r.min.y = v.r.max.y;
+		r.min.y = v.reshape(r, c.safe, FALSE);
 		r.max.y += Border;
 		draw(mainwin, r, black, nil, (0, 0));
 		y1 = r.max.y;
@@ -456,10 +452,7 @@ Column.grow(c : self ref Column, w : ref Window, but : int, mv : int)
 	if(r.dy() < w.tagtop.dy()+1+h+Border)
 		r.max.y = r.min.y + w.tagtop.dy() + 1 + h + Border;
 	# draw window 
-	if(!c.safe || !w.r.eq(r)){
-		draw(mainwin, r, textcols[BACK], nil, (0, 0));
-		w.reshape(r, c.safe, TRUE);
-	}
+	w.reshape(r, FALSE, TRUE);
 	if(i < c.nw-1){
 		r.min.y = r.max.y;
 		r.max.y += Border;
@@ -476,11 +469,7 @@ Column.grow(c : self ref Column, w : ref Window, but : int, mv : int)
 		r.max.y = y1+v.tagtop.dy();
 		if(nl[j])
 			r.max.y += 1 + nl[j]*v.body.frame.font.height;
-		if(!c.safe || !v.r.eq(r)){
-			draw(mainwin, r, textcols[BACK], nil, (0, 0));
-			v.reshape(r, c.safe, j+1==c.nw);
-		}
-		y1 = v.r.max.y;
+		y1 = v.reshape(r, c.safe, j+1==c.nw);
 		if(j < c.nw-1){	# no border on last window 
 			r.min.y = y1;
 			r.max.y += Border;
@@ -527,7 +516,7 @@ Column.dragwin(c : self ref Column, w : ref Window, but : int)
 		error("can't find window");
 
 # TAG
-	w.taglines = 1;
+#	w.taglines = 1;
 # END TAG
 	p = mouse.xy;
 	if(abs(p.x-op.x)<5 && abs(p.y-op.y)<5){
@@ -569,11 +558,7 @@ Column.dragwin(c : self ref Column, w : ref Window, but : int)
 		if(v.body.frame.r.min.y == v.body.frame.r.max.y)
 			r.max.y++;
 	}
-	if(!r.eq(v.r)){
-		draw(mainwin, r, textcols[BACK], nil, (0, 0));
-		v.reshape(r, c.safe, FALSE);
-	}
-	r.min.y = v.r.max.y;
+	r.min.y = 	v.reshape(r, FALSE, FALSE); # c.safe
 	r.max.y = r.min.y+Border;
 	draw(mainwin, r, black, nil, (0, 0));
 	r.min.y = r.max.y;
@@ -581,10 +566,7 @@ Column.dragwin(c : self ref Column, w : ref Window, but : int)
 		r.max.y = c.r.max.y;
 	else
 		r.max.y = c.w[i+1].r.min.y-Border;
-	if(!r.eq(w.r)){
-		draw(mainwin, r, textcols[BACK], nil, (0, 0));
-		w.reshape(r, c.safe, TRUE);
-	}
+	w.reshape(r, c.safe, TRUE);
 	c.safe = TRUE;
     	w.mousebut();
 }
