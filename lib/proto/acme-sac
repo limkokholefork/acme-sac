@@ -1,0 +1,77 @@
+LICENCE
+NOTICE
+CHANGES
+Acme.exe
+startrc
+acme
+	+
+appl
+	NOTICE
+	acme
+		+
+	charon
+		+
+	cmd
+		+
+	grid
+		+
+	lib
+		+
+	math
+		+
+	mkfile
+	svc
+		+
+dis
+	+
+fonts
+	+
+keydb
+	countersigned
+	signed
+lib
+	+
+locale
+	+
+man
+	+
+mkconfig
+mkfiles
+	+
+mnt
+	acme
+	arch
+	diary
+	factotum
+	keys
+	keysrv
+	registry
+	schedule
+	wiki
+	wm
+	wrap
+	wsys
+module
+	+
+n
+services
+	httpd
+		httpd.rewrite
+		httpd.suff
+	logs
+	ppp
+	webget
+		help.html
+		inferno.gif
+		start.html
+		vnlogo.gif
+tmp
+usr
+	inferno
+		charon
+			*
+		keyring
+		lib
+			*
+		namespace
+		README

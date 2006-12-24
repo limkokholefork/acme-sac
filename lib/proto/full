@@ -1,0 +1,84 @@
+LICENCE
+NOTICE
+Acme.bat
+Charon.bat
+Wm.bat
+startrc
+emu.exe
+acme
+	+
+appl
+	acme
+		+
+	charon
+		+
+	cmd
+		+
+	grid
+		+
+	lib
+		+
+	math
+		+
+	mkfile
+	svc
+		+
+	wm
+dis
+	+
+fonts
+	+
+icons
+	+
+keydb
+	countersigned
+	signed
+lib
+	+
+locale
+	+
+mail
+man
+	+
+mkconfig
+mkfiles
+	+
+mnt
+	9win
+	acme
+	arch
+	diary
+	factotum
+	keys
+	keysrv
+	registry
+	wiki
+	wm
+	wrap
+	wsys
+module
+	+
+n
+services
+	httpd
+		httpd.rewrite
+		httpd.suff
+	logs
+	ppp
+	webget
+		help.html
+		inferno.gif
+		start.html
+		vnlogo.gif
+sys
+	+
+tmp
+usr
+	inferno
+		charon
+			*
+		keyring
+		lib
+			*
+		namespace
+		README
