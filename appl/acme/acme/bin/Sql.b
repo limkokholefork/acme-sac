@@ -61,13 +61,18 @@ init(nil: ref Draw->Context, args: list of string)
 	w.ctlwrite("get\n");
 	w.openbody(OWRITE);
 	spawn mainwin(w);
-	
-	w = resultwin = Win.wnew();
+}
+
+newoutwin()
+{
+	sys->pctl(Sys->NEWPGRP, nil);
+	w := resultwin = Win.wnew();
 	w.wname("/usr/" + getuser() + "/sql/" + fullname + "/" + servername + "/+Errors");
 	w.wtagwrite("More");
 	w.openbody(OWRITE);
-	outwin(w);
+	spawn outwin(w);
 }
+
 
 logon(server, user, passwd: string): int
 {
@@ -119,6 +124,8 @@ doexec(w: ref Win, cmd: string): int
 		arg = skip(arg, "");
 	case cmd {
 	"Run" =>
+		if(resultwin == nil)
+			spawn newoutwin();
 		s := readdot(w);
 		sql <-= s;
 	"More" =>
@@ -235,6 +242,7 @@ outwin(w: ref Win)
 			w.wwriteevent(ref e);
 		}
 	}
+	resultwin = nil;
 	postnote(1, pctl(0, nil), "kill");
 	w.wdel(1);
 	exit;
@@ -244,6 +252,8 @@ outwin(w: ref Win)
 
 runsql(w: ref Win, arg: string)
 {
+	if(datafd == nil)
+		datafd= open("/n/odbc/db/" + conn + "/data", OREAD);
 	fd := open("/n/odbc/db/" + conn + "/cmd", OWRITE);
 	if(fd == nil){
 		sys->fprint(stderr, "error opening cmd\n");
@@ -257,7 +267,8 @@ runsql(w: ref Win, arg: string)
 		sys->fprint(stderr, "error writing cmd: %r\n");
 		return;
 	}
-	sys->seek(datafd, big 0, 0);
+	if(datafd != nil)
+		sys->seek(datafd, big 0, 0);
 	w.wreplace(",", "");
 	more(w);
 }

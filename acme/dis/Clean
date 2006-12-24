@@ -1,0 +1,26 @@
+#!/dis/sh
+
+load std
+
+if{~ $#* 0}(
+	{pattern=.}
+	{pattern=$1}
+)
+for i in /mnt/acme/[0-9]* {
+	if{ftest -d $i}{
+		tag=`{cat $i/tag}
+		tagline = $"tag
+		file=$tag(1)
+
+		# must match our pattern if given, must be a clean window,
+		# and must not be an Errors window, mail, or win.
+		if {and (
+			{echo $file | grep $pattern >/dev/null >[2=1]}
+			{! ~ $tagline '*Put*'}
+			{! ~ $file '*/' '*+Errors*' '*/-*' '*/mail/*'}
+		)}{
+			echo del >$i/ctl
+		}
+	}
+}
+status=''

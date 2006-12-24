@@ -7,7 +7,6 @@ include "draw.m";
 include "wmsrv.m";
 	wmsrv: Wmsrv;
 	Window, Client: import wmsrv;
-include "tk.m";
 include "wmclient.m";
 	wmclient: Wmclient;
 include "string.m";
@@ -15,6 +14,9 @@ include "string.m";
 include "sh.m";
 include "winplace.m";
 	winplace: Winplace;
+include "menuhit.m";
+	menuhit: Menuhit;
+	Menu, Mousectl: import menuhit;
 
 Wm: module {
 	init:	fn(ctxt: ref Draw->Context, argv: list of string);
@@ -71,6 +73,8 @@ init(ctxt: ref Draw->Context, argv: list of string)
 	if (ctxt == nil)
 		ctxt = wmclient->makedrawcontext();
 	display = ctxt.display;
+	menuhit = load Menuhit Menuhit->PATH;
+	menu := ref Menu(array[] of {"acme", "wm/clock", "wm/colors"}, nil, 0);
 
 	buts := Wmclient->Appl;
 	if(ctxt.wm == nil)
@@ -83,6 +87,7 @@ init(ctxt: ref Draw->Context, argv: list of string)
 		raise "fail:no image";
 	}
 	wmclient->win.startinput("kbd" :: "ptr" :: nil);
+	menuhit->init(win);
 
 	wmctxt := win.ctxt;
 	screen = makescreen(win.image);
@@ -133,11 +138,17 @@ init(ctxt: ref Draw->Context, argv: list of string)
 				ptrfocus = c;
 				c.ctl <-= "raise";
 				setkbdfocus(c);
-			}
-			else if(p.buttons&4)
-				controlevent(sys->sprint("menu %d %d", p.xy.x, p.xy.y));
-			else
-				controlevent(sys->sprint("clear %d %d", p.xy.x, p.xy.y));
+			}else if(p.buttons & (1|2)){
+				mc := ref Mousectl(win.ctxt.ptr, p.buttons, p.xy, p.msec);
+				n := menuhit->menuhit(p.buttons, mc, menu, nil);
+				if(n >= 0 && n < len menu.item){
+					csync := chan of string;
+					spawn command(clientctxt, menu.item[n] :: nil, csync);
+					<-csync;
+				}
+				break;
+			}	
+
 		}
 		if(ptrfocus != nil && (ptrfocus.flags & Ptrstarted) != 0){
 			# inside currently selected client or it had button down last time (might have come up)
@@ -709,8 +720,8 @@ bytes2rect(b: array of byte): ref Rect
 		return nil;
 	x := int string b[1:13];
 	y := int string b[13:25];
-	but := int string b[25:37];
-	msec := int string b[37:49];
+#	but := int string b[25:37];
+#	msec := int string b[37:49];
 	return ref Rect((0,0), (x, y));
 }
 
