@@ -1,0 +1,39 @@
+LICENCE
+NOTICE
+Acme.bat
+startrc
+emu.exe
+acme
+	+
+dis
+	+
+fonts
+	+
+lib
+	+
+locale
+	+
+man
+	+
+mnt
+	acme
+	arch
+	factotum
+	keys
+	keysrv
+	registry
+	wiki
+	wm
+	wrap
+	wsys
+n
+tmp
+usr
+	inferno
+		charon
+			*
+		keyring
+		lib
+			*
+		namespace
+		README
