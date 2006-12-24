@@ -27,7 +27,6 @@ Wmclient: module
 		ctl:		chan of string;
 
 		# private from here:
-		titlebar:	ref Tk->Toplevel;		# XXX i wish this didn't have to be visible to the application...
 		tbsize: 	Draw->Point;			# size requested by titlebar.
 		tbrect:	Draw->Rect;
 		screen:	ref Draw->Screen;

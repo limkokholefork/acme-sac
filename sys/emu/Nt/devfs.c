@@ -1691,7 +1691,7 @@ secstat(Dir *dir, char *file, Rune *srv)
 	sd = secsd(file, sdrock);
 	if(sd == nil){
 		int e = GetLastError();
-		if(e == ERROR_ACCESS_DENIED || e == ERROR_SHARING_VIOLATION){
+		if(e == ERROR_ACCESS_DENIED || e == ERROR_SHARING_VIOLATION || e == ERROR_NONE_MAPPED){
 			dir->uid = strdup("unknown");
 			dir->gid = strdup("unknown");
 			if(dir->uid == nil || dir->gid == nil){
@@ -1714,7 +1714,20 @@ secstat(Dir *dir, char *file, Rune *srv)
 		n = runenlen(st.group->name, runeslen(st.group->name));
 		dir->gid = smalloc(n+1);
 		runestoutf(dir->gid, st.group->name, n+1);
-	}
+ 	}else{
+ 		int e = GetLastError();
+ 		if(e == ERROR_ACCESS_DENIED || e == ERROR_SHARING_VIOLATION || e == ERROR_NONE_MAPPED){
+ 			dir->uid = strdup("unknown");
+ 			dir->gid = strdup("unknown");
+ 			if(dir->uid == nil || dir->gid == nil){
+ 				free(dir->uid);
+ 				error(Enomem);	/* will change to use kstrdup */
+ 			}
+ 			dir->mode = 0;
+ 			return 1;
+ 		}
+ 		return 0;
+ 	}
 	return ok;
 }
 

@@ -1,0 +1,126 @@
+Irc 
+	• pasting a large block only sends the first line to the channel
+	• still something odd about noscroll behaviour
+	• non threadsafe use of bufio between infothread and mainwin
+	• implement redial
+	• channel names as args
+	• list on plumb channel for irc channel urls
+	• add commline args for channel names
+
+Charon
+	• clean up forms handling
+	• plumb images to external prog
+	• cleanup IMG text to be single glyph with superscript
+	• add standalone charon script
+	• remove tk support altogether. than remove libtk and /man/9
+
+Acme
+	• Crashes when Debug opens lots of windows,
+	writes invalid addresses to addr file.
+	• allow acme:sac to also run under wm
+	• middle-click sh commands that include comments causes
+	sh to give parse errors. e.g. man 1 bind # bind(1)
+	The problem is just the newline is missing
+	• add libcomplete support (complete.b is written)
+	• implement Indent for autoindentation
+	• get new window each time right click on /  FIXED
+	• expanded taglines two lines in size don't collapse
+	if the lower window is touching the bottom of the tag.
+	• 'Look args' doesn't work if text is already selected within the Body.
+	• middle-click in client windows, like irc, leave the command name in 
+	the row tag even after the command exits   FIXED: added waitproc for xfid
+	• mouse chording command args in client windows, like irc,
+	doesn't work because of the round trip
+
+Debug
+	• implement breakpoints
+	• don't open all the files for the stack trace. only the top level.
+	• provide nice acme stack navigation without having to stop the proc
+	• plumb filenames to full filname path and location of step
+
+Mail/Mailpop3
+	• quote "From " when saving mail
+	• Mailpop3 hangs. probably a race condition somewhere
+	• use factotum for pop password
+	• take arguments for user and pop server
+	• use default direct /mail/box/user not current directory [FIXED  for Mailpop3]
+	• pop3 can't handle large messages, runs out of heap.
+	• add ssl to sendmail (smtp lib)
+	• with ssl working it should really be part of factotum
+	• merge Sascha's changes to Reply
+	• autocomplete email addresses
+	• listen on plumb for email addresses to mailto
+
+Calendar
+	• add acme dump configuration.			FIXED
+	• access to Schedule needs to be locked.
+	• print events for current week
+	• use better defaults so schedule file already exists is mounted
+
+sendmail.b
+	• need "send" client to append to other user's mailboxes
+	if no '@' and user's mailbox exists, then append.
+
+daytime.b
+	the string2tm doesn't work on the rfc822 dates in Mail
+
+httpd
+	• connection keep-alive hangs when interacting through
+	telnet. probably need to replace bufio in the implementation.
+	• test download of ranges.
+	• cleanup directory. move CGI stuff out of there.
+
+rpc
+	• refactor disk/kfscmd, factotum/rpc, ndb/dnsquery, etc.
+
+
+factotum
+	• support logon for acme:sac to jones.net.
+	• acme client to get authinfo dialog/feedkey
+
+styxpersist.b
+	• doesn't work
+	• develop further to include lookup of registry, lookup using virgil maintain.
+
+sort
+	• runs out of memory
+
+Acme clients
+	adict
+	juke
+	pivotTable
+	Search
+	dialog/feedkey
+	autocomplete -- type in the tag line, and the window contents refresh with
+	matching words. like google suggest.
+	ctl-space for java object interfaces
+
+
+Chat
+	mount -C rc4_256 -k caerwyn.canto tcp!canto.hopto.org!6683 /n/chat
+	causes mount: mount failed: i/o on hungup channel
+			58 "Sh":fail:mount failed
+	first few attempts but works afterward
+
+man pages
+	Calendar
+	Chat
+	Irc
+	Debug
+	stackv
+	remove unused man pages
+	remove tk /man/9
+	remove prefab, wm, other unused stuff
+	rebuild INDEX using inferno only tools
+	man to html
+	remove from /man/3 that only apply to native
+	missing sys-byte2char(2)
+	
+web hosting
+	create acme sac web page like plan9port with full man pages and source
+	navigable online.
+
+windows host
+	icons for Acme.exe
+	pipe all errors messages to log readable from within acme.
+	

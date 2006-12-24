@@ -717,7 +717,7 @@ loop:
 		}
 		m.text += s;
 	}
-	sys->print("END");
+#	sys->print("END");
 	enc = nil;
 	m.box = b;
 	return m;
