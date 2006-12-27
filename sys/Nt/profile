@@ -106,3 +106,5 @@ fn svn {
 	args = ${tl $*}
 	os svn $1 `{file2root $args}
 }
+
+bind /sys/Nt/mkconfig /sys/mkconfig

@@ -12,7 +12,7 @@ runas inferno {
 	bind -c '#splumber' /chan
 	bind -a '#^' /chan
 	for i in a b c d e f g h i j k l m n o p q r s t u v w x y z {
-		bind -c '#U' ^ $i ^ ':/' /n/$i >[2] /dev/null
+		trfs '#U' ^ $i ^ ':/' /n/$i >[2] /dev/null
 	}
 	ndb/cs
 	if {ftest -f $home/lib/profile} {run $home/lib/profile} {}
