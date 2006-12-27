@@ -671,6 +671,23 @@ winproc(LPVOID x)
 }
 
 void
+fullscreen(int dofull)
+{
+	if(dofull){
+	SetForegroundWindow(window);
+		SetWindowLong(window,GWL_STYLE, WS_POPUP | WS_CLIPCHILDREN);
+		SetWindowLong(window,GWL_EXSTYLE, WS_EX_APPWINDOW);
+		ShowWindow(window, SW_SHOWMAXIMIZED);
+	}else {
+	SetForegroundWindow(window);
+		SetWindowLong(window,GWL_STYLE, WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN);
+		SetWindowLong(window,GWL_EXSTYLE, WS_EX_APPWINDOW);
+		ShowWindow(window, SW_SHOWMAXIMIZED);
+	}
+	UpdateWindow(window);
+}
+
+void
 setpointer(int x, int y)
 {
 	POINT pt; 
