@@ -169,7 +169,7 @@ execute(t : ref Text, aq0 : int, aq1 : int, external : int, argt : ref Text)
 
 	q0 = aq0;
 	q1 = aq1;
-	if(q1 == q0){	# expand to find word (actually file name) 
+	if(q1 == q0 || (q1-q0) == 1){	# expand to find word (actually file name) 
 		# if in selection, choose selection 
 		if(t.q1>t.q0 && t.q0<=q0 && q0<=t.q1){
 			q0 = t.q0;

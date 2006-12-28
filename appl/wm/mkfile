@@ -6,9 +6,8 @@ SRC=`{ls *.b}
 TARG=${SRC:%.b=%.dis}
 
 MODULES=\
-	wmdeb.m\
 
-SYSMODULES=`{grep '^include "' *.b | sed 's/.*"([^"]+)";.*$/\1/' |sort |uniq|grep -v 'wmdeb|smenu|poly'}
+SYSMODULES=`{grep '^include "' *.b | sed 's/.*"([^"]+)";.*$/\1/' |sort |uniq}
 
 DISBIN=$ROOT/dis/wm
 
