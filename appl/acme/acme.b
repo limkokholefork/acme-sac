@@ -1139,7 +1139,7 @@ plumbproc()
 	plumbpid = sys->pctl(0, nil);
 	for(;;){
 		while(plumbmsg->init(1, "edit", Dat->PLUMBSIZE) < 0){
-			sys->sleep(2);
+			sys->sleep(2000);
 		}
 		plumbed = 1;
 		for(;;){

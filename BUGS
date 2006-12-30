@@ -3,9 +3,8 @@ Irc
 	• still something odd about noscroll behaviour
 	• non threadsafe use of bufio between infothread and mainwin
 	• implement redial
-	• channel names as args
+	• channel names as command line args
 	• list on plumb channel for irc channel urls
-	• add commline args for channel names
 
 Charon
 	• clean up forms handling
@@ -21,20 +20,12 @@ Acme
 	• middle-click sh commands that include comments causes
 	sh to give parse errors. e.g. man 1 bind # bind(1)
 	The problem is just the newline is missing
-	• add libcomplete support (complete.b is written)
-	• implement Indent for autoindentation
-	• get new window each time right click on /  FIXED
-	• expanded taglines two lines in size don't collapse
-	if the lower window is touching the bottom of the tag.
 	• 'Look args' doesn't work if text is already selected within the Body.
-	• middle-click in client windows, like irc, leave the command name in 
-	the row tag even after the command exits   FIXED: added waitproc for xfid
 	• mouse chording command args in client windows, like irc,
 	doesn't work because of the round trip
 
 Debug
 	• implement breakpoints
-	• don't open all the files for the stack trace. only the top level.
 	• provide nice acme stack navigation without having to stop the proc
 	• plumb filenames to full filname path and location of step
 
@@ -42,17 +33,15 @@ Mail/Mailpop3
 	• quote "From " when saving mail
 	• Mailpop3 hangs. probably a race condition somewhere
 	• use factotum for pop password
-	• take arguments for user and pop server
 	• use default direct /mail/box/user not current directory [FIXED  for Mailpop3]
 	• pop3 can't handle large messages, runs out of heap.
-	• add ssl to sendmail (smtp lib)
 	• with ssl working it should really be part of factotum
 	• merge Sascha's changes to Reply
 	• autocomplete email addresses
 	• listen on plumb for email addresses to mailto
+	• merge in rfc822.b library
 
 Calendar
-	• add acme dump configuration.			FIXED
 	• access to Schedule needs to be locked.
 	• print events for current week
 	• use better defaults so schedule file already exists is mounted
@@ -60,6 +49,7 @@ Calendar
 sendmail.b
 	• need "send" client to append to other user's mailboxes
 	if no '@' and user's mailbox exists, then append.
+	• add ssl3
 
 daytime.b
 	the string2tm doesn't work on the rfc822 dates in Mail
@@ -81,6 +71,7 @@ factotum
 styxpersist.b
 	• doesn't work
 	• develop further to include lookup of registry, lookup using virgil maintain.
+	• look at more recent (2006) work done on p9p for persistent connections
 
 sort
 	• runs out of memory
