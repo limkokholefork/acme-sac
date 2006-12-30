@@ -33,94 +33,6 @@ lock: chan of int;
 fids: ref Table[ref Fid];
 tfids: ref Table[ref Fid];
 
-exportname(name: string): string
-{
-	for(i:=0; i<len name; i++)
-		if(name[i] == '␣')
-			name[i] = ' ';
-	return name;
-}
-
-importname(name: string): string
-{
-	for(i:=0; i<len name; i++)
-		if(name[i] == ' ')
-			name[i] = '␣';
-	return name;
-}
-
-trfsin(cfd, sfd: ref Sys->FD)
-{
-	while((t:=Tmsg.read(cfd, msize)) != nil){
-		pick m := t {
-		Clunk or
-		Remove =>
-			fids.del(m.fid);
-		Create =>
-			fid := ref Fid(m.fid, 0, 0);
-			fids.add(m.fid, fid);
-			addtfid(m.tag, fid);
-			m.name = exportname(m.name);
-		Open =>
-			fid := ref Fid(m.fid, 0, 0);
-			fids.add(m.fid, fid);
-			addtfid(m.tag, fid);
-		Read =>
-			fid := fids.find(m.fid);
-			addtfid(m.tag, fid);
-			if(fid.isdir){
-				m.count /= 3;
-				if(m.offset == big 0)
-					fid.aux = 0;
-				m.offset -= big fid.aux;
-			}
-		Walk =>
-			for(i:=0; i<len m.names; i++)
-				m.names[i] = exportname(m.names[i]);
-		Wstat =>
-			m.stat.name = exportname(m.stat.name);
-		}
-		sys->write(sfd, t.pack(), t.packedsize());
-	}
-}
-		
-trfsout(cfd, sfd: ref Sys->FD)
-{
-	while((r := Rmsg.read(sfd, msize)) != nil){
-		pick m := r {
-		Version =>
-			msize = m.msize;
-		Create or
-		Open =>
-			fid := deltfid(m.tag);
-			fid.isdir = m.qid.qtype & Sys->QTDIR;
-		Read =>
-			fid := deltfid(m.tag);
-			if(fid.isdir){
-				idat: array of byte;
-				d: Sys->Dir;
-				n, idn, ds: int;
-				
-				idat = array[2*len m.data] of byte;
-				idn = 0;
-				for(n = 0; n<len m.data; n+=ds){
-					(ds, d) = styx->unpackdir(m.data[n:]);
-					if(ds <= 0)
-						break;
-					d.name = importname(d.name);
-					idat[idn:] = styx->packdir(d);
-					idn += styx->packdirsize(d);
-				}
-				fid.aux += idn-n;
-				m.data = idat[:idn];
-			}
-		Stat =>
-			m.stat.name = importname(m.stat.name);
-		}
-		sys->write(cfd, r.pack(), r.packedsize());
-	}
-}
-
 init(nil: ref Draw->Context, argv: list of string)
 {
 	sys = load Sys Sys->PATH;
@@ -148,7 +60,87 @@ init(nil: ref Draw->Context, argv: list of string)
 	spawn trfsout(p[1], q[1]);
 	if(sys->mount(p[0], nil, mntpt, Sys->MREPL|Sys->MCREATE, nil) < 0)
 		fatal("can't mount on " + mntpt);
-	p = q = nil;
+}
+
+trfsin(cfd, sfd: ref Sys->FD)
+{
+	while((t:=Tmsg.read(cfd, msize)) != nil){
+		pick m := t {
+		Clunk or
+		Remove =>
+			fids.del(m.fid);
+		Create =>
+			fid := ref Fid(m.fid, 0, 0);
+			fids.add(m.fid, fid);
+			addtfid(m.tag, fid);
+			m.name = tr(m.name, '␣', ' ');
+		Open =>
+			fid := ref Fid(m.fid, 0, 0);
+			fids.add(m.fid, fid);
+			addtfid(m.tag, fid);
+		Read =>
+			fid := fids.find(m.fid);
+			addtfid(m.tag, fid);
+			if(fid.isdir){
+				if(m.count*3+Styx->IOHDRSZ > msize)
+					m.count /= 3;
+				if(m.offset == big 0)
+					fid.aux = 0;
+				m.offset -= big fid.aux;
+			}
+		Walk =>
+			for(i:=0; i<len m.names; i++)
+				m.names[i] = tr(m.names[i], '␣', ' ');
+		Wstat =>
+			m.stat.name = tr(m.stat.name, '␣', ' ');
+		}
+		sys->write(sfd, t.pack(), t.packedsize());
+	}
+}
+		
+trfsout(cfd, sfd: ref Sys->FD)
+{
+	b := array[Styx->MAXFDATA] of byte;
+	
+	while((r := Rmsg.read(sfd, msize)) != nil){
+		pick m := r {
+		Version =>
+			msize = m.msize;
+		Create or
+		Open =>
+			fid := deltfid(m.tag);
+			fid.isdir = m.qid.qtype & Sys->QTDIR;
+		Read =>
+			fid := deltfid(m.tag);
+			if(fid.isdir){
+				d: Sys->Dir;
+				n, bs, ds: int;
+				
+				bs = 0;
+				for(n = 0; n<len m.data; n+=ds){
+					(ds, d) = styx->unpackdir(m.data[n:]);
+					if(ds <= 0)
+						break;
+					d.name = tr(d.name, ' ', '␣');
+					b[bs:] = styx->packdir(d);
+					bs += styx->packdirsize(d);
+				}
+				fid.aux += bs-n;
+				m.data = b[:bs];
+			}
+		Stat =>
+			m.stat.name = tr(m.stat.name, ' ', '␣');
+		}
+		sys->write(cfd, r.pack(), r.packedsize());
+	}
+}
+
+tr(name: string, c1, c2: int): string
+{
+	for(i:=0; i<len name; i++)
+		if(name[i] == c1)
+			name[i] = c2;
+	return name;
 }
 
 Table[T].new(nslots: int, nilval: T): ref Table[T]
@@ -216,7 +208,6 @@ deltfid(t: int): ref Fid
 	lock <-= 1;
 	r := tfids.del(t);
 	<- lock;
-	
 	return r;
 }
 

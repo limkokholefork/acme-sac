@@ -2,11 +2,6 @@ implement ktrans;
 
 include "sys.m";
 include "draw.m";
-include "libc0.m";
-include "libc.m";
-
-minc: con '\t';
-maxc: con 'z';
 
 anjal:= array[] of {
 	("zuu",	""),
@@ -734,10 +729,10 @@ anjal:= array[] of {
 	(" n",	" "),
 	(" ",		" "),
 };
+minc: con '\t';
+maxc: con 'z';
 
 sys: Sys;
-libc0: Libc0;
-libc: Libc;
 natural: int;
 in, out, err: ref Sys->FD;
 hashtab: array of list of (string, string);
@@ -749,48 +744,39 @@ ktrans: module
 
 init(nil: ref Draw->Context, nil: list of string)
 {
-	buf:= array[128] of byte;
-	bi, ei: int;
-	nchar, wantmore, partsent: int;
+	buf := array[128] of byte;
+	bi, ei, nchar, partsent: int;
 	mstr: string;
 	
 	sys = load Sys Sys->PATH;
-	if((libc0 = load Libc0 Libc0->PATH) == nil)
-		fatal("can't load " + Libc0->PATH);
-	if((libc = load Libc Libc->PATH) == nil)
-		fatal("can't load " + Libc->PATH);
-	
 	in = sys->fildes(0);
 	out = sys->fildes(1);
 	err = sys->fildes(2);
-	bi = ei = 0;
-	wantmore = partsent = 0;
+	bi = ei = partsent = 0;
 	natural = 1;
 	
-	inithash();
+	inithtab();
+	anjal = nil;
 	
 	for(;;){
 		if(bi >= ei)
 			bi = ei = 0;
-		else if(wantmore && ei == len buf - 1){
+		else if(ei == len buf-1){
 			buf[0:] = buf[bi:ei];
-			bi = ei = 0;
+			ei -= bi;
+			bi = 0;
 		}
-		n := sys->read(in, buf[ei:], len buf - ei - 1);
-		if(n <= 0){
-			if(!partsent && bi < ei)
-				send(buf[bi:], ei-bi);
-			exit;
-		}
-		ei += n;
-		buf[ei] = byte '\0';
-		wantmore = 0;
+		n := sys->read(in, buf[ei:], len buf-ei-1);
+		if(n <= 0)
+			buf[ei++] = byte '\0';		# to flush buf[bi:ei], if any
+		else
+			ei += n;
 		while(bi < ei){
-			if(sys->utfbytes(buf[bi:], ei-bi) == 0){
-				wantmore = 1;
+			if(buf[bi] == byte '\0')
+				exit;
+			if(sys->utfbytes(buf[bi:], ei-bi) == 0)
 				break;
-			}
-			if(changelang(buf[bi])){
+			if(changekbd(buf[bi])){
 				bi++;
 				continue;
 			}
@@ -800,76 +786,58 @@ init(nil: ref Draw->Context, nil: list of string)
 				bi += clen;
 				continue;
 			}
-			(mstr, nchar) = match(buf[bi:]);
+			(mstr, nchar) = match(buf[bi:], ei-bi);
 			if(mstr != nil){
 				if(partsent){
+					# deleting the "previous" characters 
+					# is not a good idea.  dot (or current window)
+					# may have changed without our knowledge.
 					send(array[] of {byte '\b', byte '\b'}, partsent);
 					partsent = 0;
 				}
 				send(array of byte mstr, len array of byte mstr);
-				if(nchar == 0){
-					wantmore = 1;
+				if(nchar == 0){		# match, longer possible
 					partsent = len mstr;
 					break;
 				}
-				bi += nchar;
+				bi += nchar;			# longest possible match found
 			}else{
-				if(nchar){
-					wantmore = 1;
+				if(nchar > 0)			# match possible
 					break;
-					# bug: partsent not considered ("sr<eof>")
-				}
-				send(buf[bi:], 1);
+				send(buf[bi:], 1);	# no match
 				bi++;
 			}
 		}
 	}
 }
 
-inithash()
+inithtab()
 {
 	hashtab = array[maxc-minc+1] of list of (string, string);
-	for(j:=len anjal-1; j >= 0; j--){
+	for(j:=len anjal-1; j>=0; j--){
 		k := anjal[j].t0[0]-minc;
 		hashtab[k] = anjal[j] :: hashtab[k];
 	}
-	anjal = nil;
 }
 
-match(buf: array of byte): (string, int)
+match(buf: array of byte, lb: int): (string, int)
 {
-	h: list of (string, string);
-	lb, flag, nc: int;
-	
-	h = hashtab[int buf[0]-minc];
-	lb = libc0->strlen(buf);
-	nc = flag = 0;
-	for(; h != nil; h=tl h){
-		m := hd h;
-		lr := len m.t0;
-		length := libc->min(lr, lb);
-		if(strncmp(m.t0, string buf, length) == 0){
-			if(length < lr)
-				flag = 1;
-			else{
-				if(!flag)
-					nc = len m.t0;
-				return (m.t1, nc);
+	nc := 0;
+	for(h:=hashtab[int buf[0]-minc]; h!=nil; h=tl h){
+		map := hd h;
+		lt0 := len map.t0;
+		n := min(lt0, lb);
+		if(map.t0[:n] == (string buf)[:n]){
+			if(n == lt0){
+				if(nc)
+					return(map.t1, 0);
+				else
+					return(map.t1, lt0);
 			}
+			nc = n;
 		}
 	}
-	return (nil, flag);
-}
-
-strncmp(s1: string, s2: string, n: int): int
-{
-	for(i := 0; i < n; i++){
-		if(s1[i] != s2[i])
-			return s1[i]-int s2[i];
-		if(s1[i] == 0)
-			break;
-	}
-	return 0;
+	return (nil, nc);
 }
 
 send(buf: array of byte, n: int)
@@ -878,13 +846,20 @@ send(buf: array of byte, n: int)
 		fatal("write error");
 }
 
-changelang(c: byte): int
+changekbd(c: byte): int
 {
-	if(c == byte ''){	# control-k
+	if(c == byte ''){			# control-k
 		natural = !natural;
 		return 1;
 	}
 	return 0;
+}
+
+min(m: int, n: int): int
+{
+	if(m < n)
+		return m;
+	return n;
 }
 
 fatal(s: string)
