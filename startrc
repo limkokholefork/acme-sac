@@ -15,6 +15,7 @@ runas inferno {
 		trfs '#U' ^ $i ^ ':/' /n/$i >[2] /dev/null
 	}
 	ndb/cs
+	listen -Av 'tcp!*!styx' {export /&}
 	if {ftest -f $home/lib/profile} {run $home/lib/profile} {}
 	auth/factotum
 	acme -a /usr/inferno/README

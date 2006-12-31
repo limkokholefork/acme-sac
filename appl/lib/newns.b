@@ -39,6 +39,9 @@ include "factotum.m";
 include "arg.m";
 	arg: Arg;
 
+include "string.m";
+	str: String;
+
 newns(user: string, file: string): string
 {
 	sys = load Sys Sys->PATH;
@@ -62,6 +65,8 @@ newns(user: string, file: string): string
 	err := au->init();
 	if(err != nil)
 		return "Auth->init: "+err;
+
+	str = load String String->PATH;		# no check, because we'll live without it
 
 	if(file == nil){
 		file = "namespace";
@@ -87,20 +92,49 @@ nsfile(b: ref Iobuf, facfd: ref Sys->FD): string
 {
 	e := "";
 	while((l := b.gets('\n')) != nil){
-		(n, slist) := sys->tokenize(l, " \t\n\r");	# should use str->unquote?
-		if(n <= 0)
+		if(str != nil)
+			slist := str->unquoted(l);
+		else
+			(nil, slist) = sys->tokenize(l, " \t\n\r");	# old way, in absence of String
+		if(slist == nil)
 			continue;
-		e = nsop(slist, facfd);
+		e = nsop(expand(slist), facfd);
 		if(e != "")
 			break;
    	}
 	return e;
 }
 
+expand(l: list of string): list of string
+{
+	nl: list of string;
+	for(; l != nil; l = tl l){
+		s := hd l;
+		for(i := 0; i < len s; i++)
+			if(s[i] == '$'){
+				for(j := i+1; j < len s; j++)
+					if((c := s[j]) == '.' || c == '/' || c == '$')
+						break;
+				if(j > i+1){
+					(ok, v) := getenv(s[i+1:j]);
+					if(!ok)
+						return nil;
+					s = s[0:i] + v + s[j:];
+					i = i + len v;
+				}
+			}
+		nl = s :: nl;
+	}
+	l = nil;
+	for(; nl != nil; nl = tl nl)
+		l = hd nl :: l;
+	return l;
+}
+
 nsop(argv: list of string, facfd: ref Sys->FD): string
 {
 	# ignore comments 
-	if((hd argv)[0] == '#')
+	if(argv == nil || (hd argv)[0] == '#')
 		return nil;
  
 	e := "";
@@ -238,7 +272,7 @@ mount(argv: list of string, facfd: ref Sys->FD): string
 			return ig(r, sys->sprint("cannot load %s: %r", Factotum->PATH));
 		factotum->init();
 		afd := sys->fauth(fd, spec);
-		factotum->proxy(afd, facfd, "proto=p9any role=client");
+		ai := factotum->proxy(afd, facfd, "proto=p9any role=client");	# TO DO: something with ai
 		if(sys->mount(fd, afd, dir, r.flags, spec) < 0)
 			return ig(r, sys->sprint("mount %q %q: %r", addr, dir));
 		return nil;
@@ -317,7 +351,7 @@ import9(argv: list of string, facfd: ref Sys->FD): string
 	}
 	# TO DO: new style: impo aan|nofilter clear|ssl|tls\n
 	afd := sys->fauth(fd, "");
-	factotum->proxy(afd, facfd, "proto=p9any role=client");
+	ai := factotum->proxy(afd, facfd, "proto=p9any role=client");	# TO DO: something with ai
 	if(sys->mount(fd, afd, dir, r.flags, "") < 0)
 		return ig(r, sys->sprint("import %q %q: %r", addr, dir));
 	return nil;
@@ -379,9 +413,10 @@ getenv(name: string): (int, string)
 	n := sys->read(fd, b, len b);
 	if(n <= 0)
 		return (1, "");
-	while(n > 0 && b[n-1] == byte '\n')
-		n--;
-	return (1, string b[0:n]);
+	for(i := 0; i < n; i++)
+		if(b[i] == byte 0 || b[i] == byte '\n')
+			break;
+	return (1, string b[0:i]);
 }
 	
 setenv(name: string, val: string)

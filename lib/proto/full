@@ -1,13 +1,12 @@
 LICENCE
 NOTICE
-Acme.bat
-Charon.bat
-Wm.bat
+CHANGES
+Acme.exe
 startrc
-emu.exe
 acme
 	+
 appl
+	NOTICE
 	acme
 		+
 	charon
@@ -24,6 +23,7 @@ appl
 	svc
 		+
 	wm
+		+
 dis
 	+
 fonts
@@ -37,7 +37,6 @@ lib
 	+
 locale
 	+
-mail
 man
 	+
 mkconfig
@@ -52,6 +51,7 @@ mnt
 	keys
 	keysrv
 	registry
+	schedule
 	wiki
 	wm
 	wrap

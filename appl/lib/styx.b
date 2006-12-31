@@ -766,7 +766,7 @@ Rmsg.unpack(f: array of byte): (int, ref Rmsg)
 			sys->print("Styx->Rmsg.unpack: stat count: %d/%d\n", ds, n);		# temporary
 			break;
 		}
-		return (H+n, ref Rmsg.Stat(tag, d));
+		return (H+LEN+n, ref Rmsg.Stat(tag, d));
 	}
 	return (-1, nil);		# illegal
 }
