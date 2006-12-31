@@ -26,16 +26,16 @@ connect(cmd: string, fd0, fd1: ref Sys->FD)
 
 init(nil: ref Draw->Context, argv: list of string)
 {
-	rcmd, wcmd, file: string;
 	ifd0, ifd1, fd0, fd1: ref Sys->FD;
-	dupflag: int;
-	
+	rcmd, wcmd, file: string = nil;
+	dupflag: int = 0;
+
 	sys = load Sys Sys->PATH;
 	if((sh = load Sh Sh->PATH) == nil)
 		fatal("can't load " + Sh->PATH);
 	if((arg := load Arg Arg->PATH) == nil)
 		fatal("can't load " + Arg->PATH);
-	
+
 	arg->init(argv);
 	arg->setusage("pipefile [-d] [-r command] [-w command] file");
 	while(( c:= arg->opt()) != 0)
@@ -54,13 +54,13 @@ init(nil: ref Draw->Context, argv: list of string)
 	if(wcmd == nil)
 		wcmd = "/dis/cat.dis";
 	arg = nil;
-	
+
 	file = hd argv;
 	if(dupflag){
 		if((ifd0 = sys->open(file, sys->OREAD)) == nil)
 			fatal("open " + file);
-		ifd1.fd = sys->dup(ifd0.fd, -1);
-	}else{		
+		ifd1 = ref Sys->FD(sys->dup(ifd0.fd, -1));
+	}else{
 		if((ifd0 = sys->open(file, sys->OREAD)) == nil)
 			fatal("open " + file);
 		if((ifd1 = sys->open(file, sys->OWRITE)) == nil)
@@ -71,7 +71,7 @@ init(nil: ref Draw->Context, argv: list of string)
 		fatal("bind pipe " + TEMP);
 	if(sys->bind(TEMP + "/data", file, sys->MREPL) < 0)
 		fatal("bind " + TEMP + "/data " + file);
-	
+
 	if((fd0 = sys->open(TEMP + "/data1", sys->OREAD)) == nil)
 		fatal("open " + TEMP + "/data1");
 	spawn connect(wcmd, fd0, ifd1);
