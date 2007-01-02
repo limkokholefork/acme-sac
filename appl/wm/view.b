@@ -5,7 +5,7 @@ include "sys.m";
 
 include "draw.m";
 	draw: Draw;
-	Context, Rect, Point, Display, Screen, Image: import draw;
+	Chans, Context, Rect, Point, Display, Screen, Image: import draw;
 
 include "bufio.m";
 	bufio: Bufio;
@@ -23,9 +23,9 @@ include "wmclient.m";
 include "menuhit.m";
 	menuhit: Menuhit;
 	Menu, Mousectl: import menuhit;
-
-include "selectfile.m";
-	selectfile: Selectfile;
+include "math.m";
+	math: Math;
+	pow, fabs, sqrt: import math;
 
 include	"arg.m";
 
@@ -37,9 +37,12 @@ stderr: ref Sys->FD;
 display: ref Display;
 x := 25;
 y := 25;
-img_patterns: list of string;
 plumbed := 0;
 background: ref Image;
+menu: ref Menu;
+ul: Point;  # upper left corner of image on screen
+
+Restore, Zin, Fit, Rot, Upside, Next, Prev, Exit: con iota;
 
 View: module
 {
@@ -51,7 +54,6 @@ init(ctxt: ref Draw->Context, argv: list of string)
 	spawn realinit(ctxt, argv);
 }
 
-menu: ref Menu;
 
 realinit(ctxt: ref Draw->Context, argv: list of string)
 {
@@ -63,11 +65,11 @@ realinit(ctxt: ref Draw->Context, argv: list of string)
 	draw = load Draw Draw->PATH;
 	wmclient = load Wmclient Wmclient->PATH;
 	menuhit = load Menuhit Menuhit->PATH;
-	menu = ref Menu(array[] of {"exit"}, nil, 0);
-	selectfile = load Selectfile Selectfile->PATH;
+	math = load Math Math->PATH;
 
+	menu = ref Menu(array[] of {"orig size", "zoom in", "fit window", "rotate 90", "upside down", "next", "prev", "exit"}, nil, 0);
+	
 	sys->pctl(Sys->NEWPGRP, nil);
-	selectfile->init();
 	wmclient->init();
 
 	stderr = sys->fildes(2);
@@ -77,15 +79,6 @@ realinit(ctxt: ref Draw->Context, argv: list of string)
 	arg := load Arg Arg->PATH;
 	if(arg == nil)
 		badload(Arg->PATH);
-
-	img_patterns = list of {
-		"*.bit (Compressed image files)",
-		"*.gif (GIF image files)",
-		"*.jpg (JPEG image files)",
-		"*.jpeg (JPEG image files)",
-		"*.png (PNG image files)",
-		"*.xbm (X Bitmap image files)"
-		};
 
 	imageremap = load Imageremap Imageremap->PATH;
 	if(imageremap == nil)
@@ -112,12 +105,7 @@ realinit(ctxt: ref Draw->Context, argv: list of string)
 	argv = arg->argv();
 	arg = nil;
 	if(argv == nil && !plumbed){
-		f := selectfile->filename(ctxt, nil, "View file name", img_patterns, nil);
-		if(f == "") {
-			#spawn view(nil, nil, "");
-			return;
-		}
-		argv = f :: nil;
+		return;
 	}
 
 
@@ -223,27 +211,51 @@ view(ctxt: ref Context, ims, masks: array of ref Image, file: string)
 	w.reshape(image.r);
 	w.startinput("kbd"::"ptr"::nil);
 	w.onscreen(nil);
-	redraw(image, w.screen.image);
-#	w.image.draw(w.image.r, image, nil, (0,0));
+	ul = w.image.r.min;
+	redraw(image, w.image);
 
 	for(;;) alt{
 	ctl := <-w.ctl or
 	ctl = <-w.ctxt.ctl =>
 		w.wmctl(ctl);
 		if(ctl != nil && ctl[0] == '!'){
-#			w.image.draw(w.image.r, display.white, nil, (0,0));
-#			w.image.draw(w.image.r, image, nil, (0,0));
-			redraw(image, w.screen.image);
+	ul = w.image.r.min;
+			redraw(image, w.image);
 		}
 	p := <-w.ctxt.ptr =>
 		if(!w.pointer(*p)){
 			if (p.buttons & 2){
 				mc := ref Mousectl(w.ctxt.ptr, p.buttons, p.xy, p.msec);
 				n := menuhit->menuhit(p.buttons, mc, menu, nil);
-				if(n == 0){
+				case n {
+				Exit =>
 				#	plumbmsg->shutdown();
 					postnote(1, sys->pctl(0, nil), "kill");
 					exit;
+				Rot =>
+					image = rot90(image);
+					redraw(image, w.image);
+				Fit =>
+					delta := real(w.image.r.dx())/real(image.r.dx());
+					if(real(image.r.dy())*delta > real w.image.r.dy())
+						delta = real(w.image.r.dy())/real(image.r.dy());
+					r  := Rect((0,0), (int(real(image.r.dx())*delta), int(real(image.r.dy())*delta)));
+					tmp := display.newimage(r, image.chans, 0, Draw->Black);
+					resample(image, tmp);
+					image = tmp;
+					ul = w.image.r.min;
+					redraw(image, w.image);
+				Zin =>
+					tmp := display.newimage(Rect((0,0), (int(real(image.r.dx())*1.2), int(real(image.r.dy())*1.2))), image.chans, 0, Draw->Black);
+					resample(image, tmp);
+					image = tmp;
+#					ul = w.image.r.min;
+					redraw(image, w.image);
+				Restore =>
+					image = display.newimage(ims[0].r, ims[0].chans, 0, Draw->White);
+					image.draw(image.r, ims[0], masks[0], ims[0].r.min);
+#					ul = w.image.r.min;
+					redraw(image, w.image);
 				}
 			}else if (p.buttons &1){
 				oxy = p.xy;
@@ -251,12 +263,12 @@ view(ctxt: ref Context, ims, masks: array of ref Image, file: string)
 				do{
 					dxy = p.xy.sub(oxy);
 					oxy = p.xy;
-					translate(dxy, image, w.screen.image);
+					translate(dxy, image, w.image);
 					p = <-w.ctxt.ptr;
 				} while(p.buttons &1);
 				if(p.buttons){
 					dxy = xy0.sub(oxy);
-					translate(dxy, image, w.screen.image);
+					translate(dxy, image, w.image);
 				}
 				#	w.image.draw(w.image.r, image, nil, p.xy);
 			#	w.ctl <-= sys->sprint("!move . -1 %d %d", p.xy.x, p.xy.y);
@@ -421,7 +433,6 @@ redraw(im: ref Image, screen: ref Image)
 	if(im == nil)
 		return;
 	gray := display.color(Draw->Grey);
-	ul := screen.r.min;
 	ulrange.max = screen.r.max;
 	ulrange.min = screen.r.min.sub((im.r.dx(), im.r.dy()));
 	
@@ -437,7 +448,6 @@ redraw(im: ref Image, screen: ref Image)
 	r.max = r.max.add((2,2));
 	
 	screen.border(r, -4000, gray, (0,0));
-	display.image.flush(0);
 }
 
 #
@@ -514,7 +524,6 @@ translate(delta: Point, im: ref Image, screen: ref Image)
 	if(im == nil)
 		return;
 	gray := display.color(Draw->Grey);
-	ul := screen.r.min;
 	ulrange.max = screen.r.max;
 	ulrange.min = screen.r.min.sub((im.r.dx(), im.r.dy()));
 	u = pclip(ul.add(delta), ulrange);
@@ -561,4 +570,181 @@ pclip(p: Point, r: Rect): Point
 		p.y = r.max.y-1;
 
 	return p;
+}
+
+
+# rotate.c 
+
+rot90(im: ref Image): ref Image
+{
+	tmp: ref Image;
+	dx, dy: int;
+	
+	dx = im.r.dx();
+	dy = im.r.dy();
+	tmp = display.newimage(Rect((0,0), (dy, dx)), im.chans, 0, Draw->Cyan);
+	for(j := 0; j < dx; j++) {
+		for(i := 0; i < dy; i++){
+			tmp.drawop(Rect((i,j), (i+1, j+1)), im, nil, Point(j, dy-(i+1)), Draw->S);
+		}
+	}
+	return tmp;
+}
+
+K2 : con 7;
+NK : con (2*K2+1);
+
+K := array[NK] of real;
+
+fac(L: int): real
+{
+	f := 1;
+	for(i:=L;i>1;--i)
+		f *= i;
+	return real f;
+}
+
+# i0(x) is the modified Bessel function, Σ (x/2)^2L / (L!)²
+# There are faster ways to calculate this, but we precompute
+# into a table so let's keep it simple.
+i0(x: real): real
+{
+	v := 1.0;
+	for(L := 1; L < 10; L++)
+		v += pow(x/2.,real(2*L))/pow(fac(L),real 2);
+	return v;
+}
+
+kaiser(x, τ, α: real): real
+{
+	if(fabs(x) > τ)
+		return 0.;
+	return i0(α*sqrt(real 1-(x*x/(τ*τ))))/i0(α);
+}
+
+resamplex(in: array of byte, off, d, inx: int, out: array of byte, outx: int)
+{
+	x, i, k: int;
+	X, xx, v, rat : real;
+	
+	rat = real inx / real outx;
+	for(x = 0; x < outx; x++){
+		if(inx == outx){
+			out[off+x*d] = in[off+x*d];
+			continue;
+		}
+		v = 0.0;
+		X = real x*rat;
+		for(k=-K2; k<=K2; k++){
+			xx = X + rat*real k/10.;
+			i = int xx;
+			if(i < 0)
+				i = 0;
+			if(i >= inx)
+				i = inx - 1;
+			v += real in[off+i*d] * K[K2+k];
+		}
+		out[off+x*d] = byte v;
+	}
+}
+
+resampley(in: array of array of byte, off, iny: int, out: array of array of byte, outy: int)
+{
+	y, i, k: int;
+	Y, yy, v, rat: real;
+	
+	rat = real iny / real outy;
+	for(y = 0; y < outy; y++){
+		if(iny == outy){
+			out[y][off] = in[y][off];
+			continue;
+		}
+		v = 0.0;
+		Y = real y*rat;
+		for(k=-K2; k<=K2; k++){
+			yy = Y + rat*real k/10.;
+			i = int yy;
+			if(i < 0)
+				i = 0;
+			if(i >= iny)
+				i = iny-1;
+			v += real in[i][off] * K[K2+k];
+		}
+		out[y][off] = byte v;
+	}
+}
+
+resample(from, tgt: ref Image): ref Image
+{
+	i, j, bpl, nchan: int;
+	oscan, nscan: array of array of byte;
+	tmp:= array[20] of byte;
+	xsize, ysize: int;
+	v: real;
+	t1, t2: ref Image;
+	tchan: big;
+	
+	for(i=-K2;i<=K2;i++){
+		K[K2+i]=kaiser(real i/10., real K2/10., 4.);
+	}
+	
+	# normalize
+	v = 0.0;
+	for(i=0; i<NK; i++)
+		v += K[i];
+	for(i=0; i<NK; i++)
+		K[i] /= v;
+	
+	xsize = tgt.r.dx();
+	ysize = tgt.r.dy();
+	oscan = array[from.r.dy()] of array of byte;
+	nscan = array[max(ysize, from.r.dy())] of array of byte;
+	
+	# unload original image into scan lines
+	bpl = draw->bytesperline(from.r, from.chans.depth());
+	for(i = 0; i < from.r.dy(); i++){
+		oscan[i] = array[bpl] of byte;
+		j = from.readpixels(Rect((from.r.min.x, from.r.min.y+i), (from.r.max.x, from.r.min.y+i+1)), oscan[i]);
+		if(j != bpl)
+			sys->fprint(stderr, "readpixels");
+	}
+	
+	# allocate scan lines for destination. 
+	bpl = draw->bytesperline(Rect((0,0), (xsize, from.r.dy())), from.chans.depth());
+	for(i=0; i<max(ysize, from.r.dy()); i++){
+		nscan[i] = array[bpl] of byte;
+	}
+	 
+	# resample in X
+	nchan = from.chans.depth()/8;
+	for(i=0; i<from.r.dy(); i++){
+		for(j=0; j<nchan; j++){
+			if(j==0 && from.chans.eq(Draw->XRGB32))
+				continue;
+			resamplex(oscan[i], j, nchan, from.r.dx(), nscan[i], xsize);
+		}
+		oscan[i] = nscan[i];
+		nscan[i] = array[bpl] of byte;
+	}
+	
+	# resample in Y
+	for(i = 0; i<xsize; i++)
+		for(j=0; j<nchan; j++)
+			resampley(oscan, nchan*i+j, from.r.dy(), nscan, ysize);
+			
+	
+	#pack data into destination
+	bpl = draw->bytesperline(tgt.r, tgt.chans.depth());
+	for(i=0; i<ysize; i++){
+		j = tgt.writepixels(Rect((0,i), (xsize, i+1)), nscan[i]);
+	}
+	return tgt;
+}
+
+max(a, b: int): int
+{
+	if(a>b)
+		return a;
+	else
+		return b;
 }
