@@ -82,8 +82,7 @@ trfsin(cfd, sfd: ref Sys->FD)
 			fid := fids.find(m.fid);
 			addtfid(m.tag, fid);
 			if(fid.isdir){
-				if(m.count*3+Styx->IOHDRSZ > msize)
-					m.count /= 3;
+				m.count /= 3;
 				if(m.offset == big 0)
 					fid.aux = 0;
 				m.offset -= big fid.aux;
