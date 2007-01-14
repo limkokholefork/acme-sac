@@ -494,7 +494,7 @@ stdoutx(fd1 : ref FD, afd : ref FD, dfd : ref FD)
 	hold = array[UTFmax] of byte;
 	npart = 0;
 	for(;;){
-		n = read(fd1, buf[npart:], 8192);
+		n = read(fd1, buf[npart:], 8192-UTFmax);
 		if(n < 0)
 			error(nil);
 		if(n == 0)
