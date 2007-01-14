@@ -1,6 +1,6 @@
 Utils: module
 {
-	PATH: con "utils.dis";
+	PATH: con "/dis/dict/utils.dis";
 
 	linelen: int;
 	breaklen: int;

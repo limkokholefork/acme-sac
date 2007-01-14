@@ -1,5 +1,5 @@
 Dictionary: module {
-	PATH: con "/dis/lib/dict.dis";
+	PATH: con "/dis/dict/dict.dis";
 
 	Dict: adt {
 		entries: list of (string, string);

@@ -219,7 +219,7 @@ view(ctxt: ref Context, ims, masks: array of ref Image, file: string)
 	ctl = <-w.ctxt.ctl =>
 		w.wmctl(ctl);
 		if(ctl != nil && ctl[0] == '!'){
-	ul = w.image.r.min;
+#	ul = w.image.r.min;
 			redraw(image, w.image);
 		}
 	p := <-w.ctxt.ptr =>

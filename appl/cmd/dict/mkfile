@@ -1,8 +1,6 @@
 </mkconfig
 
 TARG=\
-	adict.dis\
-	dict.dis\
 	simple.dis\
 	utils.dis\
 	mkindex.dis\
@@ -12,6 +10,7 @@ TARG=\
 MODULES=\
 	dictm.m\
 	dict.m\
+	utils.m\
 
 SYSMODULES=\
 	bufio.m\
@@ -21,9 +20,19 @@ DISBIN=$ROOT/dis/dict
 
 <$ROOT/mkfiles/mkdis
 
-install:V:	$BINTARG
+install:V:	$BINTARG $ROOT/dis/dict.dis $ROOT/acme/dis/adict.dis
 %.install:V:	$DISBIN/%
 %.installall:V:	$DISBIN/%
 
+$ROOT/dis/dict.dis:	dict.dis
+	rm -f $target && cp dict.dis $target
+
+$ROOT/acme/dis/adict.dis: adict.dis
+	rm -f $target && cp adict.dis $target
+
 $DISBIN/%:	%.sh
 	cp $stem.sh $target && chmod a+rx $target
+
+nuke:V:
+	rm -f $ROOT/dis/dict.dis
+	rm -f $ROOT/acme/dis/adict.dis

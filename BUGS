@@ -12,6 +12,7 @@ Charon
 	• cleanup IMG text to be single glyph with superscript
 	• add standalone charon script
 	• remove tk support altogether. than remove libtk and /man/9
+	• when charon is started by plumber the Url messages go to the plumb log.
 
 Acme
 	• Crashes when Debug opens lots of windows,
@@ -67,14 +68,16 @@ rpc
 factotum
 	• support logon for acme:sac to jones.net.
 	• acme client to get authinfo dialog/feedkey
+	• rework all commands that take password to use factotum
 
 styxpersist.b
 	• doesn't work
 	• develop further to include lookup of registry, lookup using virgil maintain.
-	• look at more recent (2006) work done on p9p for persistent connections
+	• look at more recent (iwp9 2006) work done on p9p for persistent connections
 
 sort
-	• runs out of memory
+	• runs out of memory.
+	• do more testing and add options to external sort /appl/mapreduce/sort.b
 
 Acme clients
 	adict
@@ -113,5 +116,4 @@ web hosting
 
 windows host
 	icons for Acme.exe
-	pipe all errors messages to log readable from within acme.
 	

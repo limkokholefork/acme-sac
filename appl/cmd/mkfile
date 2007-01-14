@@ -3,6 +3,7 @@
 DIRS=\
 	auth\
 	auxi\
+	dict\
 	disk\
 	install\
 	ip\

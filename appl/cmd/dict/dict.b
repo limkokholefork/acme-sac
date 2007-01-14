@@ -40,9 +40,9 @@ Dictinfo: adt{
 };
 
 dicts := array[] of {
-	Dictinfo ("pgw",	"Project Gutenberg Webster Dictionary",	"/n/d/library/dict/pgw",	"/n/d/library/dict/pgwindex",	"pgw.dis"),
-	Dictinfo("simple", "Simple test dictionary", "/n/d/usr/caerwyn/dict/simple", "/n/d/usr/caerwyn/dict/simpleindex", "simple.dis"),
-	Dictinfo ("roget",	"Roget's Thesaurus from Project Gutenberg",	"/n/d/library/dict/roget",	"/n/d/library/dict/rogetindex", "roget.dis"),
+	Dictinfo ("pgw",	"Project Gutenberg Webster Dictionary",	"/lib/dict/pgw",	"/lib/dict/pgwindex",	"/dis/dict/pgw.dis"),
+	Dictinfo("simple", "Simple test dictionary", "/lib/dict/simple", "/lib/dict/simpleindex", "/dis/dict/simple.dis"),
+	Dictinfo ("roget",	"Roget's Thesaurus from Project Gutenberg",	"/lib/dict/roget",	"/lib/dict/rogetindex", "/dis/dict/roget.dis"),
 };
 
 argv0:= "dict";
