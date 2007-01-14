@@ -1,0 +1,29 @@
+</mkconfig
+
+TARG=\
+	adict.dis\
+	dict.dis\
+	simple.dis\
+	utils.dis\
+	mkindex.dis\
+	pgw.dis\
+	roget.dis\
+
+MODULES=\
+	dictm.m\
+	dict.m\
+
+SYSMODULES=\
+	bufio.m\
+
+DISBIN=$ROOT/dis/dict
+
+
+<$ROOT/mkfiles/mkdis
+
+install:V:	$BINTARG
+%.install:V:	$DISBIN/%
+%.installall:V:	$DISBIN/%
+
+$DISBIN/%:	%.sh
+	cp $stem.sh $target && chmod a+rx $target
