@@ -169,7 +169,7 @@ outrune(r: int)
 	if(outinhibit)
 		return;
 	if(++linelen > breaklen && r == ' '){
-		bout.putc(10);
+		bout.putc('\n');
 		linelen = 0;
 	}
 	else
@@ -180,18 +180,6 @@ outrunes(rp: string)
 {
 	for(i:=0;i<len rp;i++)
 		outrune(rp[i]);
-}
-
-#  like outrune, but when arg is know to be a char 
-outchar(c: int)
-{
-	if(outinhibit)
-		return;
-	if(++linelen > breaklen && c == ' '){
-		c = '\n';
-		linelen = 0;
-	}
-	bout.putc(c);
 }
 
 #  Go to new line if not already there; indent if ind != 0.

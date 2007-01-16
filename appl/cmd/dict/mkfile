@@ -6,6 +6,7 @@ TARG=\
 	mkindex.dis\
 	pgw.dis\
 	roget.dis\
+	wikipedia.dis\
 
 MODULES=\
 	dictm.m\
