@@ -43,6 +43,7 @@ dicts := array[] of {
 	Dictinfo ("pgw",	"Project Gutenberg Webster Dictionary",	"/lib/dict/pgw",	"/lib/dict/pgwindex",	"/dis/dict/pgw.dis"),
 	Dictinfo("simple", "Simple test dictionary", "/lib/dict/simple", "/lib/dict/simpleindex", "/dis/dict/simple.dis"),
 	Dictinfo ("roget",	"Roget's Thesaurus from Project Gutenberg",	"/lib/dict/roget",	"/lib/dict/rogetindex", "/dis/dict/roget.dis"),
+	Dictinfo ("wp",	"Wikipedia",	"/n/d/enwik8",	"/lib/dict/wpindex", "/dis/dict/wikipedia.dis"),
 };
 
 argv0:= "dict";

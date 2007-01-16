@@ -78,7 +78,7 @@ procrexec(xprog: list of string): ref Sys->FD
 	if(sys->pipe(p) < 0)
 		return nil;
 	sync := chan of int;
-	xprog  = "/dis/sh" :: "-n" :: "-c" :: l2s(xprog) :: nil;
+#	xprog  = "/dis/sh" :: "-n" :: "-c" :: l2s(xprog) :: nil;
 	spawn exec(sync, hd xprog, xprog, (array[2] of ref Sys->FD)[0:] = p);
 	<-sync;
 	p[1] = nil;
@@ -151,7 +151,7 @@ getpattern(addr: string): string
 {
 	res := "";
 	pbuffer := array[80] of byte;
-	buffer = sprint("'%sh'", addr);
+	buffer = sprint("%sh", addr);
 	fd := procrexec(xprog :: "-d" :: dict :: "-c" :: buffer :: nil);
 	if((n := read(fd, pbuffer, 80)) > 80)
 		fprint(stderr, "Error in getting address from dict.\n");
@@ -168,9 +168,9 @@ chgaddr(dir: int): string
 	res := "";
 	abuffer := array[80] of byte;
 	if(dir < 0)
-		buffer = sprint("'%s-a'", curone);
+		buffer = sprint("%s-a", curone);
 	else
-		buffer = sprint("'%s+a'", curone);
+		buffer = sprint("%s+a", curone);
 	fd := procrexec(xprog :: "-d" :: dict :: "-c" :: buffer :: nil);
 	if (read(fd, abuffer, 80) > 80)
 		fprint(stderr, "Error in getting address from dict.\n");
@@ -215,7 +215,7 @@ dispentry(cwin: ref Win)
 		}
 		return;
 	}
-	buffer = sprint("'%sp'", curone);
+	buffer = sprint("%sp", curone);
 	fd := procrexec(xprog :: "-d" :: dict :: "-c" :: buffer :: nil);
 	cwin.wreplace("0,$", "");
 	while((nb := read(fd, buf, BUFSIZE)) > 0) {

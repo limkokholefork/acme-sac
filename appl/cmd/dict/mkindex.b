@@ -33,8 +33,10 @@ Dictinfo: adt{
 };
 
 dicts := array[] of {
-	Dictinfo("simple", "Simple test dictionary", "/n/d/usr/caerwyn/dict/simple", "/n/d/usr/caerwyn/dict/simpleindex", "simple.dis"),
-	Dictinfo ("pgw",	"Project Gutenberg Webster Dictionary",	"/d/n/library/dict/pgw",	"/n/d/library/dict/pgwindex",	"pgw.dis"),
+	Dictinfo ("pgw",	"Project Gutenberg Webster Dictionary",	"/lib/dict/pgw",	"/lib/dict/pgwindex",	"/dis/dict/pgw.dis"),
+	Dictinfo("simple", "Simple test dictionary", "/lib/dict/simple", "/lib/dict/simpleindex", "/dis/dict/simple.dis"),
+	Dictinfo ("roget",	"Roget's Thesaurus from Project Gutenberg",	"/lib/dict/roget",	"/lib/dict/rogetindex", "/dis/dict/roget.dis"),
+	Dictinfo ("wikipedia",	"Wikipedia",	"/n/d/enwik8",	"/n/d/enwik8index", "wikipedia.dis"),
 };
 
 bout, bdict: ref Iobuf;	#  output 
@@ -62,11 +64,11 @@ init(nil: ref Draw->Context, argl: list of string)
 							dictinfo = dicts[i];
 							break;
 						}
-				if(i == len dicts)
+				if(i == len dicts){
 					err(sprint("unknown dictionary: %s", p));
 					exit;
+				}
 			}
-
 	dict = load Dictm dictinfo.modpath;
 	if(dict == nil){
 		err(sprint("can't load module %s: %r", dictinfo.modpath));
