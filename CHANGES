@@ -1,3 +1,10 @@
+20060120
+	changes to parseman.b to support basic nroff
+	macros: enough to write RFC style documents
+	in plain text.
+20070114
+	added port of dict from plan9
+	fixes from Arvindh to win, trfs, pipefile, acme, libc
 20061219
 	plumber started within acme so plumber can start acme clients
 	added waitproc for xfid progs so row tag gets cleaned up of external commands
