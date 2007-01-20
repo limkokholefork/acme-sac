@@ -12,6 +12,8 @@ include "env.m";
 	env: Env;
 	getenv: import env;
 include "man.m";
+include "arg.m";
+	arg: Arg;
 
 Man2txt: module {
 	init: fn(ctxt: ref Draw->Context, argv: list of string);
@@ -28,6 +30,7 @@ R: adt {
 output: ref Iobuf;
 ROMAN: con "/fonts/lucidasans/euro.8.font";
 rfont : ref Font;
+rflag := 0;
 
 init(ctxt: ref Draw->Context, argv: list of string)
 {
@@ -35,6 +38,7 @@ init(ctxt: ref Draw->Context, argv: list of string)
 	draw = load Draw Draw->PATH;
 	env = load Env Env->PATH;
 	bufio = load Bufio Bufio->PATH;
+	arg = load Arg Arg->PATH;
 	if (bufio == nil) {
 		sys->print("cannot load Bufio module: %r\n");
 		raise "fail:init";
@@ -45,8 +49,15 @@ init(ctxt: ref Draw->Context, argv: list of string)
 
 	parser := load Parseman Parseman->PATH;
 	parser->init();
-
-	argv = tl argv;
+	arg->init(argv);
+	while((c := arg->opt()))
+		case c {
+		'r' =>
+			rflag = 1;
+		}
+	
+	
+	argv = arg->argv();
 	for (; argv != nil ; argv = tl argv) {
 		fname := hd argv;
 		fd := sys->open(fname, Sys->OREAD);
@@ -59,21 +70,21 @@ init(ctxt: ref Draw->Context, argv: list of string)
 			font = ROMAN;
 		m: Parseman->Metrics;
 		datachan := chan of list of (int, Parseman->Text);
-		if(ctxt != nil){
+		if(ctxt != nil && !rflag){
 			rfont = Font.open(ctxt.display, font);
 			em := rfont.width("m");
 			en := rfont.width("n");
 			m = Parseman->Metrics(490, 80, em, en, 14, 40, 20);
 			spawn parser->parseman(fd, m, 1, ref W, datachan);
 		}else{
-			m = Parseman->Metrics(65, 1, 1, 1, 1, 5, 2);
+			m = Parseman->Metrics(72, 10, 1, 1, 1, 3, 3);   # RFC format
 			spawn parser->parseman(fd, m, 1, ref R, datachan);
 		}
 		for (;;) {
 			line := <- datachan;
 			if (line == nil)
 				break;
-			if(ctxt!=nil)
+			if(ctxt!=nil && !rflag)
 				setline(line);
 			else
 				osetline(line);
