@@ -11,6 +11,9 @@ include "readdir.m";
 include "mapred.m";
 	mapper: Mapper;
 	reducer: Reducer;
+	reader: Reader;
+include "arg.m";
+	arg: Arg;
 
 MapReduce: module {
 	init:fn(nil: ref Draw->Context, args:list of string);
@@ -26,20 +29,35 @@ init(nil: ref Draw->Context, args:list of string)
 	sys = load Sys Sys->PATH;
 	bufio = load Bufio Bufio->PATH;
 	readdir = load Readdir Readdir->PATH;
+	arg = load Arg Arg->PATH;
+	readname := "lineread";
+	
+	arg->init(args);
+	while((c := arg->opt()) != 0)
+		case c {
+		'r' =>
+			readname = arg->earg();
+		}
 
-	args = tl args;
+	args =arg->argv();
 	if(len args < 2)
 		exit;
 
-	mapper = load Mapper "/dis/mapreduce/" + hd args + ".dis";
+	mapper = load Mapper "/dis/mr/" + hd args + ".dis";
 	args = tl args;
 	if(mapper == nil){
 		warn("mapper", "");
 		exit;
 	}
-	reducer = load Reducer "/dis/mapreduce/" + hd args + ".dis";
+	reducer = load Reducer "/dis/mr/" + hd args + ".dis";
 	if(reducer == nil){
 		warn("reducer", "");
+		exit;
+	}
+	
+	reader = load Reader "/dis/mr/" + readname + ".dis";
+	if(reader == nil){
+		warn("reader", "");
 		exit;
 	}
 	args = tl args;
@@ -49,6 +67,8 @@ init(nil: ref Draw->Context, args:list of string)
 	filelst : list of string;
 	rlst : list of string;
 	pid := sys->pctl(0, nil);
+	
+	reader->init(mapper, emit);
 	for(i := 0; i < R; i++){
 		filelst = "/tmp/mapred." + string pid + "." + string i :: filelst;
 		rlst = "out." + string i :: rlst;
@@ -134,7 +154,7 @@ dir(dirname: string): big
 		}else{
 			l := de[i].length;
 			sum += l;
-			report(s, de[i].mtime, de[i].atime, l, 0);
+			reader->read(s, big 0, l);
 		}
 	}
 	return sum;
@@ -151,20 +171,12 @@ du(name: string)
 		d.length = dir(name);
 		return;
 	}else
-		report(name, d.mtime, d.atime, d.length, 0);
+		reader->read(name, big 0, d.length);
 }
 
 warn(why: string, f: string)
 {
 	sys->fprint(sys->fildes(2), "mapred: %s %q: %r\n", why, f);
-}
-
-report(name: string, nil: int, nil: int, nil: big, nil: int)
-{
-	io := bufio->open(name, Sys->OREAD);
-	while((s := io.gets('\n')) != nil){
-		mapper->map(name, s, emit);
-	}
 }
 
 

@@ -1,5 +1,4 @@
 Mapper : module {
-	
 	map: fn(key, value: string, emit: chan of (string, string));
 };
 
@@ -8,5 +7,6 @@ Reducer : module {
 };
 
 Reader: module {
-	reader:fn(file: string, emit: chan of (string, string));
+	init: fn(mapper: Mapper, emit: chan of (string, string));
+	read:fn(file: string, offset: big, nbytes: big);
 };

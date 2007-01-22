@@ -1,11 +1,9 @@
-the idea is we define the interfaces for a mapreduce framework. Then
+the idea is we define the interfaces for a mapreduce framework. then
 we can try several different implementations of it, but the actual functions
 passed to map and reduce remain the same.
 
 we are abstracting out the way we iterate over a large number of files,
 so that this work can be parrallelized and optimized.
-
-
 
 given a list of files, maybe one directory, or a  root of a filetree or a whole filesystem. we want to perform an action on each file.
 
@@ -13,17 +11,14 @@ given a list of files, maybe one directory, or a  root of a filetree or a whole 
 we are hiding the intermediate files, and trying to keep the total memory
 used to aggregate low.
 
-mapred {mapfn} {reducefn}  /fs
+mapred mapfn reducefn  /fs
 
-mapred {tokfreq} {agg}  /fs
 
-The reduce function must be a filter, that takes 'key val' pairs one per line.
-The map function is run once per file and takes the filename as argument.
+essentially we have a large list of files, on which we run the 
+map function on each record in a file. It emits a 'key val' pair. 
+mapred will take care of storing into files and running the reduce function. 
 
-Essentially we have a large list of files, on which we run the map function on each file. It writes to standard output a 'key val' pair. mapred will take care
-of storing into files and running the reduce function. 
-
-The reduce function expects the 'key val' pairs to be ordered, by key. 
+the reduce function expects a key and list of values for that key. 
 
 The simplest implementation is to walk the tree and run mapfn on each file,
 sort all the output and redirect to reduce.  and we get one file as output.
@@ -53,12 +48,15 @@ We should specify the output filesystem as part of the interface.
 
 
 The implementation changes depending on the environment and infrastructure.
-one implementation would work well on a single emu instance. another could be created for a huge cluster. but the interface to the user and the commands used remains the same.
+one implementation should work well on a single emu instance. 
+another could be created for a cluster. 
+but the interface to the user and the modules remains the same.
+
 
 We could try splitting the data and have /tmp/mapred.pid/Msplit/Rintermediate
 
 
-We could define the map and reduce functions with specific interfaces using
+Define the map and reduce functions with specific interfaces using
 channels to receive input.
 
 the map and reduce functions should not be aware of the format stored on disk.
@@ -70,17 +68,15 @@ for map, key is typically a filename, value is implicit and is the contents of t
 else it's already the open Iobuf. We should deal with errors consistently.
 
 reduce(key, list)
-	recieves list on channel which it iterates until done 
+	receives list on channel which it iterates until done 
 	emits a value (or nothing) then returns
 
 
-reader(emit: chan of (key, value));
-	the reader reads the list of files from stdin and decides
-	how to parse them. different readers can read different file types.
-	the reader emits the key value pairs which the master
-	hands off to map workers which it spawns
-	the workers writer to intermediate workers that are also
-	watched by the master.
+reader(file, offset, nbtyes)  # reader module init(Mapper, emit: chan of (key, value));
+	the reader decides
+	how to parse file. different readers can read different file types.
+	the reader calls the mapper (so the reader should be part of a worker
+	designated to work on a chunk of data by the master)
 
 master
 	contains worker list, and intermediate list.
@@ -123,7 +119,7 @@ merges as necessary. once gather finishes, sort merges
 all the temporary files and writes out to one reduce partition.
 
 
-we can then create the remote job management system.
+after that is implemented, we can create the remote job management system.
 we need a Worker interface that takes a job specification
 and runs and logs what it does and reports back to the master its
 progress.
@@ -133,8 +129,11 @@ file splits on which to run. It reports back the files it creates once
 it's done with them and responds to heartbeats from the master,
 and reports nbytes processed.
 
+worker input is this format:
+/file/name offset nbytes
+
 Master launches Worker.
-Master write job configuration to file.
+Master writes job configuration to file.
 Worker reads file and write progress to /n/client/master
 which is a channel served by the master.
 
@@ -149,21 +148,18 @@ using the rstyx protocol.
 
 The cfg just contains the modules to load and the filenames and splits.
 
-The Master launches each worker 
-	Worker /n/client/1
-
 Worker opens ctl and gets a new connection to the Master. It reads the cfg file
 and loads the named modules. E.g. the reader and mapper. then it processes 
-the files and passes them to reader. Reader passed them to mapper. The
-output files are written back to the data channel to master.
+the files and passes them to reader. Reader passes records  to mapper. The
+output filenames are written back to the data channel to master.
 
-All the clients are kept track of as open fids, just like a normal fs. If we loose
-a client we know. We can restart clients if we loose them and fail to get
+All the clients are kept track of as open fids, just like a normal fs. If we lose
+a client we know. We can restart clients if we lose them and fail to get
 a proper close out message etc.
 
 A Masterfs is the way to go.
 
-The Masterfs could as the registry for where to go to push the load.
+The Masterfs could ask the registry for where to go to push the load.
 
 The rstyx on each server can update it's registry entry for each connection
 so the load is properly controlled. E.g. with max number of jobs.
@@ -184,15 +180,21 @@ Master wants to run job, say a mapper worker
 		(or it can bind its connection onto its own namespace and serve that).
 	Worker knows to just open /n/client/mnt/master/clone and read the number of its connection.
 	It then opens the ctl and data files. It uses data as it's stdin/stdout.
-	From ctl it get heartbeat or writes stderr.
+	From ctl it gets heartbeat or writes stderr.
 	Worker reads the configuration and starts the job,
 	when it's done it closes its connection
 	The master can mark off that job as done
 
 
 The registry must change slightly to become a job exchange. A master asks the
-registry for a resource to run one connection, one job. The registry looks up a candidate
-and gives it out. But now there's a lag between the master connecting and the resource writing back to the registry that a connection's been opened. One way around it is just for the resource to just turn it away, so the master needs to keep coming back. And if there are no resources, what does the master do? just periodically poll the registry?
+registry for a resource to run one connection, one job. 
+The registry looks up a candidate
+and gives it out. But now there's a lag between the master connecting 
+and the resource writing back to the registry that a connection's been opened. 
+One way around it is just for the resource to just turn it away, 
+so the master needs to keep coming back. 
+And if there are no resources, what does the master do? 
+just periodically poll the registry?
 
 
 grid/registry already practically does what we want with monitoring the number of connections. It just needs to write it back to the registry.
@@ -249,3 +251,9 @@ we will end up with a Family of mapreduce programs
 for different scales of data and grids.
 
 Implement a Reader for tar.gz files.
+
+
+20070121
+
+Test case; use mapreduce to generate /man/index.
+Each file needs to be deroff'd using man2txt.
