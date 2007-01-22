@@ -2198,6 +2198,8 @@ gettop(): ref Layout->Frame
 
 sync: chan of int;
 pid: int;
+acmecons: ref Sys->FD;
+
 dumptext()
 {
 	sys->pctl(Sys->NEWPGRP, nil);
@@ -2285,6 +2287,8 @@ awin(w: ref Win, sync: chan of int)
 	sync <-= sys->pctl(0, nil);;
 	w.ctlwrite("clean");
 	w.wtagwrite("Url Back Fwd");
+	if(acmecons == nil)
+		acmecons = sys->open("/mnt/acme/cons", Sys->OWRITE);
 	spawn w.wslave(c);
 	loop: for(;;){
 		alt {
@@ -2461,7 +2465,7 @@ doexec(w: ref Win, cmd: string): int
 					for(al := top.doc.anchors; al != nil; al = tl al) {
 						a := hd al;
 						if(a.index == n) {
-							sys->print("%s\n", a.href.tostring());
+							sys->fprint(acmecons, "%s\n", a.href.tostring());
 							break;
 						}
 					}
@@ -2471,7 +2475,7 @@ doexec(w: ref Win, cmd: string): int
 					s = s[1:];
 			}while(s != nil);
 		}else
-			sys->print("%s\n", top.doc.src.tostring());
+			sys->fprint(acmecons, "%s\n", top.doc.src.tostring());
 	* =>
 		return 0;
 	}

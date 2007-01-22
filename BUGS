@@ -1,29 +1,32 @@
+BUGS and suggested enhancements
+
 Irc 
 	• pasting a large block only sends the first line to the channel
 	• still something odd about noscroll behaviour
 	• non threadsafe use of bufio between infothread and mainwin
 	• implement redial
-	• channel names as command line args
 	• list on plumb channel for irc channel urls
 
 Charon
-	• clean up forms handling
-	• plumb images to external prog
+	• rewrite forms handling: come up with something much better
+	• plumb images to external prog (the new wm/view)
 	• cleanup IMG text to be single glyph with superscript
 	• add standalone charon script
 	• remove tk support altogether. than remove libtk and /man/9
-	• when charon is started by plumber the Url messages go to the plumb log.
 
 Acme
 	• Crashes when Debug opens lots of windows,
-	writes invalid addresses to addr file.
+		writes invalid addresses to addr file.
 	• allow acme:sac to also run under wm
 	• middle-click sh commands that include comments causes
-	sh to give parse errors. e.g. man 1 bind # bind(1)
-	The problem is just the newline is missing
+		sh to give parse errors. e.g. man 1 bind # bind(1)
+		The problem is just the newline is missing
 	• 'Look args' doesn't work if text is already selected within the Body.
 	• mouse chording command args in client windows, like irc,
-	doesn't work because of the round trip
+		doesn't work because of the round trip
+	• when window opens that should have expanded tag it
+		only has one line until the window is moved.
+	• right-click on /mnt/acme/1 or other acme served file will freeze acme
 
 Debug
 	• implement breakpoints
@@ -50,7 +53,7 @@ Calendar
 sendmail.b
 	• need "send" client to append to other user's mailboxes
 	if no '@' and user's mailbox exists, then append.
-	• add ssl3
+	• add ssl3 and send mail to gmail
 
 daytime.b
 	the string2tm doesn't work on the rfc822 dates in Mail
@@ -66,29 +69,30 @@ rpc
 
 
 factotum
-	• support logon for acme:sac to jones.net.
 	• acme client to get authinfo dialog/feedkey
 	• rework all commands that take password to use factotum
+	• passwordsafe replacement as acme client using factotum
 
 styxpersist.b
 	• doesn't work
-	• develop further to include lookup of registry, lookup using virgil maintain.
-	• look at more recent (iwp9 2006) work done on p9p for persistent connections
+	• develop further to include lookup of registry, 
+		lookup using virgil maintain.
+	• look at more recent (iwp9 2006) work done on p9p 
+		for persistent connections
 
 sort
 	• runs out of memory.
 	• do more testing and add options to external sort /appl/mapreduce/sort.b
 
 Acme clients
-	adict
 	juke
 	pivotTable
 	Search
 	dialog/feedkey
-	autocomplete -- type in the tag line, and the window contents refresh with
-	matching words. like google suggest.
+	autocomplete -- type in the tag line, and the window contents 
+		refresh with matching words. like google suggest.
 	ctl-space for java object interfaces
-
+	AST client (really? do we really want to go down this path?)
 
 Chat
 	mount -C rc4_256 -k caerwyn.canto tcp!canto.hopto.org!6683 /n/chat
@@ -102,13 +106,15 @@ man pages
 	Irc
 	Debug
 	stackv
+	Sql
+	charon acme client
 	remove unused man pages
 	remove tk /man/9
 	remove prefab, wm, other unused stuff
 	rebuild INDEX using inferno only tools
-	man to html
 	remove from /man/3 that only apply to native
 	missing sys-byte2char(2)
+	use Salva's man script instead of /appl/cmd/man.b
 	
 web hosting
 	create acme sac web page like plan9port with full man pages and source
@@ -117,3 +123,6 @@ web hosting
 windows host
 	icons for Acme.exe
 	
+Port from plan9/p9p
+	spell
+	sort options

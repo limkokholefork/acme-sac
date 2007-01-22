@@ -34,6 +34,7 @@ fullname: string;
 ircwin: ref Win;
 passwd: string;
 stderr: ref Sys->FD;
+join: list of string;
 
 usage()
 {
@@ -70,6 +71,7 @@ init(nil: ref Draw->Context, args: list of string)
 	'r' => redial = 1;
 	's' => servername = arg->earg();
 	'p' => passwd = arg->earg();
+	'j' => join = arg->earg() :: join;
 	}
 	args = arg->argv();
 	if(len args != 1)
@@ -103,6 +105,8 @@ init(nil: ref Draw->Context, args: list of string)
 		postnote(1, pctl(0, nil), "kill");
 		exit;
 	}
+	for (; join != nil; join = tl join)
+		newchat(hd join, nil);
 	mainwin(w);
 }
 
