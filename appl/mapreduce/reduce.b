@@ -1,10 +1,5 @@
 implement Reduce;
 
-
-# reduce takes one or more files and sorts them. then
-# gathers like keys and spawns the reduce process for each key,
-# and gathers result.
-include "sh.m";
 include "sys.m";
 	sys : Sys;
 include "draw.m";
@@ -13,8 +8,6 @@ include "bufio.m";
 	Iobuf: import bufio;
 include "mapred.m";
 	reducer : Reducer;
-
-Incr: con 2000;		# growth quantum for record array
 
 Reduce: module {
 	init:fn(nil: ref Draw->Context, args: list of string);
@@ -28,7 +21,7 @@ init(nil: ref Draw->Context, args: list of string)
 	args = tl args;
 	if(len args != 1)
 		exit;
-	reducer = load Reducer "/dis/mapreduce/" + hd args + ".dis";
+	reducer = load Reducer "/dis/mr/" + hd args + ".dis";
 	if(reducer == nil){
 		warn("reducer", "");
 		exit;
