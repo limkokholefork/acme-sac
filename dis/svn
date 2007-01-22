@@ -1,0 +1,11 @@
+#!/dis/sh
+
+load std
+
+wdir=`{pwd}
+if{~ $wdir '/n/[a-z]/*'}{
+	wdir=`{echo $wdir | sed 's;^/n/(.);\1:;'}
+}{
+	wdir=$emuroot^$wdir
+}
+os -d $wdir svn $* | tr -d ''

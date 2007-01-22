@@ -1,3 +1,7 @@
+20060121
+	added -j option to airc to take channel names
+	fix: charon writes Url message to +Errors window
+	Add /dis/svn script from Arvindh
 20060120
 	changes to parseman.b to support basic nroff
 	macros: enough to write RFC style documents
