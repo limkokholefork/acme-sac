@@ -43,19 +43,19 @@ init(nil: ref Draw->Context, args:list of string)
 	if(len args < 2)
 		exit;
 
-	mapper = load Mapper "/dis/mr/" + hd args + ".dis";
+	mapper = load Mapper "/dis/mapreduce/" + hd args + ".dis";
 	args = tl args;
 	if(mapper == nil){
 		warn("mapper", "");
 		exit;
 	}
-	reducer = load Reducer "/dis/mr/" + hd args + ".dis";
+	reducer = load Reducer "/dis/mapreduce/" + hd args + ".dis";
 	if(reducer == nil){
 		warn("reducer", "");
 		exit;
 	}
 	
-	reader = load Reader "/dis/mr/" + readname + ".dis";
+	reader = load Reader "/dis/mapreduce/" + readname + ".dis";
 	if(reader == nil){
 		warn("reader", "");
 		exit;

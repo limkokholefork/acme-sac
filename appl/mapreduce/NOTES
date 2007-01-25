@@ -3,7 +3,7 @@ we can try several different implementations of it, but the actual functions
 passed to map and reduce remain the same.
 
 we are abstracting out the way we iterate over a large number of files,
-so that this work can be parrallelized and optimized.
+so that this work can be parallelized and optimized.
 
 given a list of files, maybe one directory, or a  root of a filetree or a whole filesystem. we want to perform an action on each file.
 
@@ -139,19 +139,48 @@ which is a channel served by the master.
 
 Master should be a single fs that all the clients assigned to one
 ctl file.
-Master 	       1/
-			/ctl
-			/data
+Master 	 
+	clone
+	n/
+	n/ctl
+	n/status
+
+
+
+Just open /mnt/mapreduce/clone and read records. The worker is connected
+and processing tracked while the file is open. If the file is closed without being
+completely written, then the job is restarted. However, if everything is read and
+file closed, the job is a success.
+
+Just open and read records from /mnt/mapred/clone
+The first line is split number M, and number of R
+
+Masterfs mounts itself on /mnt/master and then calls cpu.dis with args for
+worker. 
+/dis/cpu.dis tcp!localhost mapworker
+
+So mapworker looks at /n/client/mnt/master/clone
+
+The first line it reads could be the argl for the worker, or we could
+pass the argl to the worker. Best have the serve process coordinate
+everything. That is the principle piece of design here. the fs is the supervisor.
 
 This filesystem is served for each remote host where we plan on launching any jobs
 using the rstyx protocol. 
 
 The cfg just contains the modules to load and the filenames and splits.
 
-Worker opens ctl and gets a new connection to the Master. It reads the cfg file
+The Master launches each worker 
+	worker /mnt/mapreduce/clone
+
+Worker opens clone and gets a new connection to the Master. It reads the cfg file
 and loads the named modules. E.g. the reader and mapper. then it processes 
-the files and passes them to reader. Reader passes records  to mapper. The
-output filenames are written back to the data channel to master.
+the files and passes them to reader. Reader passed them to mapper. The
+output files are written back to the data channel to master.
+
+All the clients are kept track of as open fids, just like a normal fs. If we loose
+a client we know. We can restart clients if we loose them and fail to get
+a proper close out message etc.
 
 All the clients are kept track of as open fids, just like a normal fs. If we lose
 a client we know. We can restart clients if we lose them and fail to get
@@ -179,8 +208,7 @@ Master wants to run job, say a mapper worker
 	then it begins serving it's own fs on the connection
 		(or it can bind its connection onto its own namespace and serve that).
 	Worker knows to just open /n/client/mnt/master/clone and read the number of its connection.
-	It then opens the ctl and data files. It uses data as it's stdin/stdout.
-	From ctl it gets heartbeat or writes stderr.
+	It then opens the ctl files. 
 	Worker reads the configuration and starts the job,
 	when it's done it closes its connection
 	The master can mark off that job as done
@@ -257,3 +285,22 @@ Implement a Reader for tar.gz files.
 
 Test case; use mapreduce to generate /man/index.
 Each file needs to be deroff'd using man2txt.
+
+
+Call it 
+	mapreduce [ -m mntpoint ] mapper reducer path ...
+
+
+If no path arguments are given read pathnames from stdin. Then,
+we can use fs as a tree walker.
+
+- -o output dir option
+- reader option
+- file splits of large files
+- remote progs with cpu 
+- integrate with registry
+- catch failures and restart
+- status file
+- workers write back progress in #bytes read
+- read paths from stdin
+

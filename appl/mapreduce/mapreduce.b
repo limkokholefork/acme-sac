@@ -1,11 +1,8 @@
 implement Masterfs;
 
-#
-# Copyright © 2003 Vita Nuova Holdings Limited.
-#
-
 include "sys.m";
 	sys: Sys;
+	sprint, fprint: import sys;
 include "draw.m";
 include "styx.m";
 	styx: Styx;
@@ -15,6 +12,12 @@ include "styxservers.m";
 	Styxserver, Fid, Navigator, Navop: import styxservers;
 	Enotdir, Enotfound: import Styxservers;
 	nametree: Nametree;
+include "readdir.m";
+	readdir: Readdir;
+include "arg.m";
+	arg: Arg;
+include "sh.m";
+	sh: Sh;
 
 Masterfs: module {
 	init: fn(nil: ref Draw->Context, argv: list of string);
@@ -24,11 +27,11 @@ Masterfs: module {
 #	clone
 #	1
 #		ctl
-#		data
+#		status
 
 badmodule(p: string)
 {
-	sys->fprint(sys->fildes(2), "modfs: cannot load %s: %r\n", p);
+	sys->fprint(sys->fildes(2), "masterfs: cannot load %s: %r\n", p);
 	raise "fail:bad module";
 }
 
@@ -46,29 +49,46 @@ reqidle: int;
 reqdone: chan of chan of (ref Tmsg, ref Conn, ref Fid);
 
 srv: ref Styxserver;
+stderr: ref Sys->FD;
 
 conns: array of ref Conn;
 nconns := 0;
 
-Qerror, Qroot, Qdir, Qclone, Qctl, Qdata: con iota;
+Qerror, Qroot, Qdir, Qclone, Qctl, Qstatus: con iota;
 Shift: con 4;
 Mask: con 16rf;
 
 Maxreqidle: con 3;
 Maxreplyidle: con 3;
 
+Map, Reduce: con iota;
+mcnt, rcnt: int;
+mxcnt: int;
+
+M := 1;
+R := 7;
+
+# Connection to a worker
 Conn: adt {
 	n:		int;
 	nreads:	int;
+	filechan: chan of (string, big);
+	filelst : list of (string, big);
+	wtype:	int;
+	msplit:	int;			# /tmp/mr.node.pid.msplit.rsplit
+	host:		string;		# tcp!host
 };
 
-# initial connection provides base-name (fid?) for images.
-# full name could be:
-#	window.fid.tag
+filechan: chan of (string, big);
+rchan: array of chan of (string, big);   #R chans 
+mountpt := "/mnt/mapreduce";
+mapmod: string;
+redmod: string;
 
-init(nil: ref Draw->Context, nil: list of string)
+init(nil: ref Draw->Context, argv: list of string)
 {
 	sys = load Sys Sys->PATH;
+	sh = load Sh Sh->PATH;
 	styx = load Styx Styx->PATH;
 	if (styx == nil)
 		badmodule(Styx->PATH);
@@ -77,20 +97,76 @@ init(nil: ref Draw->Context, nil: list of string)
 	if (styxservers == nil)
 		badmodule(Styxservers->PATH);
 	styxservers->init(styx);
-
-	sys->pctl(Sys->FORKNS, nil);		# fork pgrp?
-
+	readdir = load Readdir Readdir->PATH;
+	stderr = sys->fildes(2);
+	sys->pctl(Sys->NEWPGRP, nil);		# fork pgrp?
+	
+	arg = load Arg Arg->PATH;
+	arg->setusage("mapreduce [-a|-b|-ac|-bc] [-D]  [-m mountpoint] mapper reducer path ...");
+	arg->init(argv);
+	flags := Sys->MREPL;
+	while((o := arg->opt()) != 0)
+		case o {
+		'a' =>	flags = Sys->MAFTER;
+		'b' =>	flags = Sys->MBEFORE;
+		'D' =>	styxservers->traceset(1);
+		'm' =>	mountpt = arg->earg();
+		'M' =>	M = int arg->earg();
+		'R' =>	R = int arg->earg();
+		* =>		arg->usage();
+		}
+	argv = arg->argv();
+	if(len argv < 3)
+		arg->usage();
+	mapmod = hd argv;
+	redmod = hd tl argv;
+	fds := array[2] of ref Sys->FD;
+	if(sys->pipe(fds) < 0){
+		fprint(stderr, "can't create pipe: %r");
+		exit;
+	}
 	navops := chan of ref Navop;
 	spawn navigator(navops);
 	tchan: chan of ref Tmsg;
-	(tchan, srv) = Styxserver.new(sys->fildes(0), Navigator.new(navops), big Qroot);
+	(tchan, srv) = Styxserver.new(fds[0], Navigator.new(navops), big Qroot);
 	srv.replychan = chan of ref Styx->Rmsg;
 	spawn replymarshal(srv.replychan);
-	spawn serve(tchan, navops);
+	fds[0] = nil;
+	pidc := chan of int;
+	spawn serve(tchan, navops, pidc);
+	<-pidc;
+
+	filechan = chan of (string, big);
+	rchan = array[R] of {* => chan[10] of (string, big)};
+	
+	if(sys->mount(fds[1], nil, mountpt, flags, nil) < 0)
+		fprint(stderr, "can't mount mapreduce: %r");
+
+	argv = tl tl argv;
+	for(; argv != nil; argv = tl argv)
+		spawn du(hd argv);
+	#TODO: split files over a threshold
+	# du can just divy out the files as fast as workers can read them.
+	# run cpu with workers for M split.
+	# monitor that a worker completes else restart another worker
+	# once all map workers are complete build the filelists for the reduce workers
+	# start R reduceworkers using cpu
+	# reduce workers can be started at same time as map workers. they have
+	# to wait reading for records though.
+	# keep track of what we sent to a client so we can restart.
+	# we could have each worker write back the number of bytes it processed
+	# from a file, so we know if it closed without writing back we need to
+	# restart.
+	
+	# Launch workers
+	# spawn exec("cpu" :: "tcp!localhost" :: "worker" :: nil);
+	for(i := 0; i < M + R; i++)
+		spawn worker(mountpt + "/clone");
 }
 
-serve(tchan: chan of ref Tmsg, navops: chan of ref Navop)
+serve(tchan: chan of ref Tmsg, navops: chan of ref Navop, pidc: chan of int)
 {
+	pidc <-= sys->pctl(0, nil);
 	pidregister = chan of (int, int);
 	makeconn = chan of chan of (ref Conn, string);
 	delconn = chan of ref Conn;
@@ -105,7 +181,7 @@ Serve:
 			break Serve;
 		pick m := gm {
 		Readerror =>
-			sys->fprint(sys->fildes(2), "wmexport: fatal read error: %s\n", m.error);
+			sys->fprint(sys->fildes(2), "mapreduce: fatal read error: %s\n", m.error);
 			break Serve;
 		Open =>
 			(fid, nil, nil, err) := srv.canopen(m);
@@ -141,17 +217,36 @@ Serve:
 	rc := <-makeconn =>
 		if(nconns >= len conns)
 			conns = (array[len conns + 5] of ref Conn)[0:] = conns;
-		c := ref Conn(qidseq++, 0);
+			
+		# decide whether this is a map worker or a reduce worker
+		# and select filechan appropriately
+		if(mcnt < M)
+			c := ref Conn(qidseq++, 0, filechan, nil, Map, mcnt++, nil);
+		else
+			c = ref Conn(qidseq++, 0, rchan[rcnt], nil, Reduce, rcnt++, nil);
 		conns[nconns++] = c;
 		rc <-= (c, nil);
 	c := <-delconn =>
 		for(i := 0; i < nconns; i++)
 			if(conns[i] == c)
 				break;
+		# TODO: if this is a Map hand all the files off to a reducer
+		if(c.wtype == Map){
+			for(j := 0; j < R; j++)
+				rchan[j] <-= ("/tmp/mapred." + string c.n + "." + string j, big 0);
+			mxcnt++;
+			if(mcnt == mxcnt){
+				for(j = 0; j < R; j++)
+					rchan[j] <-= (nil, big 0);
+			}
+		}
 		nconns--;
 		if(i < nconns)
 			conns[i] = conns[nconns];
 		conns[nconns] = nil;
+		#TODO: last worker closed; check everything complete
+		if(nconns == 0 &&  rcnt == R)
+			break Serve;
 	reqpool = <-reqdone :: reqpool =>
 		if(reqidle++ > Maxreqidle){
 			hd reqpool <-= (nil, nil, nil);
@@ -160,6 +255,9 @@ Serve:
 		}
 	}
 	navops <-= nil;
+	sys->print("mapreduce done\n");
+	kill(sys->pctl(0, nil), "killgrp");
+	sys->unmount(nil, mountpt);
 }
 
 request(m: ref Styx->Tmsg, fid: ref Fid)
@@ -198,12 +296,26 @@ requestproc(req: chan of (ref Tmsg, ref Conn, ref Fid))
 				srv.replydirect(ref Rmsg.Error(m.tag, "connection is dead"));
 			case path & Mask {
 			Qctl =>
-				# first read gets number of connection.
+				# first read gets: WorkerType MorRsplit R module.dis
 				m.offset = big 0;
-				if(c.nreads++ == 0)
-					srv.replydirect(styxservers->readstr(m, string c.n));
-			Qdata =>
-				;
+				if(c.nreads++ == 0){
+					if(c.wtype == Map)
+						srv.replydirect(styxservers->readstr(m, 
+							sprint("worker -m -R %d -d %s -i %d\n", R, mapmod, c.n)));
+					else
+						srv.replydirect(styxservers->readstr(m,
+							sprint("worker -r -R %d -d %s -i %d\n", R, redmod, c.n)));
+				}else{
+					(name, length) :=<- c.filechan;
+					if(name != nil){
+						c.filelst = (name,length) :: c.filelst;
+						srv.replydirect(styxservers->readstr(m, sys->sprint("%s %d %bd\n", name, 0, length)));
+					}else{
+						srv.replydirect(ref Rmsg.Read(m.tag, array[0] of byte));
+					}
+				}
+			Qstatus =>
+				srv.replydirect(styxservers->readstr(m, sys->sprint("%d\n", c.nreads)));
 			* =>
 				srv.replydirect(ref Rmsg.Error(m.tag, "what was i thinking1?"));
 			}
@@ -228,7 +340,7 @@ requestproc(req: chan of (ref Tmsg, ref Conn, ref Fid))
 				(c, err) = <-cch;
 				if(c != nil)
 					q = qid(Qctl | (c.n << Shift));
-			Qdata =>
+			Qstatus =>
 				;
 			Qctl =>
 				;
@@ -312,8 +424,8 @@ navigator(navops: chan of ref Navop)
 					path = Qroot;
 				"ctl" =>
 					path = Qctl | dp;
-				"data" =>
-					path = Qdata | dp;
+				"status" =>
+					path = Qstatus | dp;
 				* =>
 					path = Qerror;
 				}
@@ -338,7 +450,7 @@ navigator(navops: chan of ref Navop)
 			d: array of int;
 			case path & Mask {
 			Qdir =>
-				d = array[] of {Qctl, Qdata};
+				d = array[] of {Qctl, Qstatus};
 				for(i := 0; i < len d; i++)
 					d[i] |= path & ~Mask;
 			Qroot =>
@@ -375,8 +487,8 @@ dirgen(path: int): (ref Sys->Dir, string)
 	Qctl =>
 		name = "ctl";
 		perm = 8r666;
-	Qdata =>
-		name = "data";
+	Qstatus =>
+		name = "status";
 		perm = 8r444;
 	* =>
 		return (nil, Enotfound);
@@ -439,32 +551,6 @@ doflush(tag: int, pid: int, done: chan of int)
 	done <-= 1;
 }
 
-# return number of characters from s that will fit into
-# max bytes when encoded as utf-8.
-fullutf(s: string, max: int): int
-{
-	Bit1:	con 7;
-	Bitx:	con 6;
-	Bit2:	con 5;
-	Bit3:	con 4;
-	Bit4:	con 3;
-	Rune1:	con (1<<(Bit1+0*Bitx))-1;		# 0000 0000 0111 1111
-	Rune2:	con (1<<(Bit2+1*Bitx))-1;		# 0000 0111 1111 1111
-	Rune3:	con (1<<(Bit3+2*Bitx))-1;		# 1111 1111 1111 1111
-	nb := 0;
-	for(i := 0; i < len s; i++){
-		c := s[i];
-		if(c <= Rune1)
-			nb++;
-		else if(c <= Rune2)
-			nb += 2;
-		else
-			nb += 3;
-		if(nb > max)
-			break;
-	}
-	return i;
-}
 
 kill(pid: int, note: string): int
 {
@@ -472,4 +558,79 @@ kill(pid: int, note: string): int
 	if(fd == nil || sys->fprint(fd, "%s", note) < 0)
 		return -1;
 	return 0;
+}
+
+# Avoid loops in tangled namespaces.
+NCACHE: con 1024; # must be power of two
+cache := array[NCACHE] of list of ref sys->Dir;
+
+seen(dir: ref sys->Dir): int
+{
+	h := int dir.qid.path & (NCACHE-1);
+	for(c := cache[h]; c!=nil; c = tl c){
+		t := hd c;
+		if(dir.qid.path==t.qid.path && dir.dtype==t.dtype && dir.dev==t.dev)
+			return 1;
+	}
+	cache[h] = dir :: cache[h];
+	return 0;
+}
+
+dudir(dirname: string): big
+{
+	prefix := dirname+"/";
+	if(dirname==".")
+		prefix = nil;
+	sum := big 0;
+	(de, nde) := readdir->init(dirname, readdir->NAME);
+	if(nde < 0)
+		warn("can't read", dirname);
+	for(i := 0; i < nde; i++) {
+		s := prefix+de[i].name;
+		if(de[i].mode & Sys->DMDIR){
+			if(!seen(de[i])){	# arguably should apply to files as well
+				size := dudir(s);
+				sum += size;
+			}
+		}else{
+			l := de[i].length;
+			sum += l;
+			add(s,  l);
+		}
+	}
+	return sum;
+}
+
+du(name: string)
+{
+	(rc, d) := sys->stat(name);
+	if(rc < 0){
+		warn("can't stat", name);
+	}else if(d.mode & Sys->DMDIR){
+		d.length = dudir(name);
+	}else
+		add(name, d.length);
+	for(;;)
+		filechan <-= (nil, big 0);
+}
+
+warn(why: string, f: string)
+{
+	sys->fprint(sys->fildes(2), "mapred: %s %q: %r\n", why, f);
+}
+
+add(name: string, size: big)
+{
+	filechan <-= (name, size);
+}
+
+worker(mnt: string)
+{
+	c := load Command "/dis/mapreduce/worker.dis";
+	if(c == nil){
+		warn("worker", "you can't touch dis! da da-da dum");
+		return;
+	}
+	
+	c->init(nil, "worker" :: mnt :: nil);
 }

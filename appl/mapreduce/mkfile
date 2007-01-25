@@ -12,6 +12,7 @@ TARG=\
 	lineread.dis\
 	reduce.dis\
 	filter.dis\
+	worker.dis\
 
 MODULES=\
 	mapred.m\
@@ -19,7 +20,17 @@ MODULES=\
 SYSMODULES=\
 	bufio.m\
 
-DISBIN=$ROOT/dis/mr
+DISBIN=$ROOT/dis/mapreduce
 
 
 <$ROOT/mkfiles/mkdis
+
+install:V: $BINTARG /dis/mapreduce.dis
+%.install:V:	$DISBIN/%
+
+mapreduce.dis: $MODULES
+
+/dis/mapreduce.dis: mapreduce.dis
+	rm -f $target && cp mapreduce.dis $target
+nuke:V:
+	rm -f $ROOT/dis/mapreduce.dis
