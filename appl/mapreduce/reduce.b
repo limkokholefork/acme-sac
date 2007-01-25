@@ -21,7 +21,7 @@ init(nil: ref Draw->Context, args: list of string)
 	args = tl args;
 	if(len args != 1)
 		exit;
-	reducer = load Reducer "/dis/mr/" + hd args + ".dis";
+	reducer = load Reducer "/dis/mapreduce/" + hd args + ".dis";
 	if(reducer == nil){
 		warn("reducer", "");
 		exit;
