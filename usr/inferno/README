@@ -70,9 +70,7 @@ WIKI
 IRC
           Join other inferno users on #inferno IRC channel. Run the
           command below
-          	airc -n acmeuser irc.freenode.net
-          then in the window that opens run 
-          	Chat #inferno
+          	airc -n acmeuser -j '#inferno' irc.freenode.net
 
 WEB
           You can read web pages in acme.  In fact this is a nice
