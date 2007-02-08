@@ -10,7 +10,6 @@ TARG=\
 	identity.dis\
 	uniq.dis\
 	lineread.dis\
-	reduce.dis\
 	filter.dis\
 	worker.dis\
 

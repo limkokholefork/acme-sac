@@ -5,9 +5,6 @@ include "common.m";
 include "tk.m";
 include "tkclient.m";
 
-include "dialog.m";
-	dialog: Dialog;
-
 sys: Sys;
 
 D: Draw;
@@ -476,12 +473,7 @@ prompt(msg, nil: string): (int, string)
 {
 	if((CU->config).doacme)
 		return (-1, "");
-	if(dialog == nil){
-		dialog = load Dialog Dialog->PATH;
-		dialog->init();
-	}
-	return (1, dialog->getstring(drawctxt, mainwin, msg));
-	# return (-1, "");
+	return (-1, "");
 }
 
 stopbutton(enable: int)

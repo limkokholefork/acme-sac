@@ -17,6 +17,8 @@ appl
 		+
 	lib
 		+
+	mapreduce
+		+
 	math
 		+
 	mkfile
@@ -27,8 +29,6 @@ appl
 dis
 	+
 fonts
-	+
-icons
 	+
 keydb
 	countersigned
@@ -43,7 +43,6 @@ mkconfig
 mkfiles
 	+
 mnt
-	9win
 	acme
 	arch
 	diary

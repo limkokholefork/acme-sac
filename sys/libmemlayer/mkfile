@@ -14,8 +14,8 @@ COMMONFILES=\
 	ltofront.$O\
 	ltorear.$O\
 	unload.$O\
-
-<mkfile-$SYSTARG		#sets $SYSFILES based on OS architecture
+	
+SYSFILES=lalloc.$O
 
 OFILES=$COMMONFILES $SYSFILES
 

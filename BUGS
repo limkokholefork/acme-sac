@@ -27,6 +27,7 @@ Acme
 	• when window opens that should have expanded tag it
 		only has one line until the window is moved.
 	• right-click on /mnt/acme/1 or other acme served file will freeze acme
+	• arrow keys don't work in tags
 
 Debug
 	• implement breakpoints
