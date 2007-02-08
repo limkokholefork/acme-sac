@@ -13,7 +13,7 @@ TARG=${SRC:%.b=%.dis}
 
 MODULES=
 
-SYSMODULES= `{grep '^include "' *.b | sed 's/.*"([^"]+)";.*$/\1/' |sort |uniq |grep -v 'utils.m|tcl.m'}
+SYSMODULES= `{grep '^include "' *.b | sed 's/.*"([^"]+)";.*$/\1/' |sort |uniq}
 
 DISBIN=$ROOT/dis/lib
 

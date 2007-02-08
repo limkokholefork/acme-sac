@@ -12,6 +12,7 @@ DIRS=\
 	ndb\
 	sh\
 	spki\
+	wikifs\
 
 SRC=`{ls *.b}
 TARG=${SRC:%.b=%.dis}

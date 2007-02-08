@@ -9,7 +9,6 @@ OFILES=\
 	dec.$O\
 	dlm-$TARGMODEL.$O\
 	draw.$O\
-#	freetype.$O\
 	gc.$O\
 	geom.$O\
 	heap.$O\
@@ -17,15 +16,12 @@ OFILES=\
 	ipint.$O\
 	link.$O\
 	load.$O\
-#	loader.$O\
 	math.$O\
-#	prefab.$O\
 	raise.$O\
 	readmod.$O\
 	runt.$O\
 	sign.$O\
 	stack.$O\
-#	tk.$O\
 	validstk.$O\
 	xec.$O\
 	das-$OBJTYPE.$O\
@@ -42,12 +38,9 @@ MODULES=\
 	/module/runt.m\
 	/module/sys.m\
 	/module/draw.m\
-	/module/prefab.m\
 	/module/math.m\
-	/module/tk.m\
 	/module/keyring.m\
 	/module/loader.m\
-	/module/freetype.m\
 
 <../mksyslib
 
@@ -63,42 +56,21 @@ keyring.h:D: $MODULES
 drawmod.h:D: $MODULES
 	rm -f $target && limbo -t Draw -I/module /module/runt.m > $target
 
-prefabmod.h:D: $MODULES
-	rm -f $target && limbo -t Prefab -I/module /module/runt.m > $target
-
-tkmod.h:D: $MODULES
-	rm -f $target && limbo -t Tk -I/module /module/runt.m > $target
-
 mathmod.h:D: $MODULES
 	rm -f $target && limbo -t Math -I/module /module/runt.m > $target
 
 loadermod.h:D: $MODULES
 	rm -f $target && limbo -t Loader -I/module /module/runt.m > $target
 
-freetypemod.h:D: $MODULES
-	rm -f $target && limbo -t Freetype -I/module /module/runt.m > $target
-
-benchmod.h:D: /module/bench.m
-	rm -f $target && limbo -t Bench -I/module /module/bench.m > $target
-
-bench.h:D:/module/bench.m
-	rm -f $target && limbo -a -I/module /module/bench.m > $target
-
 xec.$O:		optab.h  ../include/pool.h
-tk.$O:		../include/tk.h  ../include/pool.h
 draw.$O: 	../include/draw.h ../include/drawif.h
-prefab.$O: 	../include/draw.h\
-		../include/prefab.h
 
 runt.$O:	sysmod.h
-prefab.$O:	prefabmod.h
 draw.$O:	drawmod.h
-tk.$O:		../include/draw.h tkmod.h
 math.$O:	mathmod.h
 keyring.$O:	keyring.h ../libkeyring/keys.h
 ipint.$O:	keyring.h
 loader.$O:	loadermod.h
-freetype.$O:	freetypemod.h ../include/freetype.h
 math.$O:	../include/mathi.h
 
 das-spim.c:N:	das-mips.c

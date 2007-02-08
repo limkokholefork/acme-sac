@@ -6,6 +6,7 @@ DIRS=\
 	cmd\
 	grid\
 	lib\
+	mapreduce\
 	math\
 	svc\
 
