@@ -19,9 +19,7 @@ logfile logfile
 memfs memfs
 mntgen mntgen
 namespace namespace
-palmsrv palmsrv
 ramfile ramfile
 registry registry
 regquery registry
-spree spree
 tarfs tarfs
