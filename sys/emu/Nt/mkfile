@@ -42,7 +42,7 @@ default:V:	i$CONF.exe
 
 <../port/portmkfile
 
-i$CONF.exe:	$OBJ $CONF.c $CONF.root.h $LIBFILES
+i$CONF.exe:	$OBJ $CONF.$O $CONF.root.h $LIBFILES
 	$LD $target   $OBJ $CONF.$O $LIBFILES $SYSLIBS
 
 $CONF.obj: $CONF.c

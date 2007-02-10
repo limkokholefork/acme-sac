@@ -9,7 +9,7 @@ dev
 	srv
 	dup
 	ssl
-	cap
+#	cap
 	fs
 	cmd	cmd
 	indir
@@ -17,16 +17,15 @@ dev
 	draw
 	pointer
 	snarf
+	wmsz
 
 	ip	ipif-posix ipaux
-	eia
-	audio	audio
+#	eia
+#	audio	audio
 	mem
 
 lib
 	interp
-	tk
-	freetype
 	math
 	draw
 
@@ -44,12 +43,9 @@ mod
 	sys
 	draw
 
-	tk
 	math
 	srv	srv
 	keyring
-	loader
-	freetype
 
 port
 	alloc
@@ -90,17 +86,3 @@ root
 	/chan	/
 	/nvfs	/
 	/env	/
-#	/chan
-#	/dev
-#	/dis
-#	/env
-#	/n
-#	/net
-#	/nvfs /
-#	/prog
-#	/icons
-#	/osinit.dis
-#	/dis/emuinit.dis
-#	/dis/lib/auth.dis
-#	/dis/lib/ssl.dis
-#	/n/local /
