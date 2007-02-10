@@ -10,7 +10,6 @@ DIRS=\
 	libmemlayer\
 	libmp\
 	libsec\
-	libtk\
 	emu\
 
 </mkfiles/mksubdirs

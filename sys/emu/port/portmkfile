@@ -52,11 +52,6 @@ clean:V:
 
 nuke:V:	clean 
 	rm -f srv.h srvm.h
-	for (i in $LIBDIRS)
-	{
-		echo '@{cd ../../lib$i ; mk SHELLTYPE=$SHELLTYPE SYSTARG=$SYSTARG OBJTYPE=$OBJTYPE nuke}'
-		@{cd ../../lib$i; mk 'SHELLTYPE='$SHELLTYPE 'SYSTARG='$SYSTARG 'OBJTYPE='$OBJTYPE nuke}
-	}
 
 $CONF.c:	../port/mkdevc $CONF
 	sh ../port/mkdevc < $CONF > $CONF.c

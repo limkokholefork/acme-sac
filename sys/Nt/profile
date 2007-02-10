@@ -1,26 +1,9 @@
 load arg
+load std
+autoload=std
 
 fn awk {
 	os awk $*
-}
-
-fn file2url {
-	sysname:=`{cat /dev/sysname}
-	url:='http://'$sysname
-	for (i in $*) {
-		f := `{cleanname -d `pwd $i}
-		echo $f  |sed 's@/n/d@file:///D:@
-s@/services/httpd/root@'^$url^'@'
-	}
-}
-
-fn file2host {
-	for (i in $*) {
-		f := `{cleanname -d `pwd $i}
-		echo $f  |sed 's@/n/d@D:@
-				s@/n/h@file:///H:@
-				s@/n/c@file:///C:@'
-	}
 }
 
 fn 9c {
@@ -28,21 +11,19 @@ fn 9c {
 	args := $*
 	flags=''
 	(arg
-		I+ {flags = $flags  -I ^ `{file2root $arg}}
+		I+ {flags = $flags  -I ^ $arg}
 		D+ {flags = $flags -$opt ^ $arg}
 		'*' {echo unknown option $opt}
 		- $args
 	)
 	cc=cl
-	cwd=`{echo $emuroot ^ `pwd | sed 's/\//\\/g'}
+	cwd=$emuroot ^ `pwd
 	cflags=(-c 
 		-nologo
 		-W3 
 		-Zi
 		-Yd
 		-MT
-#		'-DROOT='$emuroot
-#		-DEMU
 		'-D_WIN32_WINNT=0x0400'
 		-I$cwd
 		-I$emuroot\sys\Nt\386\include
@@ -54,10 +35,7 @@ fn 9c {
 		-Fo$cwd\
 		)
 	file=$1
-	file=`{cleanname -d `pwd $file}
-	file=`{echo $emuroot ^ $file |sed 's/\//\\/g'}
-#	echo os $cc $cflags $file 
-	os $cc $cflags $flags $file 
+	os -d $cwd $cc $cflags $flags $file
 }
 
 fn 9l {
@@ -67,19 +45,21 @@ fn 9l {
 		-map
 		-subsystem:windows 
 		-entry:WinMainCRTStartup )
-	syslibs=(wsock32.lib 
+	syslibs=('/libpath:C:\Program Files\Microsoft Platform SDK\lib'
+	'/libpath:C:\Program Files\Microsoft Visual C++ Toolkit 2003\lib'
+			wsock32.lib 
 			user32.lib 
 			gdi32.lib 
 			advapi32.lib 
 			winmm.lib 
 			mpr.lib)
 	
+	cwd=$emuroot ^ `pwd
 	file=$1
 	file=`{cleanname -d `pwd $file}
 	file=`{echo $emuroot ^ $file |sed 's/\//\\/g'}
 	args = ${tl $*}
-#	echo os $ld $ldflags -out:$file `{file2root $args}
-	os $ld $ldflags -out:$file `{file2root $args} '/libpath:C:\Program Files\Microsoft Platform SDK\lib' '/libpath:C:\Program Files\Microsoft Visual C++ Toolkit 2003\lib' $syslibs
+	os -d $cwd $ld $ldflags -out:$file $args $syslibs
 }
 
 fn file2root {
@@ -92,19 +72,13 @@ fn file2root {
 
 fn 9ar {
 	ar=link /lib
-	cwd=`{echo $emuroot ^ `pwd | sed 's/\//\\/g'}
+	cwd=$emuroot ^ `pwd
 	arflags=-nologo
 	file=$1
 	file=`{cleanname -d `pwd $file}
 	file=`{echo $emuroot ^ $file |sed 's/\//\\/g'}
 	args = ${tl $*}
-#	echo os $ar $arflags -out:$file  `{file2root $args}
-	os $ar $arflags -out:$file `{file2root $args}
-}
-
-fn svn {
-	args = ${tl $*}
-	os svn $1 `{file2root $args}
+	os -d $cwd $ar $arflags -out:$file $args
 }
 
 bind /sys/Nt/mkconfig /sys/mkconfig
