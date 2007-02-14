@@ -334,6 +334,8 @@ Forloop:
 			f := findframe(top, e.frameid);
 			if (f != nil)
 				f.scrollrel(e.pt);
+			else
+				curframe.scrollrel(e.pt);
 			g = nil;
 		Esettext =>
 			f := findframe(top, e.frameid);
