@@ -27,7 +27,7 @@ OFILES=	alloc.$O\
 	openfont.$O\
 	poly.$O\
 	loadimage.$O\
-	readcolmap.$O\
+#	readcolmap.$O\
 	readimage.$O\
 	readsubfont.$O\
 	rectclip.$O\

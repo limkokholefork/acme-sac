@@ -7,7 +7,7 @@ OFILES=\
 	comp-$OBJTYPE.$O\
 	conv.$O\
 	dec.$O\
-	dlm-$TARGMODEL.$O\
+#	dlm-$TARGMODEL.$O\
 	draw.$O\
 	gc.$O\
 	geom.$O\

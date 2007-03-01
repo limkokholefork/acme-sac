@@ -26,8 +26,8 @@ IMPORTFILES=\
 	cistrncmp.$O\
 	cistrstr.$O\
 	cleanname.$O\
-	create.$O\
-	dirwstat.$O\
+#	create.$O\
+#	dirwstat.$O\
 	dofmt.$O\
 	dorfmt.$O\
 	errfmt.$O\
@@ -47,7 +47,7 @@ IMPORTFILES=\
 	print.$O\
 	readn.$O\
 	rerrstr.$O\
-	seek.$O\
+#	seek.$O\
 	seprint.$O\
 	smprint.$O\
 	snprint.$O\
