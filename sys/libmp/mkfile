@@ -1,8 +1,53 @@
 <../mkconfig
 
-DIRS=port
+LIB=libmp.a
+FILES=\
+	mpaux\
+	mpfmt\
+	strtomp\
+	mptobe\
+	mptole\
+	betomp\
+	letomp\
+	mpadd\
+	mpsub\
+	mpcmp\
+	mpfactorial\
+	mpmul\
+	mpleft\
+	mpright\
+	mpvecadd\
+	mpvecsub\
+	mpvecdigmuladd\
+	mpveccmp\
+	mpdigdiv\
+	mpdiv\
+	mpexp\
+	mpmod\
+	mpextendedgcd\
+	mpinvert\
+	mprand\
+	crt\
+	mptoi\
+	mptoui\
+	mptov\
+	mptouv\
 
-</mkfiles/mksubdirs
+OFILES=${FILES:%=%.$O}
+
+HFILES=\
+	../$OBJDIR/include/lib9.h\
+	../include/mp.h\
+	dat.h\
+
+CFILES=${FILES:%=%.c}
+
+
+UPDATE=mkfile\
+	$HFILES\
+	$CFILES\
+
+<../mksyslib
 
 # the remainder are only intended for testing on a few system types
 test.$O:	test.c $ROOT/$OBJDIR/include/lib9.h $ROOT/include/mp.h port/dat.h
