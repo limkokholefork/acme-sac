@@ -133,9 +133,15 @@ r2s(r: Rect): string
 evhandle(w: ref Window, evchan: chan of ref Event)
 {
 	last : Draw->Pointer;
+	wmsize := startwmsize();
 	for(;;) {
 		ev: ref Event = nil;
 		alt {
+		wmsz := <-wmsize =>
+			w.image = w.screen.newwindow(wmsz, Draw->Refnone, Draw->Nofill);
+			makewins();
+			ev = ref Event.Ereshape(mainwin.r);
+			offset = w.image.r.min;
 		ctl := <-w.ctl or
 		ctl = <-w.ctxt.ctl =>
 			w.wmctl(ctl);
@@ -326,4 +332,41 @@ Popup.flush(p: self ref Popup, r: Rect)
 	img := p.image;
 	if (win != nil && img != nil)
 		win.draw(r, img, nil, r.min);
+}
+
+startwmsize(): chan of Rect
+{
+	rchan := chan of Rect;
+	fd := sys->open("#w/wmsize", Sys->OREAD);
+	if(fd == nil)
+		return rchan;
+	sync := chan of int;
+	spawn wmsizeproc(sync, fd, rchan);
+	<-sync;
+	return rchan;
+}
+
+Wmsize: con 1+4*12;		# 'm' plus 4 12-byte decimal integers
+
+wmsizeproc(sync: chan of int, fd: ref Sys->FD, ptr: chan of Rect)
+{
+	sync <-= sys->pctl(0, nil);
+
+	b:= array[Wmsize] of byte;
+	while(sys->read(fd, b, len b) > 0){
+		p := bytes2rect(b);
+		if(p != nil)
+			ptr <-= *p;
+	}
+}
+
+bytes2rect(b: array of byte): ref Rect
+{
+	if(len b < Wmsize || int b[0] != 'm')
+		return nil;
+	x := int string b[1:13];
+	y := int string b[13:25];
+#	but := int string b[25:37];
+#	msec := int string b[37:49];
+	return ref Rect((0,0), (x, y));
 }

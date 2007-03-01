@@ -248,14 +248,6 @@ is a network address, use
 .IR styxpersist (2)
 to try to simulate a permanent connection, even should the server reboot.
 Note the caveats on that page.
-.TP
-.B -o
-For
-.I mount
-only,
-the file server serves the original version of the Styx protocol, and
-.I mount
-inserts a process that translates to the current version.
 .SH SOURCE
 .B /appl/cmd/bind.b
 .br

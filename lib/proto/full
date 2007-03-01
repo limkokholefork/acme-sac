@@ -63,7 +63,6 @@ services
 		httpd.rewrite
 		httpd.suff
 	logs
-	ppp
 	webget
 		help.html
 		inferno.gif

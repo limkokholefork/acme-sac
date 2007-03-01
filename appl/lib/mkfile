@@ -6,7 +6,6 @@ DIRS=\
 	ecmascript\
 	encoding\
 	spki\
-	styxconv\
 
 SRC=`{ls *.b}
 TARG=${SRC:%.b=%.dis}
