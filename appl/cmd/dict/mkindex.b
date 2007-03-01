@@ -36,7 +36,7 @@ dicts := array[] of {
 	Dictinfo ("pgw",	"Project Gutenberg Webster Dictionary",	"/lib/dict/pgw",	"/lib/dict/pgwindex",	"/dis/dict/pgw.dis"),
 	Dictinfo("simple", "Simple test dictionary", "/lib/dict/simple", "/lib/dict/simpleindex", "/dis/dict/simple.dis"),
 	Dictinfo ("roget",	"Roget's Thesaurus from Project Gutenberg",	"/lib/dict/roget",	"/lib/dict/rogetindex", "/dis/dict/roget.dis"),
-	Dictinfo ("wikipedia",	"Wikipedia",	"/n/d/enwik8",	"/n/d/enwik8index", "wikipedia.dis"),
+	Dictinfo ("wikipedia",	"Wikipedia",	"/n/f/wiki/enwiki-20061130-pages-articles.xml",	"/n/d/enwik8index", "/dis/dict/wikipedia.dis"),
 };
 
 bout, bdict: ref Iobuf;	#  output 
@@ -50,7 +50,7 @@ init(nil: ref Draw->Context, argl: list of string)
 	utils = load Utils Utils->PATH;
 	
 	dictinfo := dicts[0];
-	
+	startoff := big 0;
 	bout = bufio->fopen(sys->fildes(1), Bufio->OWRITE);
 	utils->init(bufio, bout);
 	arg->init(argl);
@@ -68,6 +68,8 @@ init(nil: ref Draw->Context, argl: list of string)
 					err(sprint("unknown dictionary: %s", p));
 					exit;
 				}
+			'o' =>
+				startoff = big arg->earg();
 			}
 	dict = load Dictm dictinfo.modpath;
 	if(dict == nil){
@@ -81,27 +83,29 @@ init(nil: ref Draw->Context, argl: list of string)
 	}
 
 	dict->init(bufio, utils, bdict, bout);
-	
-	ae := int bdict.seek(big 0, 2);
-	for(a := 0; a < ae; a = dict->nextoff(a+1)) {
-		linelen = 0;
-		e := getentry(a);
-		bout.puts(sprint("%d\t", a));
-		linelen = 4;
-		dict->printentry(e, 'h');
-	}
+	dict->mkindex();
+#	utils->breaklen = 1024;
+#	ae := bdict.seek(big 0, 2);
+#	print("%bd\n", ae);
+#	for(a := startoff; a < ae; a = dict->nextoff(a+ big 1)) {
+#		linelen = 0;
+#		e := getentry(a);
+#		bout.puts(sprint("%bd\t", a));
+#		linelen = 4;
+#		dict->printentry(e, 'h');
+#	}
 	bout.flush();
 	exit;
 }
 
-getentry(b: int): Entry
+getentry(b: big): Entry
 {
-	dtop: int;
+	dtop: big;
 	ans : Entry;
-	e := dict->nextoff(b+1);
+	e := dict->nextoff(b+ big 1);
 	ans.doff = big b;
-	if(e < 0) {
-		dtop = int bdict.seek(big 0, 2);
+	if(e < big 0) {
+		dtop = bdict.seek(big 0, 2);
 		if(b < dtop){
 			e = dtop;
 		}else{
@@ -109,8 +113,8 @@ getentry(b: int): Entry
 			ans.start = nil;
 		}
 	}
-	n := e-b;
-	if(n){
+	n := int (e-b);
+	if(n != 0){
 		ans.start = array[n] of byte;
 		bdict.seek(big b, 0);
 		n = bdict.read(ans.start, n);

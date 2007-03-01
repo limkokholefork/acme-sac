@@ -6,7 +6,6 @@ include "draw.m";
 include "keyring.m";
 include "security.m";
 include "factotum.m";
-include "styxconv.m";
 include "styxpersist.m";
 include "arg.m";
 include "sh.m";
@@ -19,7 +18,6 @@ Mount: module
 verbose := 0;
 doauth := 1;
 do9 := 0;
-oldstyx := 0;
 persist := 0;
 showstyx := 0;
 
@@ -67,8 +65,6 @@ init(ctxt: ref Draw->Context, args: list of string)
 		'9' =>
 			doauth = 0;
 			do9 = 1;
-		'o' =>
-			oldstyx = 1;
 		'v' =>
 			verbose = 1;
 		'P' =>
@@ -88,9 +84,6 @@ init(ctxt: ref Draw->Context, args: list of string)
 	arg = nil;
 	addr = hd args;
 	mountpoint := hd tl args;
-
-	if(oldstyx && do9)
-		fail("usage", "cannot combine -o and -9 options");
 
 	fd := connect(ctxt, addr);
 	ok: int;
@@ -183,8 +176,6 @@ authcvt(fd: ref Sys->FD): (ref Sys->FD, string)
 		if(verbose)
 			sys->print("remote username is %s\n", err);
 	}
-	if(oldstyx)
-		return cvstyx(fd);
 	return (fd, nil);
 }
 
@@ -208,22 +199,6 @@ runcmd(sh: Sh, ctxt: ref Draw->Context, argv: list of string, stdin: ref Sys->FD
 	stdin = nil;
 	sync <-= 0;
 	sh->run(ctxt, argv);
-}
-
-cvstyx(fd: ref Sys->FD): (ref Sys->FD, string)
-{
-	styxconv := load Styxconv Styxconv->PATH;
-	if(styxconv == nil)
-		return (nil, sys->sprint("cannot load %s: %r", Styxconv->PATH));
-	styxconv->init();
-	p := array[2] of ref Sys->FD;
-	if(sys->pipe(p) < 0)
-		return (nil, sys->sprint("can't create pipe: %r"));
-	pidc := chan of int;
-	spawn styxconv->styxconv(p[1], fd, pidc);
-	p[1] = nil;
-	<-pidc;
-	return (p[0], nil);
 }
 
 authenticate(keyfile, alg: string, dfd: ref Sys->FD, addr: string): (ref Sys->FD, string)
