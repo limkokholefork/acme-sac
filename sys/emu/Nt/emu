@@ -84,7 +84,5 @@ root
 	/fd	/
 	/prog	/
 	/net	/
-	/net.alt	/
 	/chan	/
-	/nvfs	/
 	/env	/
