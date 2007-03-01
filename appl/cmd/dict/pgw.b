@@ -1019,14 +1019,14 @@ printentry(e: Entry, cmd: int)
 #  * Return offset into bdict where next webster entry after fromoff starts.
 #  * Webster entries start with <p><hw>
 #  
-nextoff(fromoff: int): int
+nextoff(fromoff: big): big
 {
-	a, n: int;
-	c: int;
+	a: big;
+	n, c: int;
 
-	a = int bdict.seek(big fromoff, 0);
+	a = bdict.seek(big fromoff, 0);
 	if(a != fromoff)
-		return -1;
+		return big -1;
 	n = 0;
 	for(;;){
 		c = bdict.getc();
@@ -1043,7 +1043,7 @@ nextoff(fromoff: int): int
 				break;
 		}
 	}
-	return int (bdict.offset()-big n);
+	return (bdict.offset()-big n);
 }
 
 
@@ -1095,4 +1095,8 @@ gettag(f: string): string
 		tag[k++] = f[i];
 	}
 	return f[i:];
+}
+
+mkindex()
+{
 }

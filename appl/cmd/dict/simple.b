@@ -41,13 +41,13 @@ printentry(e: Entry, cmd: int)
 	outnl(0);
 }
 
-nextoff(fromoff: int): int
+nextoff(fromoff: big): big
 {
 	if(bdict.seek(big fromoff, 0) < big 0)
-		return -1;
+		return big -1;
 	if(bdict.gets('\n') == nil)
-		return -1;
-	return int bdict.offset();
+		return big -1;
+	return bdict.offset();
 }
 
 printkey()
@@ -55,3 +55,7 @@ printkey()
 	bout.puts("No pronunciation key.\n");
 }
 
+
+mkindex()
+{
+}

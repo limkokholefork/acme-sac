@@ -8,10 +8,8 @@ TARG=sh.dis\
 	sexprs.dis\
 	std.dis\
 	string.dis\
-	tk.dis\
 	echo.dis\
 	csv.dis\
-	test.dis\
 
 INS=	$ROOT/dis/sh.dis\
 	$ROOT/dis/sh/arg.dis\

@@ -7,6 +7,7 @@ Dictm: module {
 
 	init: fn(b: Bufio, u: Utils, bd, bo: ref Iobuf );
 	printentry: fn(e: Entry, cmd: int);
-	nextoff: fn(fromoff: int): int;
+	nextoff: fn(fromoff: big): big;
 	printkey: fn();
+	mkindex: fn();
 };

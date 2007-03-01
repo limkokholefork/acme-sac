@@ -43,7 +43,7 @@ dicts := array[] of {
 	Dictinfo ("pgw",	"Project Gutenberg Webster Dictionary",	"/lib/dict/pgw",	"/lib/dict/pgwindex",	"/dis/dict/pgw.dis"),
 	Dictinfo("simple", "Simple test dictionary", "/lib/dict/simple", "/lib/dict/simpleindex", "/dis/dict/simple.dis"),
 	Dictinfo ("roget",	"Roget's Thesaurus from Project Gutenberg",	"/lib/dict/roget",	"/lib/dict/rogetindex", "/dis/dict/roget.dis"),
-	Dictinfo ("wp",	"Wikipedia",	"/n/d/enwik8",	"/lib/dict/wpindex", "/dis/dict/wikipedia.dis"),
+	Dictinfo ("wp",	"Wikipedia",	"/lib/dict/wikipedia",	"/lib/dict/wpindex", "/dis/dict/wikipedia.dis"),
 };
 
 argv0:= "dict";
@@ -58,7 +58,7 @@ Addr: adt{
 	n: int;	#  number of offsets 
 	cur: int;	#  current position within doff array 
 	maxn: int;	#  actual current size of doff array 
-	doff: array of int;	#  doff[maxn], with 0..n-1 significant 
+	doff: array of big;	#  doff[maxn], with 0..n-1 significant 
 };
 
 
@@ -153,7 +153,7 @@ init(nil: ref Draw->Context, argl: list of string)
 	}
 	indextop = int bindex.seek(big 0, 2);
 	dot = ref Addr;
-	dot.doff = array[Aslots] of int;
+	dot.doff = array[Aslots] of big;
 	dot.n = 0;
 	dot.cur = 0;
 	dot.maxn = Aslots;
@@ -247,7 +247,7 @@ execcmd(cmd: int)
 		}
 		case(cmd){
 		'a' =>
-			bout.puts(sprint("#%d\n", dot.doff[cur]));
+			bout.puts(sprint("#%bd\n", dot.doff[cur]));
 		'h' or 'p' or 'r' =>
 			e = getentry(cur);
 			dict->printentry(e, cmd);
@@ -299,8 +299,8 @@ parseaddr(line: string): (int, string)
 			return (-1, nil);
 		}
 	}else if(line[0] ==  '#'){
-		v: int;
-		(v, line) = str->toint(line[1:], 10);
+		v: big;
+		(v, line) = str->tobig(line[1:], 10);
 		#  absolute byte offset into dictionary 
 		dot.doff[0] = v;
 		dot.n = 1;
@@ -373,7 +373,8 @@ search(pat: string, dofold: int): int
 	needre, n: int;
 	match : array of (int, int);
 	re: Re;
-	ioff, v: int;
+	ioff: int;
+	v: big;
 	pre : string;
 	lit : string;
 	entry : string;
@@ -415,10 +416,10 @@ search(pat: string, dofold: int): int
 		if(match != nil){
 			if((entry = getfield()) == nil)
 				break;
-			(v, nil) = str->toint(entry, 10);
+			(v, nil) = str->tobig(entry, 10);
 			if(dot.n >= dot.maxn){
 				n = 2*dot.maxn;
-				dot.doff = (array[n] of int)[0:] = dot.doff;
+				dot.doff = (array[n] of big)[0:] = dot.doff;
 				if(dot.doff == nil){
 					err("out of memory");
 					exit;
@@ -557,7 +558,7 @@ getfield(): string
 sortaddr(a: ref Addr)
 {
 	i, j: int;
-	v: int;
+	v: big;
 
 	if(a.n <= 1)
 		return;
@@ -572,10 +573,10 @@ sortaddr(a: ref Addr)
 	a.n = i;
 }
 
-qsort(a: array of int, n: int)
+qsort(a: array of big, n: int)
 {
 	i, j: int;
-	t: int;
+	t: big;
 
 	while(n > 1){
 		i = n>>1;
@@ -610,21 +611,26 @@ anslen: int = 0;
 
 getentry(i: int): Entry
 {
-	b, e, n: int;
+	b, e: big;
+	n: int;
 
 	b = dot.doff[i];
-	e = dict->nextoff(b+1);
-	ans.doff = big b;  #TODO change all offsets to big
-	if(e < 0){
+	e = dict->nextoff(b+ big 1);
+	ans.doff =  b;
+	if(e < big 0){
 		err("couldn't seek to entry");
 		ans.start = nil;
 		ans.end = nil;
 	}else{
-		n = e-b;
+		n = int (e-b);
 		ans.start = array[n+1] of byte;
-		anslen = n+1;
-		bdict.seek(big b, 0);
+#		anslen = n+1;
+		bdict.seek(b, 0);
 		n = bdict.read(ans.start, n);
+		if(n < 0){
+			err(sprint("read entry: %r\n"));
+			return ans;
+		};
 		ans.start = ans.start[:n];
 		ans.end = ans.start[n:];
 	#	ans.end[0] = byte 0;   huh!
@@ -634,10 +640,10 @@ getentry(i: int): Entry
 
 setdotnext()
 {
-	b: int;
+	b: big;
 
-	b = dict->nextoff(dot.doff[dot.cur]+1);
-	if(b < 0){
+	b = dict->nextoff(dot.doff[dot.cur] + big 1);
+	if(b < big 0){
 		err("couldn't find a next entry");
 		return;
 	}
@@ -648,32 +654,32 @@ setdotnext()
 
 setdotprev()
 {
-	tryback: int;
-	here, last, p: int;
+	tryback: big;
+	here, last, p: big;
 
 	if(dot.cur < 0 || dot.cur >= dot.n)
 		return;
-	tryback = 2000;
+	tryback = big 2000;
 	here = dot.doff[dot.cur];
-	last = 0;
-	while(last == 0){
+	last = big 0;
+	while(last == big 0){
 		p = here-tryback;
-		if(p < 0)
-			p = 0;
+		if(p < big 0)
+			p = big 0;
 		for(;;){
-			p = dict->nextoff(p+1);
-			if(p < 0)
+			p = dict->nextoff(p+ big 1);
+			if(p < big 0)
 				return;	#  shouldn't happen 
 			if(p >= here)
 				break;
 			last = p;
 		}
-		if(!last){
-			if(here-tryback < 0){
+		if(last == big 0){
+			if(here-tryback < big 0){
 				err("can't find a previous entry");
 				return;
 			}
-			tryback = 2*tryback;
+			tryback = big 2*tryback;
 		}
 	}
 	dot.doff[0] = last;

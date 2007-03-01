@@ -140,7 +140,7 @@ printentry(e: Entry, cmd: int)
 	outnl(0);
 }
 
-nextoff(fromoff: int): int
+nextoff(fromoff: big): big
 {
 	bdict.seek(big fromoff, 0);
 	bdict.gets('\n');
@@ -149,9 +149,9 @@ nextoff(fromoff: int): int
 			continue;
 		for(i := 0; i < len p - 4; i++)
 			if(p[i:i+4] == " -- ")
-				return int bdict.offset() - len p;
+				return bdict.offset() - big len p;
 	}
-	return int bdict.offset();
+	return bdict.offset();
 }
 
 printkey()
@@ -159,3 +159,6 @@ printkey()
 	bout.puts("No pronunciation key.\n");
 }
 
+mkindex()
+{
+}

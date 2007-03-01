@@ -85,19 +85,21 @@ printentry(e: Entry, cmd: int)
 		}
 		r = p[0];
 		p = p[1:];
-		if(r == '&'){
-			#  Start of special character name 
-			(spec, p) = getspec(p);
-			r = lookassoc(spectab, len spectab, spec);	
-			if(r == -1){
-				if(debug)
-					err(sprint("spec %bd %d %s", e.doff, len curentry.start, spec));
-				r = '�';
-			}
-			if(rprev != NONE)
-				outrune(rprev);
-			rprev = r;
-		}else if(r == '<'){
+#		if(r == '&'){
+#			#  Start of special character name 
+#			(spec, p) = getspec(p);
+#			r = lookassoc(spectab, len spectab, spec);	
+#			if(r == -1){
+#				if(debug)
+#					err(sprint("spec %bd %d %s", e.doff, len curentry.start, spec));
+#				r = '�';
+#			}
+#			if(rprev != NONE)
+#				outrune(rprev);
+#			rprev = r;
+#		}else 
+		
+		if(r == '<'){
 			#  Start of tag name 
 			if(rprev != NONE){
 				outrune(rprev);
@@ -154,13 +156,14 @@ printentry(e: Entry, cmd: int)
 #  Return offset into bdict where next Wikipedia entry after fromoff starts.
 #  Wikipedia entries start with <title>
 #  
-nextoff(fromoff: int): int
+nextoff(fromoff: big): big
 {
-	a, n: int;
+	a: big;
+	n: int;
 	c: int;
-	a = int bdict.seek(big fromoff, 0);
+	a = bdict.seek(fromoff, 0);
 	if(a != fromoff)
-		return -1;
+		return big -1;
 	n = 0;
 	for(;;){
 		c = bdict.getc();
@@ -174,7 +177,7 @@ nextoff(fromoff: int): int
 				break;
 		}
 	}
-	return int (bdict.offset()-big n);
+	return (bdict.offset()- big n);
 }
 
 
@@ -288,4 +291,28 @@ translateentity(s: string, i: int): (string, int)
 	hvs : string = nil;
 	hvs[0] = hv;
 	return (hvs, j);
+}
+
+mkindex()
+{
+	offset: big;
+	title: string;
+	for(;;){
+		c := bdict.getc();
+		if(c < 0)
+			break;
+		if(c == '<' && bdict.getc() == 't' && bdict.getc() == 'i'){
+			if(bdict.getc() == 't' && bdict.getc() == 'l'
+			&& bdict.getc() == 'e' && bdict.getc() == '>'){
+				offset = bdict.offset() - big 7;
+				title = "";
+				i := 0;
+				while((c = bdict.getc()) != '<')
+					title[i++] = c;
+				title = substituteentities(title);
+				bout.puts(sprint("%bd\t%s\n", offset, title));
+			}
+		}
+	}
+	bout.flush();
 }

@@ -67,7 +67,7 @@ Nmulti: con MULTIE-MULTI;
 	Entry: adt{
 		start: array of byte;	#  entry starts at start 
 		end: array of byte;	#  and finishes just before end 
-		doff: int;	#  dictionary offset (for debugging) 
+		doff: big;	#  dictionary offset (for debugging) 
 	};
 	
 	Assoc: adt{
@@ -85,9 +85,5 @@ Nmulti: con MULTIE-MULTI;
 		desc: array of byte;	#  description 
 		path: array of byte;	#  path to dictionary data 
 		indexpath: array of byte;	#  path to index data 
-		nextoff: fn(): int;	#  function to find next entry offset from arg 
-		printentry: fn(e: Entry, n: int);	#  function to print entry 
-		printkey: fn();	#  function to print pronunciation key 
 	};
-
 }
