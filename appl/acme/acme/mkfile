@@ -1,11 +1,9 @@
 <../../../mkconfig
 
 DIRS=\
-	acid\
 	bin\
 	calendar\
 	debug\
-	edit\
 	irc\
 	mail\
 	wiki\

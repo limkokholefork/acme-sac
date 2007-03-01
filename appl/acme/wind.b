@@ -148,6 +148,8 @@ taglines(w: ref Window, r: Rect): int
 		return w.tag.frame.maxlines;
 	rune := ref Astring;
 	n := w.tag.frame.nlines;
+	if(w.tag.file.buf.nc == 0)
+		return 1;
 	w.tag.file.buf.read(w.tag.file.buf.nc - 1, rune, 0, 1);
 	if(rune.s[0] == '\n')
 		n++;

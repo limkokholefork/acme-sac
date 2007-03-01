@@ -1,5 +1,7 @@
 BUGS and suggested enhancements
 
+emu
+	sys->stat of large files (test was 8GB) produces incorrect file size.
 Irc 
 	• pasting a large block only sends the first line to the channel
 	• still something odd about noscroll behaviour
