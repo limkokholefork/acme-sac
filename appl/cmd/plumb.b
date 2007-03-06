@@ -20,10 +20,37 @@ Plumb: module
 	init:	fn(nil: ref Draw->Context, nil: list of string);
 };
 
+m : ref Msg;
 usage()
 {
-	sys->fprint(stderr(), "Usage: plumb [-s src] [-d dest] [-D dir] [-k kind] [-a name val] ... data ...\n");
+	sys->fprint(stderr(), "Usage: plumb [-s src] [-d dest] [-D dir] [-k kind] [-a name val] -i | ... data ...\n");
 	raise "fail:usage";
+}
+
+gather()
+{
+	buf := array[8192] of byte;
+	n, ndata: int;
+	
+	ndata = 0;
+	m.data = nil;
+	while((n = sys->read(sys->fildes(0), buf, len buf)) > 0){
+		b := array[ndata + len buf] of byte;
+		if(b == nil){
+			err(sys->sprint("alloc failed: %r\n"));
+			raise "alloc";
+		}
+		if (ndata > 0)
+			b[0:] = m.data[0:ndata];
+		b[ndata:] = buf[0:n];
+		m.data = b[0:ndata+n];
+		ndata += n;
+	}
+
+	if (n < 0){
+		err(sys->sprint("i/o error on input: %r\n"));
+		raise "read";
+	}
 }
 
 init(nil: ref Draw->Context, args: list of string)
@@ -43,7 +70,8 @@ init(nil: ref Draw->Context, args: list of string)
 		err(sys->sprint("can't connect to plumb: %r"));
 
 	attrs: list of ref Attr;
-	m := ref Msg("plumb", nil, workdir->init(), "text", nil, nil);
+	input := 0;
+	m = ref Msg("plumb", nil, workdir->init(), "text", nil, nil);
 	arg->init(args);
 	while((c := arg->opt()) != 0)
 		case c {
@@ -53,7 +81,9 @@ init(nil: ref Draw->Context, args: list of string)
 			m.dst = use(arg->arg(), c);
 		'D' =>
 			m.dir = use(arg->arg(), c);
-		'k' =>
+		'i' =>
+			input++;
+		't' or 'k'=>
 			m.kind = use(arg->arg(), c);
 		'a' =>
 			name := use(arg->arg(), c);
@@ -63,8 +93,22 @@ init(nil: ref Draw->Context, args: list of string)
 			usage();
 		}
 	args = arg->argv();
-	if(args == nil)
+	if((input && len args > 0) || (!input && len args < 1))
 		usage();
+	if(input){
+		gather();
+		(notfound, nil) := plumbmsg->lookup(plumbmsg->string2attrs(m.attr), "action");
+		if(notfound){
+			tack(attrs, ref Attr("action", "showdata"));
+		}
+		m.attr = plumbmsg->attrs2string(attrs);
+		if(m.send() < 0){
+			err(sys->sprint("can't send message: %r\n"));
+			raise "error";
+		}
+		exit;
+	}
+	
 	nb := 0;
 	for(a := args; a != nil; a = tl a)
 		nb += len array of byte hd a;
