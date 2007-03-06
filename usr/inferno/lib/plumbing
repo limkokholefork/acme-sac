@@ -73,8 +73,7 @@ plumb start /dis/acme.dis -c1 $dir
 kind is text
 data matches '([a-zA-Z¡-￿0-9_\-./]+)\(([0-9]+)\)'
 plumb alwaysstart man # nasty plumbing hack
-plumb start /dis/sh.dis -c '{plumb -d edit -a action showdata -a filename ''/man/$1($2)'' "{man $2 $1 >[2=1]}}'
-#plumb start /dis/wm/man.dis $2 $1
+plumb start /dis/sh.dis -c '/dis/man -b $2 $1'
 
 # change plumb namespace
 kind is text
