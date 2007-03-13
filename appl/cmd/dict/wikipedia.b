@@ -167,8 +167,10 @@ nextoff(fromoff: big): big
 	n = 0;
 	for(;;){
 		c = bdict.getc();
-		if(c < 0)
+		if(c < 0){
+			sys->fprint(sys->fildes(2), "getc: %r\n");
 			break;
+		}
 		if(c == '<' && bdict.getc() == 't' && bdict.getc() == 'i'){
 			if(bdict.getc() == 't' && bdict.getc() == 'l'
 			&& bdict.getc() == 'e' && bdict.getc() == '>')

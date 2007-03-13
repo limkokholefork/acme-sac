@@ -169,25 +169,26 @@ init(nil: ref Draw->Context, argl: list of string)
 
 locate(): int
 {
-	top, bot, mid, c: int;
+	top, bot, mid: big;
+	c: int;
 	n: int;
 
-	bot = 0;
-	top = int dfile.seek(big 0, 2);
+	bot = big 0;
+	top = dfile.seek(big 0, 2);
 	for(;;){
-		mid = (top+bot)/2;
+		mid = (top+bot)/ big 2;
 		if(debug)
-			sys->fprint(sys->fildes(2), "locate %d %d %d\n", top, mid, bot);
-		dfile.seek(big mid, 0);
+			sys->fprint(sys->fildes(2), "locate %bd %bd %bd\n", top, mid, bot);
+		dfile.seek(mid, 0);
 		do
 			c = dfile.getc();
 		while(c >= 0 && c != '\n');
-		mid = int dfile.offset();
+		mid = dfile.offset();
 		if((entry = dfile.gets('\n')) == nil)
 			break;
 		word = rcanon(entry);
 		if(debug)
-			sys->fprint(sys->fildes(2), "mid %d key: %s entry: %s\n", mid, key, word);
+			sys->fprint(sys->fildes(2), "mid %bd key: %s entry: %s\n", mid, key, word);
 		n = compare(key, word);
 		if(debug)
 			sys->fprint(sys->fildes(2), "compare: %d\n", n);
@@ -204,12 +205,12 @@ locate(): int
 		break;
 	}
 	if(debug)
-		sys->fprint(sys->fildes(2), "locate %d %d %d\n", top, mid, bot);
-	bot = int dfile.seek(big bot, 0);
+		sys->fprint(sys->fildes(2), "locate %bd %bd %bd\n", top, mid, bot);
+	bot = dfile.seek(bot, 0);
 	while((entry = dfile.gets('\n')) != nil){
 		word = rcanon(entry);
 		if(debug)
-			sys->fprint(sys->fildes(2), "seekbot %d key: %s entry: %s\n", bot, key, word);
+			sys->fprint(sys->fildes(2), "seekbot %bd key: %s entry: %s\n", bot, key, word);
 		n = compare(key, word);
 		if(debug)
 			sys->fprint(sys->fildes(2), "compare: %d\n", n);

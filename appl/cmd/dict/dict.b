@@ -628,7 +628,7 @@ getentry(i: int): Entry
 		bdict.seek(b, 0);
 		n = bdict.read(ans.start, n);
 		if(n < 0){
-			err(sprint("read entry: %r\n"));
+			err(sprint("read entry %bd %bd, %d: %r\n", b, e, n));
 			return ans;
 		};
 		ans.start = ans.start[:n];
