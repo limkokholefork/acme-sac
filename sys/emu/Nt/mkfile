@@ -27,7 +27,7 @@ OBJ=\
 	$CONF.root.$O\
 	lock.$O\
 	fp.$O\
-	vlrt.$O\
+#	vlrt.$O\
 	$DEVS\
 	$PORT\
 

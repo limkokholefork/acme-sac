@@ -4,25 +4,6 @@ fn awk {
 	os awk $*
 }
 
-fn file2url {
-	sysname:=`{cat /dev/sysname}
-	url:='http://'$sysname
-	for (i in $*) {
-		f := `{cleanname -d `pwd $i}
-		echo $f  |sed 's@/n/d@file:///D:@
-s@/services/httpd/root@'^$url^'@'
-	}
-}
-
-fn file2host {
-	for (i in $*) {
-		f := `{cleanname -d `pwd $i}
-		echo $f  |sed 's@/n/d@D:@
-				s@/n/h@file:///H:@
-				s@/n/c@file:///C:@'
-	}
-}
-
 fn 9c {
 	load arg
 	args := $*

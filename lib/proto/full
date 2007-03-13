@@ -45,7 +45,6 @@ mkfiles
 mnt
 	acme
 	arch
-	diary
 	factotum
 	keys
 	keysrv
