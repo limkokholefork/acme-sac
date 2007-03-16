@@ -36,7 +36,7 @@ dicts := array[] of {
 	Dictinfo ("pgw",	"Project Gutenberg Webster Dictionary",	"/lib/dict/pgw",	"/lib/dict/pgwindex",	"/dis/dict/pgw.dis"),
 	Dictinfo("simple", "Simple test dictionary", "/lib/dict/simple", "/lib/dict/simpleindex", "/dis/dict/simple.dis"),
 	Dictinfo ("roget",	"Roget's Thesaurus from Project Gutenberg",	"/lib/dict/roget",	"/lib/dict/rogetindex", "/dis/dict/roget.dis"),
-	Dictinfo ("wikipedia",	"Wikipedia",	"/n/f/wiki/enwiki-20061130-pages-articles.xml",	"/n/d/enwik8index", "/dis/dict/wikipedia.dis"),
+	Dictinfo ("wp",	"Wikipedia",	"/lib/dict/wikipedia",	"/lib/dict/wpindex", "/dis/dict/wikipedia.dis"),
 };
 
 bout, bdict: ref Iobuf;	#  output 
