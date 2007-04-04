@@ -1,3 +1,15 @@
+20070322
+	Sorry! Missed some updates
+	Fixed support for big files in Acme.exe (devfs.c) and look.b and dict
+	/appl/acme/xfid.b attempt at fixing acme crash when moving window
+	between columns while the window is being written to from external command
+	Some fixes carried over from inferno-os: 
+		fix to devsrv.c
+		default array bounds checking in Acme.exe
+		/locale timezone files
+		/emu/port/devip.c, get socket fd on reopen of ctl
+		/libmemdraw/draw.c: copy fix to memfillcolor
+	Incorporate Salva's man script and remove man.b; add -i option to plumb
 20060121
 	added -j option to airc to take channel names
 	fix: charon writes Url message to +Errors window

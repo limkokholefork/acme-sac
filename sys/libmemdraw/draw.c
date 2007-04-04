@@ -2390,7 +2390,7 @@ DBG print("bsh %d\n", bsh);
 
 	bx = -bsh-1;
 	ex = -bsh-1-dx;
-	SET(bits);
+	bits = 0;
 	v = par->sdval;
 
 	/* make little endian */
@@ -2494,6 +2494,7 @@ memfillcolor(Memimage *i, ulong val)
 {
 	ulong bits;
 	int d, y;
+	uchar p[4];
 
 	if(val == DNofill)
 		return;
@@ -2507,6 +2508,11 @@ memfillcolor(Memimage *i, ulong val)
 	default:	/* 1, 2, 4, 8, 16, 32 */
 		for(d=i->depth; d<32; d*=2)
 			bits = (bits << d) | bits;
+		p[0] = bits;		/* make little endian */
+		p[1] = bits>>8;
+		p[2] = bits>>16;
+		p[3] = bits>>24;
+		bits = *(u32int*)p;
 		memsetl(wordaddr(i, i->r.min), bits, i->width*Dy(i->r));
 		break;
 	}
