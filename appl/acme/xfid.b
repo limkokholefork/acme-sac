@@ -468,7 +468,8 @@ Xfid.write(x : self ref Xfid)
 
 	qid = FILE(x.f.qid);
 	w = x.f.w;
-#	row.qlock.lock();	# tasks->procs now
+
+	row.qlock.lock();	# tasks->procs now
 	if(w != nil){
 		c = 'F';
 		if(qid==QWtag || qid==QWbody)
@@ -476,7 +477,7 @@ Xfid.write(x : self ref Xfid)
 		w.lock(c);
 		if(w.col == nil){
 			w.unlock();
-#			row.qlock.unlock();
+			row.qlock.unlock();
 			respond(x, fc, Edel);
 			return;
 		}
@@ -643,7 +644,7 @@ Xfid.write(x : self ref Xfid)
 	}
 	if(w != nil)
 		w.unlock();
-#	row.qlock.unlock();
+	row.qlock.unlock();
 }
 
 Xfid.ctlwrite(x : self ref Xfid, w : ref Window)
@@ -887,7 +888,8 @@ loop :
 			err = Ebadevent;
 			break;
 		}
-		row.qlock.lock();
+# locked by parent otherwise we deadlock
+#		row.qlock.lock();
 		case(c){
 		'x' or 'X' =>
 			exec->execute(t, q0, q1, TRUE, nil);
@@ -897,7 +899,7 @@ loop :
 			err = Ebadevent;
 			break loop;
 		}
-		row.qlock.unlock();
+#		row.qlock.unlock();
 	}
 
 	ab := array of byte r[0:n];

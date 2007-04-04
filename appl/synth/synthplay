@@ -1,0 +1,13 @@
+#!/dis/sh
+
+# os d:/acme-sac/acme.exe   -g 500x350 -r d:/acme-sac -c1 '-pheap=128M' '-pmain=128M' /dis/sh.dis /appl/synth/synthplay 
+#mount {mntgen} /n
+#bind -c '#UD:/' /n/d
+wm/wm charon&
+
+#midi2skini /n/d/bwv988/988-v04.mid |sed 100q| synth/sequencer {master  {fm  {waveloop sinewave} {adsr 0.01 0.21 0.3 0.08} } {delay 0.085 0.4} {delay 0.185 0.2} {delay 0.485 0.1} {delay 0.685 0.08}  {proxy {onezero} {lfo 0.18 1.0 0.0} }  } 
+
+synth/phase -r 11  | synth/sequencer {master  {fm  {waveloop sinewave} {adsr 0.01 0.21 0.3 0.08} } {delay 0.085 0.4} {delay 0.185 0.3} {delay 0.485 0.2} {delay 0.685 0.08}   } 
+
+
+echo halt > /dev/sysctl
