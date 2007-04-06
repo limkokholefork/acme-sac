@@ -26,7 +26,7 @@ OS=		v851ok0q2t6
 AR=		9ar
 ARFLAGS=
 
-AS=		9a
+AS=		9c
 ASFLAGS=
 
 CC=		9c
