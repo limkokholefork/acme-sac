@@ -1,4 +1,4 @@
-runas inferno {
+runas caerwy {
 	listen -A 'tcp!*!6666' {export  /prog &}
 	mount -ac {mntgen} /n
 	bind -c /dis /dis
