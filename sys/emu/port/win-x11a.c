@@ -1209,10 +1209,10 @@ xmouse(XEvent *e)
 	case MotionNotify:
 		me = (XMotionEvent *) e;
 
-		/* remove excess MotionNotify events from queue and keep last one */
+		/* remove excess MotionNotify events from queue and keep last one 
 		while(XCheckTypedWindowEvent(xmcon, xdrawable, MotionNotify, &motion) == True)
 			me = (XMotionEvent *) &motion;
-
+*/
 		s = me->state;
 		x = me->x;
 		y = me->y;
