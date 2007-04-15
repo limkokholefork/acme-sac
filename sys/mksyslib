@@ -31,6 +31,9 @@ $LIBRARY(%.$O):N:	%.$O
 
 %.$O:	%.s
 	$AS $ASFLAGS $stem.s
+	
+%.$O:	%.S
+	$AS $ASFLAGS $stem.S
 
 y.tab.h y.tab.c:	$YFILES
 	$YACC $YFLAGS $prereq

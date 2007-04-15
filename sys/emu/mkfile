@@ -13,6 +13,10 @@ nuke:V:	nuke-$HOSTMODEL
 &-Nt:QV:
 	echo '@{builtin cd' $SYSTARG '; mk $MKFLAGS $stem}'
 	@{builtin cd $SYSTARG; mk $MKFLAGS $stem }
+	
+&-Linux:QV:
+	echo '@{builtin cd' $SYSTARG '; mk $MKFLAGS $stem}'
+	@{builtin cd $SYSTARG; mk $MKFLAGS $stem }
 
 &-Plan9:QV:
 	echo '@{builtin cd' $SYSTARG '; mk $MKFLAGS $stem}'
