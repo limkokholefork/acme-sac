@@ -292,7 +292,7 @@ Text.columnate(t : self ref Text, dlp : array of ref Dirlist, ndl : int)
 	for(i=0; i<ndl; i++){
 		dl = dlp[i];
 		w = dl.wid;
-		if(maxt-w%maxt < mint)
+		if(maxt-w%maxt<mint || w%maxt==0)
 			w += mint;
 		if(w % maxt)
 			w += maxt-(w%maxt);
