@@ -1,0 +1,69 @@
+#!/dis/sh.dis
+load std
+autoload=std
+
+fn setupfonts ()
+{
+	echo '
+	You''re running Acme-sac for the first time,
+	In order to run Acme you need the B&H fonts (which are excluded),
+	they can be get following the instructions from Vitanuova''s site:
+	http://www.vitanuova.com/inferno/net_download4T.html.'
+
+	echo '
+	do you want to do this automatically? [Enter=y]'
+	if {{getfonts=1 && ~ $#getfonts 0}}{ # getfonts=`{read}
+		mkdir -p /tmp/inferno
+		cd /tmp/inferno
+
+		webgrab -vv -r -o - http://www.vitanuova.com/dist/4e/20070510/inferno.tgz > inferno.tgz
+		gunzip <inferno.tgz > inferno.tar
+		gettar < inferno.tar
+		gunzip <install/inferno/1178807193.gz >install/inferno/1178807193
+		archfs -m mnt/wrap install/inferno/1178807193 /fonts
+		cp -r mnt/wrap/fonts/* /fonts
+	
+		unmount mnt/wrap
+		rm -rf /tmp/inferno
+	}
+}
+
+
+#listen -A 'tcp!*!6666' {export  /prog &}
+mount -ac {mntgen} /n
+if {~ $emuhost Linux}{
+	bind -c '#U*' /n/local
+}{~ $emuhost Nt}{
+	for i in c d {  # add more drive letters to suit
+		trfs '#U' ^ $i ^ ':/' /n/$i >[2] /dev/null
+	}
+}
+
+bind -c /dis /dis
+bind -a '#w' /dev
+bind -c '#splumber' /chan
+bind -a '#^' /chan
+if {ftest -d '#A'}{
+	bind -a '#A' /dev
+}
+
+run $home/lib/functions
+if {! ftest -f /net/dns}{
+	ndb/dns -r
+}
+if {! ftest -f /net/cs}{
+	ndb/cs
+}
+if {! ftest -f /mnt/factotum/proto}{
+	auth/factotum
+}
+
+if {! ftest -d /fonts/lucidasans || ! ftest -d /fonts/lucida}{
+	setupfonts;
+}
+
+acme -a /usr/inferno/README
+sleep 1
+waitid = `{sed '' /prog/*/status | sort -n | grep Acme | sed 1q | sed 's/^ +([0-9]+) +.*/\1/'}
+read < /prog/^$waitid^/wait
+echo halt > /dev/sysctl
