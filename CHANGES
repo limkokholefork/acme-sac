@@ -1,3 +1,8 @@
+20070513
+	Rework initialization, disperse bits of /startrc
+	over /lib/sh/profile, /usr/inferno/lib/{profile,functions} 
+	and revert differences in emuinit.b (sh -l is simpler).
+	Add hp and make svn command use it.
 20070322
 	Sorry! Missed some updates
 	Fixed support for big files in Acme.exe (devfs.c) and look.b and dict
