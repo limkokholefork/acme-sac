@@ -39,7 +39,7 @@ loadmod(args: list of string): (Command, list of string)
 	if(args != nil)
 		path = hd args;
 	else
-		args = "-l" :: "/startrc" :: nil;	# add startup option
+		args = "-l" :: nil;	# add startup option
 
 	# try loading the module directly.
 	mod: Command;
@@ -60,7 +60,7 @@ loadmod(args: list of string): (Command, list of string)
 		sys->fprint(sys->fildes(2), "emuinit: unable to load %s: %s\n", path, err);
 		raise "fail:error";
 	}
-	return (mod, "sh" :: args);
+	return (mod, "sh" :: "-c" :: "$*" :: args);
 }
 
 getenv(v: string): list of string

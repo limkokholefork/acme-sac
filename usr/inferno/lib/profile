@@ -12,7 +12,7 @@ fn setupfonts ()
 
 	echo '
 	do you want to do this automatically? [Enter=y]'
-	if {{getfonts=1 && ~ $#getfonts 0}}{ # getfonts=`{read}
+	if {{~ a b && ~ $#getfonts 0}}{ # getfonts=`{read} seems broken
 		mkdir -p /tmp/inferno
 		cd /tmp/inferno
 
