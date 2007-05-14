@@ -2,8 +2,7 @@
 load std
 autoload=std
 
-fn setupfonts ()
-{
+fn setupfonts {
 	echo '
 	You''re running Acme-sac for the first time,
 	In order to run Acme you need the B&H fonts (which are excluded),
@@ -12,8 +11,10 @@ fn setupfonts ()
 
 	echo '
 	do you want to do this automatically? [Enter=y]'
-	if {{~ a b && ~ $#getfonts 0}}{ # getfonts=`{read} seems broken
-		mkdir -p /tmp/inferno
+	# getfonts=`{read} seems broken
+	if {{getfonts=no && ~ $#getfonts 0 || ~ $getfonts yes}}{
+		mkdir /fonts
+		mkdir /tmp/inferno
 		cd /tmp/inferno
 
 		webgrab -vv -r -o - http://www.vitanuova.com/dist/4e/20070510/inferno.tgz > inferno.tgz
@@ -58,8 +59,8 @@ if {! ftest -f /mnt/factotum/proto}{
 	auth/factotum
 }
 
-if {! ftest -d /fonts/lucidasans || ! ftest -d /fonts/lucida}{
-	setupfonts;
+if {! ftest -d /fonts/ || ! ftest -d /fonts/lucida*}{
+	setupfonts
 }
 
 acme -a /usr/inferno/README
