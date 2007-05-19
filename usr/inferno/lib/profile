@@ -2,35 +2,9 @@
 load std
 autoload=std
 
-fn setupfonts {
-	echo '
-	You''re running Acme-sac for the first time,
-	In order to run Acme you need the B&H fonts (which are excluded),
-	they can be get following the instructions from Vitanuova''s site:
-	http://www.vitanuova.com/inferno/net_download4T.html.'
-
-	echo '
-	do you want to do this automatically? [Enter=y]'
-	# getfonts=`{read} seems broken
-	if {{getfonts=no && ~ $#getfonts 0 || ~ $getfonts yes}}{
-		mkdir /fonts
-		mkdir /tmp/inferno
-		cd /tmp/inferno
-
-		webgrab -vv -r -o - http://www.vitanuova.com/dist/4e/20070510/inferno.tgz > inferno.tgz
-		gunzip <inferno.tgz > inferno.tar
-		gettar < inferno.tar
-		gunzip <install/inferno/1178807193.gz >install/inferno/1178807193
-		archfs -m mnt/wrap install/inferno/1178807193 /fonts
-		cp -r mnt/wrap/fonts/* /fonts
-	
-		unmount mnt/wrap
-		rm -rf /tmp/inferno
-	}
-}
-
-
+# For Debugging
 #listen -A 'tcp!*!6666' {export  /prog &}
+
 mount -ac {mntgen} /n
 if {~ $emuhost Linux}{
 	bind -c '#U*' /n/local
@@ -59,11 +33,12 @@ if {! ftest -f /mnt/factotum/proto}{
 	auth/factotum
 }
 
-if {! ftest -d /fonts/ || ! ftest -d /fonts/lucida*}{
-	setupfonts
+if {! ftest -d /fonts/lucidasans}{
+	echo 'No fonts found. Run setupfonts to copy /fonts from www.vitanuova.com Inferno distribution.'
+	# TODO: see if we can use misc MIT fonts instead
 }
 
-acme -a /usr/inferno/README
+acme -a $home /usr/inferno/README 
 sleep 1
 waitid = `{sed '' /prog/*/status | sort -n | grep Acme | sed 1q | sed 's/^ +([0-9]+) +.*/\1/'}
 read < /prog/^$waitid^/wait
