@@ -2,14 +2,7 @@
 # emu sh initialisation here
 load std
 
-user="{cat /dev/user}
-if {! ~ $user inferno}{
-	bind /usr/inferno /usr/$user
-}
-if {ftest -d /usr/$user}{
-	home=/usr/$user
-}{
-	home=/
-}
+home=/usr/^"{cat /dev/user}
+if {ftest -d $home} {} {cp -r /usr/inferno $home}
 # load $home/lib/profile
 cd $home 
