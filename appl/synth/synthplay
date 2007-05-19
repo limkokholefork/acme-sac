@@ -1,6 +1,6 @@
 #!/dis/sh
 
-# os d:/acme-sac/acme.exe   -g 500x350 -r d:/acme-sac -c1 '-pheap=128M' '-pmain=128M' /dis/sh.dis /appl/synth/synthplay 
+# os /home/caerwy/workspace/acme-sac/acme-linux   -g 500x350 -r /home/caerwy/workspace/acme-sac -c1 '-pheap=128M' '-pmain=128M' /dis/sh.dis /appl/synth/synthplay 
 #mount {mntgen} /n
 #bind -c '#UD:/' /n/d
 wm/wm charon&
