@@ -2,6 +2,7 @@ LICENCE
 NOTICE
 CHANGES
 Acme.exe
+acme-linux
 startrc
 acme
 	+
@@ -41,7 +42,6 @@ mkfiles
 mnt
 	acme
 	arch
-	diary
 	factotum
 	keys
 	keysrv

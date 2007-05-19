@@ -1234,7 +1234,6 @@ xmouse(XEvent *e)
 		b |= 16;
 	if(dbl)
 		b |= 1<<8;
-
 	mousetrack(b, x, y, 0);
 }
 
