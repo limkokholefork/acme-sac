@@ -1,0 +1,21 @@
+#!/dis/sh.dis
+load std
+
+if {ftest -d /fonts/lucidasans}{
+	echo 'error: /fonts directory already exists'
+	exit
+}
+
+mkdir /fonts
+mkdir /tmp/inferno
+cd /tmp/inferno
+
+webgrab -v -r -o - http://www.vitanuova.com/dist/4e/20070510/inferno.tgz > inferno.tgz
+gunzip <inferno.tgz > inferno.tar
+gettar < inferno.tar
+gunzip <install/inferno/1178807193.gz >install/inferno/1178807193
+archfs -m mnt/wrap install/inferno/1178807193 /fonts
+cp -r mnt/wrap/fonts/* /fonts
+
+unmount mnt/wrap
+rm -rf /tmp/inferno
