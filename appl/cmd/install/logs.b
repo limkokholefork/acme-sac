@@ -160,7 +160,7 @@ Entry.logtext(e: self ref Entry): string
 	sf := e.serverpath;
 	if(sf == nil || sf == e.path)
 		sf = "-";
-	return sys->sprint("%bd %bd %c %q %q %uo %q %q %ud %bd%s", e.seq>>32, e.seq & 16rFFFFFFFF, a, e.path, sf, e.d.mode, e.d.uid, e.d.gid, e.d.mtime, e.d.length, contents(e));
+	return sys->sprint("%bd %bd %c %q %q %uo %q %q %ud %bd %s", e.seq>>32, e.seq & 16rFFFFFFFF, a, e.path, sf, e.d.mode, e.d.uid, e.d.gid, e.d.mtime, e.d.length, contents(e));
 }
 
 Entry.remove(e: self ref Entry)

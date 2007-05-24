@@ -89,6 +89,8 @@ init(nil: ref Draw->Context, args: list of string)
 			gid = arg->earg();
 		's' =>
 			sums = 1;
+		'S' =>
+			sums = 2;
 		't' =>
 			now = int arg->earg();
 			gen = int arg->earg();
@@ -251,8 +253,13 @@ doproto(tree: string, protofile: string)
 			new = new[1:];
 		if(!considered(new))
 			continue;
-		if(sums && (d.mode & Sys->DMDIR) == 0)
-			digests := md5sum(old) :: nil;
+		digests: list of string;
+		if(sums && (d.mode & Sys->DMDIR) == 0){
+			if(sums == 1)
+				digests = md5sum(old) :: nil;
+			else if(sums == 2)
+				digests = sha1sum(old) ::  nil;
+		}
 		if(uid != nil)
 			d.uid = uid;
 		if(gid != nil)
@@ -379,6 +386,25 @@ md5sum(file: string): string
 		error(sys->sprint("error reading %s: %r", file));
 	digest := array[Keyring->MD5dlen] of byte;
 	kr->md5(nil, 0, digest, ds);
+	s: string;
+	for(i := 0; i < len digest; i++)
+		s += sys->sprint("%.2ux", int digest[i]);
+	return s;
+}
+
+sha1sum(file: string): string
+{
+	fd := sys->open(file, Sys->OREAD);
+	if(fd == nil)
+		error(sys->sprint("can't open %s: %r", file));
+	ds: ref Keyring->DigestState;
+	buf := array[Sys->ATOMICIO] of byte;
+	while((n := sys->read(fd, buf, len buf)) > 0)
+		ds = kr->sha1(buf, n, nil, ds);
+	if(n < 0)
+		error(sys->sprint("error reading %s: %r", file));
+	digest := array[Keyring->SHA1dlen] of byte;
+	kr->sha1(nil, 0, digest, ds);
 	s: string;
 	for(i := 0; i < len digest; i++)
 		s += sys->sprint("%.2ux", int digest[i]);
