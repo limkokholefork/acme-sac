@@ -11,7 +11,6 @@ DIRS=\
 	mk\
 	ndb\
 	sh\
-	spki\
 	wikifs\
 
 SRC=`{ls *.b}
@@ -19,7 +18,7 @@ TARG=${SRC:%.b=%.dis}
 
 MODULES=\
 
-SYSMODULES=`{grep '^include "' *.b | sed 's/.*"([^"]+)";.*$/\1/' |sort |uniq}
+SYSMODULES=`{sed -n '/^include "/s/.*"([^"]+)";.*$/\1/p'  *.b|sort |uniq}
 
 DISBIN=$ROOT/dis
 
@@ -28,4 +27,3 @@ DISBIN=$ROOT/dis
 
 auhdr.dis: auplay.dis
 	rm -f auhdr.dis && cp auplay.dis auhdr.dis
-

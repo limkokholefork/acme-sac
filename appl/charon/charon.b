@@ -2240,7 +2240,7 @@ dumpitems(w: ref Acmewin->Win, it: ref Item)
 		Irule =>
 			w.wwritebody("-------------\n");
 		Iimage =>
-			w.wwritebody(" [IMG " + a.altrep + " " + a.ci.src.tostring() +"] ");
+			w.wwritebody(" † " + a.altrep +  +" "); # +a.ci.src.tostring()
 			if(k.anchorid > 0)
 				w.wwritebody(i2suf(k.anchorid));
 		Iformfield =>

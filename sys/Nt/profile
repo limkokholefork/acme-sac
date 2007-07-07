@@ -2,10 +2,6 @@ load arg
 load std
 autoload=std
 
-fn awk {
-	os awk $*
-}
-
 fn 9c {
 	load arg
 	args := $*
@@ -43,8 +39,8 @@ fn 9l {
 	ldflags=(-nologo
 		-incremental:no
 		-map
-		-subsystem:windows 
-		-entry:WinMainCRTStartup )
+		$LDFLAGS
+		)
 	syslibs=('/libpath:C:\Program Files\Microsoft Platform SDK\lib'
 	'/libpath:C:\Program Files\Microsoft Visual C++ Toolkit 2003\lib'
 			wsock32.lib 

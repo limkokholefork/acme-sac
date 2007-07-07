@@ -79,7 +79,9 @@ include "readdir.m";
 include "string.m";
 	str : String;
 include "arg.m";
-
+include "daytime.m";
+	daytime: Daytime;
+	
 Diff : module  
 {
 	init: fn(ctxt: ref Draw->Context, argv: list of string);
@@ -87,7 +89,7 @@ Diff : module
 
 stderr: ref Sys->FD;
 
-mode : int;			# '\0', 'e', 'f', 'h', 'c', 'a'
+mode : int;			# '\0', 'e', 'f', 'h', 'c', 'a', 'u'
 bflag : int;			# ignore multiple and trailing blanks 
 rflag : int;			# recurse down directory trees 
 mflag : int;			# pseudo flag: doing multiple files, one dir
@@ -132,6 +134,7 @@ init(nil: ref Draw->Context, args: list of string)
 	draw = load Draw Draw->PATH;
 	bufio = load Bufio Bufio->PATH;
 	readdir = load Readdir Readdir->PATH;	
+	daytime = load Daytime Daytime->PATH;
 	str = load String String->PATH;
 	if (bufio==nil)
 		fatal(sys->sprint("cannot load %s: %r", Bufio->PATH));
@@ -146,7 +149,7 @@ init(nil: ref Draw->Context, args: list of string)
 	arg->init(args);
 	while((o := arg->opt()) != 0)
 		case o {
-		'a' or 'c' or 'e' or 'f' =>
+		'a' or 'c' or 'e' or 'f' or 'u' =>
 			mode = o;
 		'w' =>
 			bflag = 2;
@@ -619,8 +622,10 @@ range(a, b : int, separator : string)
 		out.puts(sys->sprint("%d", b));
 	else
 		out.puts(sys->sprint("%d", a));
-	if (a < b)
+	if (a < b && mode != 'u')
 		out.puts(sys->sprint("%s%d", separator, b));
+	else if(a < b)
+		out.puts(sys->sprint("%s%d", separator, b-a+1));
 }
 
 fetch(f : array of int, a,b : int , bp : ref Iobuf, s : string) 
@@ -645,15 +650,19 @@ change(a, b, c, d : int)
 	if (a > b && c > d)
 		return;
 	anychange = 1;
-	if (mflag && firstchange == 0) {
+	if ((mflag || mode == 'u') && firstchange == 0) {
 		if(mode)
 			buf := sys->sprint("-%c ", mode);
 		else
 			buf = "";
-		out.puts(sys->sprint( "diff %s%s %s\n", buf, file1, file2));
+		if(mode == 'u'){
+			out.puts(sys->sprint("--- %s %s\n", file1, daytime->text(daytime->local(sys->stat(file1).t1.mtime))));
+			out.puts(sys->sprint("+++ %s %s\n", file2, daytime->text(daytime->local(sys->stat(file2).t1.mtime))));
+		}else
+			out.puts(sys->sprint( "diff %s%s %s\n", buf, file1, file2));
 		firstchange = 1;
 	}
-	if (mode == 'c' || mode == 'a'){
+	if (mode == 'c' || mode == 'a' || mode == 'u'){
 		if(nchanges%1024 == 0)
 			changes = (array[nchanges+1024] of Change)[0:] = changes;
 		changes[nchanges++] = Change(a, b, c, d);
@@ -734,20 +743,30 @@ flushchanges()
 			d = ilen[1];
 			j = nchanges;
 		}
-		out.puts(sys->sprint("%s:", file1));
+		if(mode == 'u')
+			out.puts("@@ -");
+		else
+			out.puts(sys->sprint("%s:", file1));
 		range(a, b, ",");
-		out.puts(sys->sprint(" - "));
-		out.puts(sys->sprint("%s:", file2));
+		
+		if(mode == 'u')
+			out.puts(" +");
+		else{
+			out.puts(sys->sprint(" - "));
+			out.puts(sys->sprint("%s:", file2));
+		}
 		range(c, d, ",");
+		if(mode == 'u')
+			out.puts(" @@");
 		out.putc('\n');
 		at = a;
 		for(; i<j; i++){
-			fetch(ixold, at, changes[i].a-1, input[0], "  ");
-			fetch(ixold, changes[i].a, changes[i].b, input[0], "- ");
-			fetch(ixnew, changes[i].c, changes[i].d, input[1], "+ ");
+			fetch(ixold, at, changes[i].a-1, input[0], " ");
+			fetch(ixold, changes[i].a, changes[i].b, input[0], "-");
+			fetch(ixnew, changes[i].c, changes[i].d, input[1], "+");
 			at = changes[i].b+1;
 		}
-		fetch(ixold, at, b, input[0], "  ");
+		fetch(ixold, at, b, input[0], " ");
 	}
 	nchanges = 0;
 }

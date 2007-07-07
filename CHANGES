@@ -1,3 +1,45 @@
+20070610 acme-0.9.5
+Salva: 
+	sig, g scripts
+	use ndb from smtp to query dom
+	
+Arvindh: 
+	add pipefs
+	add rect
+	man pages for pipefs, trfs, pipefile
+	/appl/acme/regx.b fix for :1-1
+	
+Kris:
+	use colormix in /appl/acme/acme.b
+
+Caerwyn:
+	fix factotum 
+	use factotum from smtp.b and Mailpop3.b
+	use ipattr from smtp to query dom
+	added ipquery and Logon
+	dded /services/wiki
+	added vera fonts and set them as defaults in /usr/inferno/lib/profile
+	added /appl/cmd/hold/difflog, changes to applylog and tarball
+
+Roger:
+	included 9cpu and fdrun from /n/sources/contrib/rog/infauth
+	So acme-sac can be used as drawterm replacement.
+
+Charles: (Pulled changes from inferno-os)
+	copy /appl/cmd/ip/*.b taking latest fixes
+	copy the dhcp client and /appl/lib/dhcpclient.b /module/dhcp.m
+	copy /appl/cmd/ls.b and man page
+	update /appl/cmd/mc. module name and usage 
+	add xopen #define to lib9.h includes for Linux
+	copy secstore manpage
+
+20070603 acme-0.9.4
+	Includes patches to Mailpop3, sendmail, factotum and new Feedkey
+	acme client.Acme fixes from Salva for cursor movement in Tagline.
+20070529  acme-0.9.3
+	updated diff
+	updated smtp, sendmail, and Mailpop3
+	new and crude SCM (buggy) 
 20070513
 	Rework initialization, disperse bits of /startrc
 	over /lib/sh/profile, /usr/inferno/lib/{profile,functions} 

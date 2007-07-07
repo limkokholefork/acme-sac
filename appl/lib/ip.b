@@ -135,6 +135,11 @@ IPaddr.ismulticast(ip: self IPaddr): int
 	return ip.a[0] == byte 16rFF;
 }
 
+IPaddr.isvalid(ip: self IPaddr): int
+{
+	return !ip.eq(noaddr) && !ip.eq(v4noaddr);
+}
+
 IPaddr.v4(ip: self IPaddr): array of byte
 {
 	if(!ip.isv4() && !ip.eq(noaddr))

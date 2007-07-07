@@ -155,6 +155,20 @@ stat() : (int, string, int, int)
 		return (1, nil, int hd tl ls, int hd tl tl ls);
 	return (-1, "stat failed", 0, 0);
 }
+
+uidl(m: int) : (int, string)
+{
+	if (!conn)
+		return (-1, "not connected");
+	(ok, s) := mcmd(sys->sprint("UIDL %d", m));
+	if (ok < 0)
+		return (-1, s);
+	(n, ls) := sys->tokenize(s, " ");
+	if (n == 3)
+		return (1, hd tl tl ls);
+	return (-1, s);
+}
+
 	
 msglist() : (int, string, list of (int, int))
 {
@@ -185,6 +199,35 @@ msglist() : (int, string, list of (int, int))
 	}
 }
 
+uidllist() : (int, string, list of (int, string))
+{
+	ls : list of (int, string);
+
+	if (!conn)
+		return (-1, "not connected", nil);
+	(ok, s) := mcmd("UIDL");
+	if (ok < 0)
+		return (-1, s, nil);
+	for (;;) {
+		(ok, s) = mread();
+		if (ok < 0)
+			return (-1, s, nil);
+		if (len s < 3) {
+			if (len s > 0 && s[0] == '.')
+				return (1, nil, ls);
+			else
+				return (-1, s, nil);
+		}
+		else {
+			(n, sl) := sys->tokenize(s, " ");
+			if (n == 2)
+				ls = (int hd sl, hd tl sl) :: ls;
+			else
+				return (-1, "bad list format", nil);
+		}
+	}
+}
+
 msgnolist() : (int, string, list of int)
 {
 	ls : list of int;
@@ -201,6 +244,8 @@ msgnolist() : (int, string, list of int)
 		if (len s < 3) {
 			if (len s > 0 && s[0] == '.' && ls != nil)
 				return (1, nil, rev1(ls));
+			else if(len s > 0 && s[0] == '.')
+				return (1, nil, nil);
 			else
 				return (-1, s, nil);
 		}
@@ -249,6 +294,37 @@ getbdy() : (int, string, string)
 		b = b + s + "\n";
 	}
 	return (1, nil, b);
+}
+
+fetch(dir: string, m: int): (int, string)
+{
+	if (!conn)
+		return (-1, "not connected");
+	f := dir + "/" + string m;
+	(ok, s) := uidl(m);
+	if(ok == 1)
+		f = dir + "/" + s;
+	
+	(ok, s) = mcmd("RETR " + string m);
+	if (ok < 0)
+		return (-1, s);
+	fd := sys->create(f, Sys->OWRITE, 0);
+	if (fd == nil) 
+		return (-1, sys->sprint("could not create '%s'", f));
+	for (;;) {
+		(ok, s) = mread();
+		if (ok < 0)
+			return (-1, s);
+		if (s == ".")
+			break;
+		if (len s > 1 && s[0] == '.' && s[1] == '.')
+			s = s[1:];
+		if(sys->fprint(fd, "%s\n", s) < 0) {
+			sys->remove(f);
+			return (-1, sys->sprint("could not write '%s': %r", f));
+		}
+	}
+	return (0, nil);
 }
 	
 delete(m : int) : (int, string)

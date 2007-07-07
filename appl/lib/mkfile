@@ -5,14 +5,13 @@ DIRS=\
 	crypt\
 	ecmascript\
 	encoding\
-	spki\
 
 SRC=`{ls *.b}
 TARG=${SRC:%.b=%.dis}
 
 MODULES=
 
-SYSMODULES= `{grep '^include "' *.b | sed 's/.*"([^"]+)";.*$/\1/' |sort |uniq}
+SYSMODULES= `{sed -n '/^include "/s/.*"([^"]+)";.*$/\1/p'  *.b|sort |uniq}
 
 DISBIN=$ROOT/dis/lib
 

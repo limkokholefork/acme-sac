@@ -10,7 +10,7 @@ Logs: module
 		serverpath:	string;
 		x:	int;
 		d:	Sys->Dir;
-		contents:	list of string;	# MD5 hash of content, most recent first
+		contents:	list of string;	# SHA1 or MD5 hash of content, (WAS most recent first)
 
 		read:	fn(in: ref Bufio->Iobuf): (ref Entry, string);
 		remove:	fn(e: self ref Entry);

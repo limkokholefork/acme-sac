@@ -1,9 +1,9 @@
 <../mkconfig
 
 DIRS=\
-	acme\
 	charon\
 	cmd\
+	acme\
 	grid\
 	lib\
 	mapreduce\

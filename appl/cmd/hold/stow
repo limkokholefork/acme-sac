@@ -1,0 +1,27 @@
+#!/dis/sh
+
+load std string
+
+tar=$1
+hold=/n/hold/objects
+n := `{date -n}
+tarfs $tar /n/tar 
+
+install/updatelog -S -r /n/tar /dev/null > /n/hold/stowage/$n
+
+
+getlines {
+	(sec seq v file sf mode uid gid mtime size sha) := ${split ' ' $line}
+	if {! ~ $#sha 0} {
+		(a b) := ${slice 0 2 $sha} ${slice 2 40 $sha}
+		if {ftest -e $hold/objects/$a/$b} {} {
+			echo a $file
+			mkdir -p $hold/objects/$a
+			gzip < /n/tar/$file > $hold/objects/$a/$b
+		}
+	}
+} < /n/hold/stowage/$n
+
+sha := `{sha1sum < /n/hold/stowage/$n}
+
+echo $n stow $tar $sha >> /n/hold/logs/log

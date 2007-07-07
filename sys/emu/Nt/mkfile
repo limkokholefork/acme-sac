@@ -9,21 +9,16 @@ OBJTYPE=386
 #Configurable parameters
 
 CONF=emu			#default configuration
-CONFLIST=emu
+CONFLIST=emu acme cell
 CLEANCONFLIST=
 
 INSTALLDIR=../../$SYSTARG/$OBJTYPE/bin	#path of directory where kernel is installed
 
 #end configurable parameters
 
-OSX=os
-WINX=win
-
 <| sh ../port/mkdevlist < $CONF	#sets $IP, $DEVS, $PORT, $LIBS
 
 OBJ=\
-	$OSX.$O\
-	$WINX.$O\
 	$CONF.root.$O\
 	lock.$O\
 	fp.$O\
@@ -48,6 +43,4 @@ i$CONF.exe:	$OBJ $CONF.$O $CONF.root.h $LIBFILES
 $CONF.obj: $CONF.c
 	$CC $CFLAGS '-DKERNDATE='$KERNDATE $CONF.c
 
-install:V: i$CONF.exe
-	mv /Acme.exe /Acme-bak.exe
-	cp i$CONF.exe /Acme.exe
+install:V: $INSTALLDIR/i$CONF.exe

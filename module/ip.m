@@ -17,6 +17,7 @@ IP: module
 		maskn:	fn(nil: self IPaddr, m: IPaddr): IPaddr;
 		isv4:	fn(nil: self IPaddr): int;
 		ismulticast:	fn(nil: self IPaddr): int;
+		isvalid:	fn(nil: self IPaddr): int;
 
 		v4:	fn(nil: self IPaddr): array of byte;
 		v6:	fn(nil: self IPaddr): array of byte;

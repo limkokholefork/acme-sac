@@ -4,6 +4,7 @@ include "sys.m";
 include "draw.m";
 	draw: Draw;
 	Image, Display, Pointer: import draw;
+include "arg.m";
 include "keyboard.m";
 include "tk.m";
 include "wmclient.m";
@@ -12,10 +13,11 @@ include "wmclient.m";
 include "sh.m";
 	sh: Sh;
 
-# run a p9 graphics program (default rio) under plan 9,
+# run a p9 graphics program (default rio) under inferno wm,
 # making available to it:
 # /dev/winname - naming the current inferno window (changing on resize)
-# /dev/mouse - pointer file + resize events.
+# /dev/mouse - pointer file + resize events; write to change position
+# /dev/cursor - change appearance of cursor.
 # /dev/draw - inferno draw device
 # /dev/cons - read keyboard events, write to 9win stdout.
 
@@ -26,6 +28,7 @@ winname: string;
 
 init(ctxt: ref Draw->Context, argv: list of string)
 {
+	size := Draw->Point(500, 500);
 	sys = load Sys Sys->PATH;
 	draw = load Draw Draw->PATH;
 	wmclient = load Wmclient Wmclient->PATH;
@@ -37,11 +40,40 @@ init(ctxt: ref Draw->Context, argv: list of string)
 		ctxt = wmclient->makedrawcontext();
 		buts = Wmclient->Plain;
 	}
-	argv = tl argv;
-	if(argv == nil)
+	arg := load Arg Arg->PATH;
+	arg->init(argv);
+	arg->setusage("9win [-s] [-x width] [-y height]");
+	exportonly := 0;
+	while(((opt := arg->opt())) != 0){
+		case opt {
+		's' =>
+			exportonly = 1;
+		'x' =>
+			size.x = int arg->earg();
+		'y' =>
+			size.y = int arg->earg();
+		* =>
+			arg->usage();
+		}
+	}
+	if(size.x < 1 || size.y < 1)
+		arg->usage();
+	argv = arg->argv();
+	if(argv != nil && hd argv == "-s"){
+		exportonly = 1;
+		argv = tl argv;
+	}
+	if(argv == nil && !exportonly)
 		argv = "rio" :: nil;
-	w := wmclient->window(ctxt, "9win "+hd argv, buts);
-	w.reshape(((0, 0), (500, 500)));
+	if(argv != nil && exportonly){
+		sys->fprint(sys->fildes(2), "9win: no command allowed with -s flag\n");
+		raise "fail:usage";
+	}
+	title := "9win";
+	if(!exportonly)
+		title += " " + hd argv;
+	w := wmclient->window(ctxt, title, buts);
+	w.reshape(((0, 0), size));
 	w.onscreen(nil);
 	if(w.image == nil){
 		sys->fprint(sys->fildes(2), "9win: cannot get image to draw on\n");
@@ -49,23 +81,38 @@ init(ctxt: ref Draw->Context, argv: list of string)
 	}
 
 	sys->pctl(Sys->FORKNS|Sys->NEWPGRP, nil);
+	ld := "/n/9win";
+	if(sys->bind("#s", ld, Sys->MREPL) == -1 &&
+			sys->bind("#s", ld = "/n/local", Sys->MREPL) == -1){
+		sys->fprint(sys->fildes(2), "9win: cannot bind files: %r\n");
+		raise "fail:error";
+	}
 	w.startinput("kbd" :: "ptr" :: nil);
 	spawn ptrproc(rq := chan of Sys->Rread, ptr := chan[10] of ref Pointer, reshape := chan[1] of int);
 
-	sys->bind("#s", "/n/local", Sys->MREPL);
-	fwinname := sys->file2chan("/n/local", "winname");
-	fconsctl := sys->file2chan("/n/local", "consctl");
-	fcons := sys->file2chan("/n/local", "cons");
-	fmouse := sys->file2chan("/n/local", "mouse");
-	spawn run(sync := chan of string, w.ctl, argv);
-	if((e := <-sync) != nil){
-		sys->fprint(sys->fildes(2), "9win: %s", e);
-		raise "fail:error";
+		
+	fwinname := sys->file2chan(ld, "winname");
+	fconsctl := sys->file2chan(ld, "consctl");
+	fcons := sys->file2chan(ld, "cons");
+	fmouse := sys->file2chan(ld, "mouse");
+	fcursor := sys->file2chan(ld, "cursor");
+	if(!exportonly){
+		spawn run(sync := chan of string, w.ctl, ld, argv);
+		if((e := <-sync) != nil){
+			sys->fprint(sys->fildes(2), "9win: %s", e);
+			raise "fail:error";
+		}
 	}
-	spawn serveproc(w, rq, fwinname, fconsctl, fcons, fmouse);
-	# handle events synchronously so that we don't get a "killed" message
-	# from the shell.
-	handleevents(w, ptr, reshape);
+	spawn serveproc(w, rq, fwinname, fconsctl, fcons, fmouse, fcursor);
+	if(!exportonly){
+		# handle events synchronously so that we don't get a "killed" message
+		# from the shell.
+		handleevents(w, ptr, reshape);
+	}else{
+		spawn handleevents(w, ptr, reshape);
+		sys->bind(ld, "/dev", Sys->MBEFORE);
+		export(sys->fildes(0), w.ctl);
+	}
 }
 
 handleevents(w: ref Window, ptr: chan of ref Pointer, reshape: chan of int)
@@ -99,7 +146,7 @@ handleevents(w: ref Window, ptr: chan of ref Pointer, reshape: chan of int)
 	}
 }
 
-serveproc(w: ref Window, mouserq: chan of Sys->Rread, fwinname, fconsctl, fcons, fmouse: ref Sys->FileIO)
+serveproc(w: ref Window, mouserq: chan of Sys->Rread, fwinname, fconsctl, fcons, fmouse, fcursor: ref Sys->FileIO)
 {
 	winid := 0;
 	krc: list of Sys->Rread;
@@ -159,9 +206,25 @@ serveproc(w: ref Window, mouserq: chan of Sys->Rread, fwinname, fconsctl, fcons,
 	(nil, nil, nil, rc) := <-fmouse.read =>
 		if(rc != nil)
 			mouserq <-= rc;
-	(nil, nil, nil, wc) := <-fmouse.write =>
-		if(wc != nil)
-			wc <-= (-1, "permission denied");
+	(nil, d, nil, wc) := <-fmouse.write =>
+		if(wc != nil){
+			e := cursorset(w, string d);
+			if(e == nil)
+				wc <-= (len d, nil);
+			else
+				wc <-= (-1, e);
+		}
+	(nil, nil, nil, rc) := <-fcursor.read =>
+		if(rc != nil)
+			rc <-= (nil, "permission denied");
+	(nil, d, nil, wc) := <-fcursor.write =>
+		if(wc != nil){
+			e := cursorswitch(w, d);
+			if(e == nil)
+				wc <-= (len d, nil);
+			else
+				wc <-= (-1, e);
+		}
 	}
 }
 
@@ -188,7 +251,39 @@ ptrproc(rq: chan of Sys->Rread, ptr: chan of ref Pointer, reshape: chan of int)
 	}
 }
 
-run(sync, ctl: chan of string, argv: list of string)
+cursorset(w: ref Window, m: string): string
+{
+	if(m == nil || m[0] != 'm')
+		return "invalid mouse message";
+	x := int m[1:];
+	for(i := 1; i < len m; i++)
+		if(m[i] == ' '){
+			while(m[i] == ' ')
+				i++;
+			break;
+		}
+	if(i == len m)
+		return "invalid mouse message";
+	y := int m[i:];
+	return w.wmctl(sys->sprint("ptr %d %d", x, y));
+}
+
+cursorswitch(w: ref Window, d: array of byte): string
+{
+	Hex: con "0123456789abcdef";
+	if(len d != 2*4+64)
+		return w.wmctl("cursor");
+	hot := Draw->Point(bglong(d, 0*4), bglong(d, 1*4));
+	s := sys->sprint("cursor %d %d 16 32 ", hot.x, hot.y);
+	for(i := 2*4; i < len d; i++){
+		c := int d[i];
+		s[len s] = Hex[c >> 4];
+		s[len s] = Hex[c & 16rf];
+	}
+	return w.wmctl(s);
+}
+
+run(sync, ctl: chan of string, ld: string, argv: list of string)
 {
 	Rcmeta: con "|<>&^*[]?();";
 	sys->pctl(Sys->FORKNS, nil);
@@ -204,13 +299,13 @@ run(sync, ctl: chan of string, argv: list of string)
 	}
 	sync <-= nil;
 	spawn export(fd, ctl);
-	# XXX /mnt/term is probably a bad choice - what would be better?
 	sh->run(nil, "os" ::
 		"rc" :: "-c" ::
 			"mount "+srvname+" /mnt/term;"+
 			"rm "+srvname+";"+
-			"bind -b /mnt/term/n/local /dev;"+
-			"bind /mnt/term/dev/draw /dev/draw || {mntgen /dev; bind /mnt/term/dev/draw /dev/draw};"+
+			"bind -b /mnt/term"+ld+" /dev;"+
+			"bind /mnt/term/dev/draw /dev/draw ||"+
+				"bind -a /mnt/term/dev /dev;"+
 			quotedc("cd"::"/mnt/term"+cwd()::nil, Rcmeta)+";"+
 			quotedc(argv, Rcmeta)+";"::
 			nil
@@ -350,4 +445,9 @@ in(c: int, s: string): int
 	if(negate)
 		ans = !ans;
 	return ans;
+}
+
+bglong(d: array of byte, i: int): int
+{
+	return int d[i] | (int d[i+1]<<8) | (int d[i+2]<<16) | (int d[i+3]<<24);
 }

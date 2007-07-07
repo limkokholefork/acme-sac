@@ -9,11 +9,17 @@ include "daytime.m";
 	Tm: import daytime;
 include "smtp.m";
 include "env.m";
+include "arg.m";
+	arg: Arg;
 
+include "factotum.m";
 sprint, fprint : import sys;
 
 DEBUG : con 0;
 STRMAX : con 512;
+username : string;
+password : string;
+aflag: int;		# do authentication
 
 Sendmail : module
 {
@@ -28,6 +34,7 @@ Sendmail : module
 init(nil : ref Draw->Context, args : list of string) {
 	from : string;
 	tos, cc : list of string = nil;
+	hasfrom := 0;
 
   	sys = load Sys Sys->PATH;
 	smtp := load Smtp Smtp->PATH;
@@ -36,6 +43,14 @@ init(nil : ref Draw->Context, args : list of string) {
 	daytime = load Daytime Daytime->PATH;
 	if (daytime == nil)
 		error(sprint("cannot load %s", Daytime->PATH), 1);
+	arg = load Arg Arg->PATH;
+	
+	arg->init(args);
+	while((c := arg->opt()) != 0)
+	case c {
+		'a' => aflag = 1;
+	}
+	args = arg->argv();
 	msgl := readin();
 	for (ml := msgl; ml != nil; ml = tl ml) {
 		msg := hd ml;
@@ -49,6 +64,7 @@ init(nil : ref Draw->Context, args : list of string) {
 				s := msg[i:j];
 				if (from == nil) {
 					from = match(s, "from");
+					hasfrom = 1;
 					if (from != nil)
 						from = extract(from);
 				}
@@ -62,19 +78,31 @@ init(nil : ref Draw->Context, args : list of string) {
 				sol = 1;
 		}
 	}
-	if (tos != nil && tl args != nil)
+	if (tos != nil && args != nil)
 		error("recipients specified on To: line and as args - aborted", 1);
 	if (from == nil)
 		from = readfile("/dev/user");
 	from = adddom(from);
 	if (tos == nil)
-		tos = tl args;
-	(ok, err) := smtp->open(nil);
+		tos = args;
+
+	if(aflag) {
+		factotum := load Factotum Factotum->PATH;
+		if(factotum != nil){
+			factotum->init();
+			(username, password) = factotum->getuserpasswd("proto=pass service=smtp");
+		}
+	}
+	if(username == nil)
+		(ok, err) := smtp->open(nil);
+	else
+		(ok, err) = smtp->authopen(username, password, nil, 1);
   	if (ok < 0) {
 		smtp->close();
     		error(sprint("smtp open failed: %s", err), 1);
 	}
-	msgl = "From: " + from + "\n" :: msgl;
+	if(!hasfrom)
+		msgl = "From: " + from + "\n" :: msgl;
 	msgl = "Date: " + datetxt() + "\n" :: msgl;
 	dump(from, tos, cc, msgl);
 	(ok, err) = smtp->sendmail(from, tos, cc, msgl);
