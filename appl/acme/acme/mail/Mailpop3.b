@@ -11,6 +11,8 @@ include "arg.m";
 	arg: Arg;
 include "encoding.m";
 	enc: Encoding;
+include "factotum.m";
+
 mailpop3 : module {
 	init : fn(ctxt : ref Draw->Context, argl : list of string);
 };
@@ -44,12 +46,9 @@ CHAPPEND : con 0; # 16r40000000;
 Mesg : adt {
 	w : ref Win;
 	id : int;
-	popno : int;
 	hdr : string;
 	realhdr : string;
 	replyto : string;
-	from: string;
-	date: int;
 	text : string;
 	subj : string;
 	next : cyclic ref Mesg;
@@ -57,8 +56,12 @@ Mesg : adt {
 	box : cyclic ref Box;
 	isopen : int;
 	posted : int;
+	
 	deleted : int;
+	date: int;
+	from: string;
 	encoding: string;
+	popno : int;
 
 	read : fn(b : ref Box) : ref Mesg;
 	open : fn(m : self ref Mesg);
@@ -84,6 +87,7 @@ Box : adt {
  	cdel : chan of ref Mesg;
 	cevent : chan of Event;
 	cmore : chan of int;
+	
 	lst : list of int;
 	s : string;
 	
@@ -151,6 +155,11 @@ init(ctxt : ref Context, args : list of string)
 	'u'  => user = arg->earg();
 	't' => usessl = 1;
 	's' => server = arg->earg();
+	}
+	if(server != nil){
+		factotum := load Factotum Factotum->PATH;
+		factotum->init();
+		(user, pwd) = factotum->getuserpasswd(sys->sprint("proto=pass service=pop3 dom=%s", server));
 	}
 	args = arg->argv();
 	main();
@@ -1013,14 +1022,13 @@ Mesg.send(m : self ref Mesg)
 {
 	s, buf : string;
 	t, u : int;
-	a, b : list of string;
+	a : list of string;
 	n : int;
 	p : array of ref FD;
 	c : chan of int;
 
 	p = array[2] of ref FD;
 	s = m.w.wreadall();
-	a = "sendmail" :: nil;
 	if(len s >= 5 && (s[0:5] == "From " || s[0:5] == "From:"))
 		s = s[5:];
 	for(t=0; t < len s && s[t]!='\n' && s[t]!='\t';){
@@ -1033,10 +1041,10 @@ Mesg.send(m : self ref Mesg)
 			break;
 		a = s[u:t] :: a;
 	}
-	b = nil;
-	for ( ; a != nil; a = tl a)
-		b = hd a :: b;
-	a = b;
+	if(usessl)
+		a = "sendmail" :: "-a" :: a;
+	else
+		a = "sendmail" :: a;
 	while(t < len s && s[t]!='\n')
 		t++;
 	if(s[t] == '\n')
@@ -1069,34 +1077,36 @@ Box.read(readonly : int) : ref Box
 	b.leng = 0;
 	b.readonly = readonly;
 	b.w = Win.wnew();
-	b.w.wwritebody("Password:");
 	b.w.wname("Mail/box/");
-	b.w.wclean();
-	b.w.wselect("$");
-	b.w.ctlwrite("noecho\n");
 	b.cevent = chan of Event;
 	spawn b.w.wslave(b.cevent);
-	e := ref Event;
-	for (;;) {
-		sleep(1000);
-		s := b.w.wreadall();
-		lens := len s;
-		if (lens >= 10 && s[0:9] == "Password:" && s[lens-1] == '\n') {
-			pwd = s[9:lens-1];
-			for (i := 0; i < lens; i++)
-				s[i] = '\b';
-			b.w.wwritebody(s);
-			break;
-		}
-		alt {
-			*e = <-b.cevent =>
-				b.event(e);
+	if(pwd == nil){
+		b.w.wwritebody("Password:");
+		b.w.wclean();
+		b.w.wselect("$");
+		b.w.ctlwrite("noecho\n");
+		e := ref Event;
+		for (;;) {
+			sleep(1000);
+			s := b.w.wreadall();
+			lens := len s;
+			if (lens >= 10 && s[0:9] == "Password:" && s[lens-1] == '\n') {
+				pwd = s[9:lens-1];
+				for (i := 0; i < lens; i++)
+					s[i] = '\b';
+				b.w.wwritebody(s);
 				break;
-			* =>
-				break;
+			}
+			alt {
+				*e = <-b.cevent =>
+					b.event(e);
+					break;
+				* =>
+					break;
+			}
 		}
+		b.w.ctlwrite("echo\n");
 	}
-	b.w.ctlwrite("echo\n");
 	pop3open(1);
 	pop3init(b);
 	while((m = m.read(b)) != nil){

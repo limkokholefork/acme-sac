@@ -957,29 +957,16 @@ iconinit()
 	tagcols = array[NCOL] of ref Draw->Image;
 	textcols = array[NCOL] of ref Draw->Image;
 
-	if(1){
-		tagcols[BACK] = imagemix(display.rgb(16raa, 16rff, 16rff), white, 1, 3);	# mix DPalebluegreenwith DWhite
-		tagcols[HIGH] = display.rgb(16r9e, 16ree, 16ree);		# was DPalegreygreen
-		tagcols[BORD] = display.rgb(16r88, 16r88, 16rcc);		# was DPurpleblue
-		tagcols[TEXT] = black;
-		tagcols[HTEXT] = black;
-		textcols[BACK] = imagemix(display.rgb(16rff, 16rff, 16raa), white, 1, 3);	# mix DPaleyellow with DWhite
-		textcols[HIGH] = display.rgb(16ree, 16ree, 16r9e);		# was DDarkyellow
-		textcols[BORD] = display.rgb(16r99, 16r99, 16r4c);		# was Dyellowgreen
-		textcols[TEXT] = black;
-		textcols[HTEXT] = black;
-	}else{
-		tagcols[BACK] = display.rgb(16r22, 16r22, 16r22);
-		tagcols[HIGH] = display.rgb(16r9e, 16ree, 16ree);		# was DPalegreygreen
-		tagcols[BORD] = display.rgb(16r88, 16r88, 16rcc);		# was DPurpleblue
-		tagcols[TEXT] = white;
-		tagcols[HTEXT] = black;
-		textcols[BACK] = black;
-		textcols[HIGH] = blue;	
-		textcols[BORD] = display.rgb(16r99, 16r99, 16r4c);		# was Dyellowgreen
-		textcols[TEXT] = white;
-		textcols[HTEXT] = white;
-	}
+	tagcols[BACK] = display.colormix(Draw->Palebluegreen, Draw->White);
+	tagcols[HIGH] = display.color(Draw->Palegreygreen);
+	tagcols[BORD] = display.color(Draw->Purpleblue);
+	tagcols[TEXT] = black;
+	tagcols[HTEXT] = black;
+	textcols[BACK] = display.colormix(Draw->Paleyellow, Draw->White);
+	textcols[HIGH] = display.color(Draw->Darkyellow);
+	textcols[BORD] = display.color(Draw->Yellowgreen);
+	textcols[TEXT] = black;
+	textcols[HTEXT] = black;
 
 	if(button != nil)
 		button = modbutton = colbutton = nil;

@@ -1,8 +1,8 @@
 env
-	LDFLAGS=	-subsystem:windows -entry:WinMainCRTStartup $LDFLAGS
+	LDFLAGS=	-subsystem:console -entry:WinMainCRTStartup $LDFLAGS
 
 dev
-	root
+	root win os
 	cons
 	env
 	mnt

@@ -23,3 +23,10 @@ adict
 	may be applied to any word in any adict window.
 	When a word has multiple definitions, indicate the number
 	(as in acme Mail) to disambiguate.
+rect [replacement]
+	Rect deletes a rectangular area of text in an acme window.
+	If replacement is given, it replaces each line in the
+	rectangle with the replacement.  The input rectangular area
+	is specified by making a selection in the acme window.  The
+	beginning and end of the selection define the top left and
+	bottom right corners of the rectangle.

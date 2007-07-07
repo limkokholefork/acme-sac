@@ -118,6 +118,8 @@ mouseconsume(void)
 	Sleep(&ptrq.r, ptrqnotempty, 0);
 	ptrq.full = 0;
 	ptrq.get++; /*= ptrq.put; */
+	if(ptrq.get > ptrq.put)
+		ptrq.get = ptrq.put;
 	if(ptrq.rd != ptrq.wr){
 		e = ptrq.clicks[ptrq.rd];
 		if(++ptrq.rd >= Nevent)

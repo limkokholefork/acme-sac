@@ -17,10 +17,8 @@ INS=	$ROOT/dis/sh.dis\
 	$ROOT/dis/sh/regex.dis\
 	$ROOT/dis/sh/std.dis\
 	$ROOT/dis/sh/string.dis\
-#	$ROOT/dis/sh/tk.dis\
 	$ROOT/dis/sh/echo.dis\
 	$ROOT/dis/sh/csv.dis\
-	$ROOT/dis/sh/test.dis\
 
 SYSMODULES=\
 	bufio.m\
@@ -33,7 +31,6 @@ SYSMODULES=\
 	string.m\
 	sys.m\
 	tk.m\
-	tkclient.m\
 
 DISBIN=$ROOT/dis/sh
 

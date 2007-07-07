@@ -1,7 +1,7 @@
 <../../../mkconfig
 
 DIRS=\
-	ppp\
+#	ppp\
 #	nppp\
 
 TARG=\
@@ -10,16 +10,16 @@ TARG=\
 	rip.dis\
 	tftpd.dis\
 	virgild.dis\
-	obootpd.dis\
+	sntp.dis\
 
 SYSMODULES=\
-	sys.m\
-	draw.m\
-	bufio.m\
 	attrdb.m\
+	bufio.m\
+	draw.m\
+	ether.m\
 	ip.m\
 	ipattr.m\
-	ether.m\
+	sys.m\
 
 DISBIN=$ROOT/dis/ip
 

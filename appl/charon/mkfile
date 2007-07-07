@@ -70,7 +70,6 @@ SYSMODULES=\
 	strinttab.m\
 	sys.m\
 	tk.m\
-	tkclient.m\
 
 DISBIN=$ROOT/dis/charon
 

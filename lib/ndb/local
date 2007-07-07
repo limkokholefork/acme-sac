@@ -8,14 +8,17 @@ database=
 # default site-wide resources
 #
 infernosite=
-	#dnsdomain=your.domain.com
+	dnsdomain=your.domain.com
 	#dns=1.2.3.4	# resolver
-	SIGNER=your_signer_here
+	SIGNER=canto.hopto.org
 	FILESERVER=your_fileserver_here
-	smtp=smtp.comcast.net
-	pop3=pop.comcast.net
-	registry=your_registry
+	smtp=smtp.gmail.com
+	pop3=pop.gmail.com
+	registry=canto.hopto.org
 	auth=fir
 
 sys=fir ip=71.192.173.148
 	ip=192.168.1.2
+
+sys=ASH ip=192.168.1.102
+	dom=canto.hopto.org

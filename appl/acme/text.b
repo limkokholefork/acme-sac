@@ -799,6 +799,8 @@ Text.typex(t : self ref Text, r : int, echomode : int)
 				t.w.reshape(t.w.r, FALSE, TRUE);
 			}
 			return;
+		Keyboard->Left or Keyboard->Right => # handled below
+			;
 	}
 	
 	case(r){
@@ -1178,7 +1180,7 @@ Text.show(t : self ref Text, q0 : int, q1 : int)
 	nl : int;
 	q : int;
 
-	if(t.what != Body)
+	if(t.what != Body && t.what != Tag)
 		return;
 	if(t.w!=nil && t.frame.maxlines==0)
 		t.col.grow(t.w, 1, 0);

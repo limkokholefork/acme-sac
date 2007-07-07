@@ -101,7 +101,8 @@ number(md: ref Dat->Mntdir, t : ref Text, r : Range, line : int, dir : int, size
 				}
 				--q0;
 			}
-			if(line > 0)
+			# :1-1 is :0 = #0, but :1-2 is an error
+			if(line > 1)
 				raise "e";
 			while(q0>0 && t.readc(q0-1)!='\n')
 				--q0;

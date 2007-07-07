@@ -253,27 +253,26 @@ doproto(tree: string, protofile: string)
 			new = new[1:];
 		if(!considered(new))
 			continue;
-		digests: list of string;
-		if(sums && (d.mode & Sys->DMDIR) == 0){
-			if(sums == 1)
-				digests = md5sum(old) :: nil;
-			else if(sums == 2)
-				digests = sha1sum(old) ::  nil;
-		}
 		if(uid != nil)
 			d.uid = uid;
 		if(gid != nil)
 			d.gid = gid;
+		orig := old;
 		old = relative(old, rootdir);
 		db := state.look(new);
 		if(db == nil){
 			if(!changesonly){
+				if(sums && (d.mode & Sys->DMDIR) == 0)
+					digests := sha1sum(orig) :: nil;
 				db = state.entry(nextseq(), new, *d);
 				change('a', db, db.seq, db.d, db.path, old, digests);
 			}
 		}else{
-			if(!samestat(db.d, *d))
+			if(!samestat(db.d, *d)){
+				if(sums && (d.mode & Sys->DMDIR) == 0)
+					digests := sha1sum(orig) :: nil;
 				change('c', db, nextseq(), *d, new, old, digests);
+			}
 			if(!samemeta(db.d, *d))
 				change('m', db, nextseq(), *d, new, old, nil);	# need digest?
 		}

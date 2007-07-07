@@ -38,7 +38,7 @@ Entry.read(in: ref Iobuf): (ref Entry, string)
 	e.x = -1;
 
 	l := str->unquoted(s);
-	fields := array[11] of string;
+	fields := array[len l] of string;
 	for(i := 0; l != nil; l = tl l)
 		fields[i++] = S(hd l);
 
@@ -83,7 +83,11 @@ Entry.read(in: ref Iobuf): (ref Entry, string)
 	"log format:*" =>
 		return (nil, sys->sprint("%s in log entry %q", ex, s));
 	}
-	e.contents = fields[10] :: nil;	# optional
+	e.contents = nil;
+	for(i = 10; i < len fields; i++)
+		e.contents = fields[i] :: e.contents;
+	e.contents = rev(e.contents);
+#	e.contents = fields[10] :: nil;	# optional
 	return (e, nil);
 }
 
@@ -184,8 +188,9 @@ Entry.update(e: self ref Entry, n: ref Entry)
 	if(n.action != 'm' || e.action == 'd')
 		e.action = n.action;
 	e.serverpath = S(n.serverpath);
-	for(nl := rev(n.contents); nl != nil; nl = tl nl)
-		e.contents = hd nl :: e.contents;
+#	for(nl := rev(n.contents); nl != nil; nl = tl nl)
+#		e.contents = hd nl :: e.contents;
+	e.contents = n.contents;
 	if(n.seq > e.seq)
 		e.seq = n.seq;
 }

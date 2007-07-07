@@ -1609,6 +1609,11 @@ init(nil: ref Draw->Context, args: list of string)
 	(rv, l) = getreply(!quiet);
 	if (rv != Success)
 		fail(rv, l);
+	factotum := load Factotum Factotum->PATH;
+	if(factotum != nil){
+		factotum->init();
+		(user, password) = factotum->getuserpasswd(sys->sprint("proto=pass dom=%s service=ftp %s", hostname, keyspec));
+	}
 	if (user == nil) {
 		getuser();
 		user = myname;
@@ -1622,17 +1627,8 @@ init(nil: ref Draw->Context, args: list of string)
 		if (rv != Incomplete)
 			fail(rv, l);
 		if (code == 331) {
-			if(password == nil){
-				factotum := load Factotum Factotum->PATH;
-				if(factotum != nil){
-					factotum->init();
-					if(user != nil && keyspec == nil)
-						keyspec = sys->sprint("user=%q", user);
-					(nil, password) = factotum->getuserpasswd(sys->sprint("proto=pass server=%s service=ftp %s", hostname, keyspec));
-				}
-				if(password == nil)
-					password = prompt("Password", nil, 0);
-			}
+			if(password == nil)
+				password = prompt("Password", nil, 0);
 			rv = sendrequest2("PASS " + password, 0, "PASS XXXX");
 			if (rv != Success)
 				sendfail(rv);

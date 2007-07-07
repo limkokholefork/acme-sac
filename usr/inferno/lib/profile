@@ -35,12 +35,11 @@ if {! ftest -f /mnt/factotum/proto}{
 
 if {! ftest -d /fonts/lucidasans}{
 	echo 'No fonts found. Run setupfonts to copy /fonts from www.vitanuova.com Inferno distribution.'
-	# TODO: see if we can use misc MIT fonts instead
+	acme-font=/fonts/vera/Vera/unicode.14.font
+	acme-Font=/fonts/vera/VeraMono/VeraMono.14.font
 }
-acme-font=/fonts/misc/unicode.6x13.font
-acme-Font=/fonts/misc/unicode.6x13.font
 
-acme -a $home /usr/inferno/README 
+acme -a $home $home/README 
 sleep 1
 waitid = `{sed '' /prog/*/status | sort -n | grep Acme | sed 1q | sed 's/^ +([0-9]+) +.*/\1/'}
 read < /prog/^$waitid^/wait

@@ -39,6 +39,8 @@ qopt := 0;
 sopt := 0;
 topt := 0;
 uopt := 0;
+Fopt := 0;
+Topt := 0;
 now:	int;
 sortby:	int;
 
@@ -109,8 +111,12 @@ init(nil: ref Context, argv: list of string)
 			compact = Readdir->COMPACT;
 		'r' =>
 			rev = Readdir->DESCENDING;
+		'T' =>
+			Topt++;
+		'F' =>
+			Fopt++;
 		* =>
-			sys->fprint(stderr, "usage: ls [-delmnpqrstuc] [files]\n");
+			sys->fprint(stderr, "usage: ls [-delmnpqrstucFT] [files]\n");
 			raise "fail:usage";
 		}
 	}
@@ -247,6 +253,12 @@ lslineprint(dirname, name: string, dir: ref Dir, w: ref Widths)
 	}
 	if(qopt)
 		out.puts(sys->sprint("(%.16bux %*ud %.2ux) ", dir.qid.path, w.vers, dir.qid.vers, dir.qid.qtype));
+	if(Topt){
+		if(dir.mode & Sys->DMTMP)
+			out.puts("t ");
+		else
+			out.puts("- ");
+	}
 
 	file := name;
 	pf := dir.dev & PREFIX;
@@ -262,6 +274,8 @@ lslineprint(dirname, name: string, dir: ref Dir, w: ref Widths)
 		else
 			file = dirname + "/" + file;
 	}
+	if(Fopt)
+		file += fileflag(dir);
 
 
 	if(lopt) {
@@ -280,6 +294,15 @@ lslineprint(dirname, name: string, dir: ref Dir, w: ref Widths)
 				daytime->filet(now, time), file));
 	} else
 		out.puts(file+"\n");
+}
+
+fileflag(dir: ref Dir): string
+{
+	if(dir.qid.qtype & Sys->QTDIR)
+		return "/";
+	if(dir.mode & 8r111)
+		return "*";
+	return "";
 }
 
 mtab := array[] of {
