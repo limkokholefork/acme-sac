@@ -41,7 +41,7 @@ WebgetUtils: module
 	ImageJpeg, ImageGif, ImageIef, ImageTiff,
 	ImageXCompressed, ImageXCompressed2, ImageXXBitmap,
 	AudioBasic,
-	VideoMpeg, VideoQuicktime, Soap, TextXml: con iota;
+	VideoMpeg, VideoQuicktime, Soap, TextXml, Javascript: con iota;
 
 	init : fn(m: Message, s: String, b: Bufio, u: Url, logfd: ref Sys->FD);
 	usererr: fn(r: ref Req, msg: string) : ref Message->Msg;

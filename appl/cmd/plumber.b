@@ -85,6 +85,7 @@ NOTSTARTED: con -3;
 output: array of ref Output;
 
 input: ref Input;
+rulesio: ref Sys->FileIO;
 
 stderr: ref Sys->FD;
 pgrp: int;
@@ -177,6 +178,11 @@ init(ctxt: ref Draw->Context, args: list of string)
 	input.inc = chan of ref Inmesg;
 	input.resc = chan of int;
 	spawn receiver(input);
+ 	
+	rulesio = makefile("plumb.rules");
+	if(rulesio == nil)
+		shutdown();
+	spawn rulesproc(rulesio);
 
 	output = array[len ports] of ref Output;
 
@@ -275,6 +281,88 @@ sender(input: ref Input, output: array of ref Output)
 				outputc[j] = nil;
 			log("sending \n");
 			rc <-= (msg, nil);
+		}
+	}
+}
+
+readrules(crules: list of ref Rule): string
+{
+	s: string;
+	buf: string;
+	
+	r := crules;
+	for(i:=0; i<len crules; i++){
+		rule := hd r;
+		r = tl r;
+		for (j:=0; j < len rule.pattern; j++){
+			p := rule.pattern[j];
+			if (p.field == "data" && p.pred == "matches")
+				buf = sys->sprint("%s %s '%s'\n",p.field, p.pred, p.arg);
+			else
+				buf = sys->sprint("%s %s %q\n",p.field, p.pred, p.arg);
+			if (buf == nil)
+				return nil;
+			s = s + buf;
+		}
+		
+		for (k:=0; k< len rule.action; k++){
+			a := rule.action[k];
+			s += sys->sprint("%s %s %q %s", a.field, a.pred, a.arg, str->quoted(a.extra));
+			s += "\n";
+		}
+		s += "\n";
+	}
+	return s;
+}
+
+updaterules(urules: list of ref Rule): list of ref Rule
+{
+	r: list of ref Rule;
+	while(urules != nil){
+		r = hd urules :: r;
+		urules = tl urules;
+	}
+	# reverse the rules
+	urules = nil;
+	while(r != nil){
+		urules = hd r :: urules;
+		r = tl r;
+	}
+	return urules;
+}
+
+rulesproc(rulesio: ref Sys->FileIO)
+{
+	for(;;){
+		alt{
+		(off, count, nil, rc) := <- rulesio.read =>
+			if (rc == nil){	# no interest in EOF
+				break;
+			}
+			data := readrules(rules);
+			if (off > len data){
+				rc <-= (nil, "");
+				break;
+			}			
+			if (count < len data){
+				rc <-= (nil, "buffer to short for message");
+				break;
+			}
+			rc <-= (array of byte data, nil);
+			
+		(nil, data, nil, wc) := <-rulesio.write =>
+			if(wc == nil)
+				break;	# not interested in EOF
+			else{
+				(urules, err) := plumbing->parse("/chan/plumb.rules", string data);
+				if(err != nil){
+					wc <-= (0, err);
+					break;
+				}
+				rules = updaterules (urules);
+				wc <-= (len data, "");
+			}
+			break;
 		}
 	}
 }

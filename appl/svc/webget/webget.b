@@ -121,6 +121,7 @@ start(ctl: chan of int)
 	if(DO_LOG)
 		log = sys->create(logfile, Sys->OWRITE, 8r666);
 
+	sys->bind("#s", "/chan", Sys->MBEFORE|Sys->MCREATE);
 	io := sys->file2chan("/chan", "webget");
 	if(io == nil) {
 		sys->fprint(stderr, "webget: failed to post: %r\n");

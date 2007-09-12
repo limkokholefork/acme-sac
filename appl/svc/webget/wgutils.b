@@ -43,6 +43,7 @@ mtypes := array[] of { T->StringInt
 	("application/rtf", ApplRtf),
 	("application/soap+xml", TextPlain),
 	("application/x-html", TextHtml),
+	("application/x-javascript", Javascript),
 	("au", AudioBasic),
 	("audio/au", AudioBasic),
 	("audio/basic", AudioBasic),
@@ -95,7 +96,8 @@ mnames := array[] of {
 	"video/mpeg",
 	"video/quicktime",
 	"application/soap+xml",
-	"text/xml"
+	"text/xml",
+	"application/x-javascript"
 };
 
 init(m: Message, s: String, b: Bufio, u: Url, lfd: ref Sys->FD)

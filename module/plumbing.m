@@ -20,4 +20,5 @@ Plumbing: module
 	};
 
 	init:	fn(regexmod: Regex, args: list of string): (list of ref Rule, string);
+ 	parse: fn(filename, file: string): (list of ref Rule, string);
 };

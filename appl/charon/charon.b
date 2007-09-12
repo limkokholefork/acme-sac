@@ -4,6 +4,8 @@ include "common.m";
 include "debug.m";
 include "bufio.m";
 include "acmewin.m";
+include "factotum.m";
+	factotum: Factotum;
 sys: Sys;
 acmewin: Acmewin;
 Win: import acmewin;
@@ -1950,10 +1952,19 @@ getauth(chal: string) : (string, string)
 		if(realm == a.realm)
 			return (realm, a.credentials);
 	}
-	
-	(code, uname, pword) := G->auth(realm);
-	if(code != 1)
-		return (nil, nil);
+	uname, pword: string;
+	if((CU->config).doacme){
+		if(factotum == nil){
+			factotum = load Factotum Factotum->PATH;
+			factotum->init();
+		}
+		(uname, pword) = factotum->getuserpasswd(sys->sprint("proto=pass service=http realm=%s", realm));
+	}else{
+		code: int;
+		(code, uname, pword) = G->auth(realm);
+		if(code != 1)
+			return (nil, nil);
+	}
 	cred := uname + ":" + pword;
 	cred = tobase64(cred);
 	return (realm, cred);
