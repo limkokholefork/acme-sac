@@ -18,6 +18,10 @@ nuke:V:	nuke-$HOSTMODEL
 	echo '@{builtin cd' $SYSTARG '; mk $MKFLAGS $stem}'
 	@{builtin cd $SYSTARG; mk $MKFLAGS $stem }
 
+&-MacOSX:QV:
+	echo '@{builtin cd' $SYSTARG '; mk $MKFLAGS $stem}'
+	@{builtin cd $SYSTARG; mk $MKFLAGS $stem }
+
 &-Plan9:QV:
 	echo '@{builtin cd' $SYSTARG '; mk $MKFLAGS $stem}'
 	@{builtin cd $SYSTARG; mk $MKFLAGS $stem }

@@ -1,8 +1,8 @@
-SYSTARG=MacOSX
-#OBJTYPE=power
+_SYSTARG=$SYSTARG
+_OBJTYPE=$OBJTYPE
 <../../mkconfig
-SYSTARG=MacOSX
-#OBJTYPE=power
+SYSTARG=$_SYSTARG
+OBJTYPE=$_OBJTYPE
 
 #Configurable parameters
 
@@ -19,7 +19,7 @@ INSTALLDIR=/sys/$SYSTARG/$OBJTYPE/bin	#path of directory where kernel is install
 OBJ=\
 	asm-$OBJTYPE.$O\
 	os.$O\
-	win.$O\
+	win-x11a.$O\
 	$CONF.root.$O\
 	lock.$O\
 	$DEVS\
@@ -41,8 +41,7 @@ KERNDATE=`{$NDATE}
 LDFLAGS=$LDFLAGS -L/usr/X11R6/lib
 
 SYSLIBS= \
-	-lm\
-	-framework Carbon -framework QuickTime\
+	-lm -lX11 -lXext\
 	-lpthread\
 	-framework CoreFoundation\
 	-framework IOKit\

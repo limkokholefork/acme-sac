@@ -1,36 +1,34 @@
 dev
-	root
+	root os
 	cons
 	env
 	mnt
 	pipe
 	prog
-	prof
+#	prof
 	srv
 	dup
-	ssl
-	cap
+#	ssl
+#	cap
 	fs
 	cmd	cmd
-	indir
+#	indir
 
-	draw
-	pointer
-	snarf
-	wmsz
+#	draw
 
 	ip	ipif ipaux
-	eia
+#	eia
 #	audio	audio
-	mem
+#	mem
+#	arch
+#	pointer
+#	snarf
+#	wmsz
 
 lib
 	interp
-#	tk
-#	freetype
 	math
 	draw
-
 	memlayer
 	memdraw
 	keyring
@@ -43,14 +41,10 @@ link
 
 mod
 	sys
-	draw
-
-#	tk
+#	draw
 	math
 	srv	srv
 	keyring
-#	loader
-#	freetype
 
 port
 	alloc
@@ -80,6 +74,8 @@ port
 code
 	int	dontcompile = 1;
 	int macjit = 1;
+	void setpointer(int x, int y){USED(x); USED(y);}
+	ulong strtochan(char *s){USED(s); return ~0;}
 
 init
 	emuinit
@@ -89,21 +85,5 @@ root
 	/fd	/
 	/prog	/
 	/net	/
-	/net.alt	/
 	/chan	/
-	/nvfs	/
 	/env	/
-#	/chan
-#	/dev
-#	/dis
-#	/env
-#	/n
-#	/net
-#	/nvfs /
-#	/prog
-#	/icons
-#	/osinit.dis
-#	/dis/emuinit.dis
-#	/dis/lib/auth.dis
-#	/dis/lib/ssl.dis
-#	/n/local /

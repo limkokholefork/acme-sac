@@ -1,5 +1,8 @@
+env
+	LDFLAGS=	-subsystem:windows -entry:WinMainCRTStartup $LDFLAGS
+
 dev
-	root
+	root win os
 	cons
 	env
 	mnt
@@ -9,28 +12,26 @@ dev
 	srv
 	dup
 	ssl
-	cap
+#	cap
 	fs
 	cmd	cmd
-	indir
+#	indir
 
 	draw
+
+	ip	ipif ipaux
+#	eia
+	audio	audio
+	mem
+	arch
 	pointer
 	snarf
 	wmsz
 
-	ip	ipif ipaux
-	eia
-#	audio	audio
-	mem
-
 lib
 	interp
-#	tk
-#	freetype
 	math
 	draw
-
 	memlayer
 	memdraw
 	keyring
@@ -44,13 +45,9 @@ link
 mod
 	sys
 	draw
-
-#	tk
 	math
 	srv	srv
 	keyring
-#	loader
-#	freetype
 
 port
 	alloc
@@ -78,8 +75,6 @@ port
 	uqid
 
 code
-	int	dontcompile = 1;
-	int macjit = 1;
 
 init
 	emuinit
@@ -89,21 +84,5 @@ root
 	/fd	/
 	/prog	/
 	/net	/
-	/net.alt	/
 	/chan	/
-	/nvfs	/
 	/env	/
-#	/chan
-#	/dev
-#	/dis
-#	/env
-#	/n
-#	/net
-#	/nvfs /
-#	/prog
-#	/icons
-#	/osinit.dis
-#	/dis/emuinit.dis
-#	/dis/lib/auth.dis
-#	/dis/lib/ssl.dis
-#	/n/local /

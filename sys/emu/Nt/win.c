@@ -393,7 +393,7 @@ WindowProc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam)
 		mousetrack(b, x, y, 0);
 		break;
 	case WM_MOUSEWHEEL:
-		if(GET_WHEEL_DELTA_WPARAM(wparam) > 0)
+		if((short)HIWORD(wparam) > 0)
 			b =8;
 		else
 			b = 16;
