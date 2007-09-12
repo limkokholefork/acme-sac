@@ -31,7 +31,7 @@ OBJ=\
 
 HFILES=\
 #'-DROOT="'$ROOT'"'
-CFLAGS= '''-DROOT="'$emuroot'"''' -DEMU -I. -I../port -I../../$SYSTARG/$OBJTYPE/include -I../../include -I../../libinterp $CTHREADFLAGS $CFLAGS $EMUOPTIONS
+CFLAGS= '''-DROOT="'.'"''' -DEMU -I. -I../port -I../../$SYSTARG/$OBJTYPE/include -I../../include -I../../libinterp $CTHREADFLAGS $CFLAGS $EMUOPTIONS
 #SYSLIBS= -lm -lX11 -lXext
 KERNDATE=`{$NDATE}
 

@@ -32,7 +32,7 @@ $LIBRARY(%.$O):N:	%.$O
 %.$O:	%.s
 	$AS $ASFLAGS $stem.s
 	
-%.$O:	%.S
+%.$O:	%.S$MACOSINF
 	$AS $ASFLAGS $stem.S
 
 y.tab.h y.tab.c:	$YFILES

@@ -110,7 +110,7 @@ ipif-$SYSTARG.$O devip.$O:		../port/ip.h
 devroot.$O:	$CONF.root.h
 $CONF.$O:	$CONF.root.h
 
-$CONF.root.c $CONF.root.h: $CONF ../port/mkroot 
+$CONF.root.c $CONF.root.h: $CONF 
 	mkroot $CONF  < $CONF > $CONF.root.h
 
 audio.c:N:	../port/audio-tbls.c
