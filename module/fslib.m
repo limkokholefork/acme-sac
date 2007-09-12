@@ -8,6 +8,7 @@ Fslib: module {
 		t:	fn(v: self ref Value): ref Value.T;
 		v:	fn(v: self ref Value): ref Value.V;
 		m:	fn(v: self ref Value): ref Value.M;
+		f:	fn(v: self ref Value): ref Value.F;
 		typec: fn(v: self ref Value): int;
 		discard: fn(v: self ref Value);
 		pick {
@@ -25,6 +26,8 @@ Fslib: module {
 			i: chan of int;		# sync channel for void-valued processes
 		M =>
 			i: Cmpchan;
+		F =>
+			i: chan of ref Sys->FD;
 		}
 	};
 	init:			fn();

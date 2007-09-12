@@ -4,5 +4,6 @@ load std
 
 home=/usr/^"{cat /dev/user}
 if {ftest -d $home} {} {cp -r /usr/inferno $home}
-# load $home/lib/profile
-cd $home 
+
+cd $home || {mount -a {mntgen} /usr; bind /usr/inferno $home; cd $home}
+
