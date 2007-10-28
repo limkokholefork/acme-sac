@@ -50,7 +50,7 @@ IMPORTFILES=\
 	runeseprint.$O\
 	runesmprint.$O\
 	runesnprint.$O\
-	runevseprint.$O\
+#	runevseprint.$O\
 #	seek.$O\
 	seprint.$O\
 	smprint.$O\

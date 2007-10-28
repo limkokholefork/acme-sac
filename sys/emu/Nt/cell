@@ -14,7 +14,7 @@ dev
 #	ssl
 #	cap
 	fs
-#	cmd	cmd
+	cmd	cmd
 #	indir
 
 #	draw

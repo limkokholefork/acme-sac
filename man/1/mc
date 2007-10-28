@@ -1,8 +1,8 @@
-.TH MCOL 1
+.TH MC 1
 .SH NAME
-mcol \- multicolumn print
+mc \- multicolumn print
 .SH SYNOPSIS
-.B mcol
+.B mc
 [
 .BI -c " columns"
 ]
@@ -10,14 +10,14 @@ mcol \- multicolumn print
 .I file ...
 ]
 .SH DESCRIPTION
-.I Mcol
+.I Mc
 formats the contents of
 .I files
 (standard input by default) into columns.
 .I Columns
 is an integer specifying the number of
 character widths into which
-.IR mcol 's
+.IR mc 's
 output is formatted.
 If run in an
 .IR acme (1)
@@ -28,7 +28,7 @@ otherwise the default
 .I columns
 is 65.
 .SH SOURCE
-.B /appl/cmd/mcol.b
+.B /appl/cmd/mc.b
 .SH "SEE ALSO"
 .IR acme (1)
 .SH BUGS

@@ -105,6 +105,7 @@ valuec := array[] of {
 	tagof(Value.C) => 'c',
 	tagof(Value.T) => 't',
 	tagof(Value.M) => 'm',
+	tagof(Value.F) => 'f',
 };
 
 init()
@@ -219,6 +220,8 @@ type2s(c: int): string
 		return "entries";
 	'm' =>
 		return "selector";
+	'f' =>
+		return "filedescriptor";
 	* =>
 		return sys->sprint("unknowntype('%c')", c);
 	}
@@ -265,7 +268,11 @@ Value.m(v: self ref Value): ref Value.M
 	pick xv :=v {M => return xv;}
 	raise typeerror('m', v);
 }
-
+Value.f(v: self ref Value): ref Value.F
+{
+	pick xv := v {F => return xv;}
+	raise typeerror('f', v);
+}
 Value.typec(v: self ref Value): int
 {
 	return valuec[tagof v];
@@ -286,6 +293,8 @@ Value.discard(v: self ref Value)
 		xv.i <-= 0;
 	T =>
 		xv.i.sync <-= 0;
+	F =>
+		xv.i <-= nil;
 	}
 }
 

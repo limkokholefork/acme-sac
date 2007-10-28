@@ -755,7 +755,6 @@ Text.typex(t : self ref Text, r : int, echomode : int)
 	nnb, nb, n, i : int;
 	u : ref Text;
 	rp : string;
-	rp[0] = r;
 
 	if(alphabet != ALPHA_LATIN)
 		r = transc(r, alphabet);
@@ -767,6 +766,8 @@ Text.typex(t : self ref Text, r : int, echomode : int)
 		}
 		return;
 	}
+
+	rp[0] = r;
 
 #TAG
 # Used to disallow \n in tag here.
@@ -996,23 +997,17 @@ if(0)	# DEBUGGING
 		# Change the tag before we add to ncache,
 		# so that if the window body is resized the
 		# commit will not find anything in ncache.
-		if(u.what==Body && u.ncache == 0){
+#		if(u.what==Body && u.ncache == 0){
 #			u.needundo = TRUE;
 #			t.w.settag();
 #			u.needundo=FALSE;
-		}
+#		}
 		u.insert(t.q0, rp, len rp, FALSE, echomode);
 		if(u != t)
 			u.setselect(u.q0, u.q1);
-		if(u.ncache + len rp >= u.ncachealloc){
-			u.ncachealloc += len rp + 10;
-			u.cache += (stralloc(len rp)).s + "1234567890";
-		}
-
-		for (i=0; i < len rp; i++)
-			u.cache[u.ncache+i] = rp[i];
-		u.ncache += len rp;
-		#sys->print("insert nnb:%d rp[%d]:%s.\n", nnb, len rp, r	}
+		for (j:=0; j < len rp; j++)
+			u.cache[u.ncache++] = rp[j];
+		#sys->print("insert nnb:%d rp[%d]:%s.\n", nnb, len rp, rp);
 	}
 	t.setselect(t.q0+len rp, t.q0+len rp);
 	if(r=='\n' && t.w!=nil)

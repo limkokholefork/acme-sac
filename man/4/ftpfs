@@ -9,6 +9,9 @@ ftpfs \- file transfer protocol (FTP) file server
 .BI -m " mountpoint"
 ] [
 .BI -a " password"
+] [
+.B -k
+.I keyspec
 ]
 .I ftphost
 .SH DESCRIPTION
@@ -37,10 +40,19 @@ and the default service is
 .B ftp
 (port 21).
 .PP
-.I Ftpfs
-will prompt for a user name and password as
-.I ftphost
-demands.
+If required by
+.IR ftphost , " ftpfs"
+will ask
+.IR factotum (4)
+for a key matching the pattern
+.IP
+.EX
+proto=pass service=ftp server=\fIftphost\fP user? !password? \fIkeyspec\fP
+.EE
+.PP
+If
+.I factotum
+does not have such a key, the user is prompted for one.
 If the FTP host supports `anonymous FTP' (ie, guest access),
 it will accept the user name
 .L anonymous
@@ -54,7 +66,8 @@ automatically logs in as
 with the
 .I password
 supplied,
-avoiding prompting.
+without using
+.IR factotum .
 .PP
 By default,
 .I ftpfs

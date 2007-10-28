@@ -43,4 +43,5 @@ acme -a $home $home/README
 sleep 1
 waitid = `{sed '' /prog/*/status | sort -n | grep Acme | sed 1q | sed 's/^ +([0-9]+) +.*/\1/'}
 read < /prog/^$waitid^/wait
+sleep 2
 echo halt > /dev/sysctl

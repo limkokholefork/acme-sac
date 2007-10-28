@@ -1,19 +1,22 @@
 #!/dis/sh.dis
-#	Plan 9 man script adaptation for Inferno
-#	for more details see man(1)
+# Plan 9 man script adaptation for Inferno
+# for more details see the real man(1)
+load std
+
+fils=()
 cmd=n
 sec=()
 S=/man
 d=0
 
 x=$* # see sh(1) for details about s/$*/$x/.
-x=`{echo $x|tr A-Z a-z|tr -dc 'a-z0-9_ \012-'}	# fold case, delete funny chars
+x=`{echo $x|tr A-Z a-z|tr -dc 'a-z0-9_ \012-/'}	# fold case, delete funny chars
 
 search=yes
 while {~ $d 0}{
-	#echo d$d search$search cmd$cmd ${hd $x}: $"x
+	#echo d$d search$search cmd$cmd fils$fils: $"x
 	if {no $x}{
-		echo 'Usage: man [-bnSw] [0-9] [0-9] ... name1 name2 ...'
+		echo 'Usage: man [-bnSwpf] [0-9] [0-9] ... name1 name2 ...'
 		exit
 	}
 	if{ftest -d $S/${hd $x}}{
@@ -25,9 +28,23 @@ while {~ $d 0}{
 			cmd=w; x=${tl $x};
 		}{~ ${hd $x} '-b'}{
 			cmd=b; x=${tl $x};
-		}{~ ${hd $x} '-S'}{
+		}{~ ${hd $x} '-p'}{
+			cmd=p; x=${tl $x};
+		}{~ ${hd $x} '-s'}{
 			search=no; x=${tl $x};
+		}{~ ${hd $x} '-f'}{
+			search=no; x=${tl $x};
+			if {ftest -f ${hd $x}}{
+				fils=(${hd $x});
+			}{
+				echo 'man: bad option -f '${hd $x}
+				exit 'no file'
+			}
 		}{
+			d=1;
+		}
+		
+		if{no $x}{
 			d=1;
 		}
 	}
@@ -40,7 +57,6 @@ ix=$S/$sec/INDEX
 if{~ $#x 1} {pat='^'^$x^' '}
 {pat='^('^`{echo $x | sed 's/ /|/g'}^') '}
 
-fils=()
 if{~ $search yes} {
 	for i in $S/$sec {
 		if {ftest -f $i/INDEX}{
@@ -71,19 +87,25 @@ if{no $fils} {
 
 for i in $fils {
 	if {! ftest -f $i}{
-		echo need $i
+		echo need:$i
 	}{
 		if {~ $cmd n}{
 			man2txt $i
 		}{~ $cmd w}{
 			echo $i
+		}{~ $cmd p}{
+			wm/man -f $i
 		}{~ $cmd b}{
-			x=`{echo $i | sed 's;/man/(.*)/(.*);\1 \2;'}			
-			if{~ ${index 2 $x} 0intro}{
-				x=(${index 1 $x} intro)
+			if{~ $i '/man/*/0intro'}{
+				x=`{echo $i | sed 's;/man/(.*)/.*;\1 intro;'}
+			}{~ $i '/man/*/*'}{
+				x=`{echo $i | sed 's;/man/(.*)/(.*);\1 \2;'}			
+			}{
+				x=($i '')
 			}
+
 			man2txt $i |
-		 	plumb -i -d edit -a action showdata -a filename '/man/'^${index 2 $x}^'('^${index 1 $x}^')'
+		 	plumb -i -d edit -a action showdata -a filename '/man/'^${tl $x}^'('^${hd $x}^')'
 
 		}
 	}

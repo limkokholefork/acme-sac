@@ -585,9 +585,7 @@ Column.which(c : self ref Column, p : Point) : ref Text
 		if(p.in(w.r)){
 			if(p.in(w.tagtop) || p.in(w.tag.all))
 				return w.tag;
-			if(p.in(w.body.scrollr) || p.in(w.body.frame.r))
-				return w.body;
-			return nil;
+			return w.body;
 		}
 	}
 	return nil;
