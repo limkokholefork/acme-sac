@@ -10,16 +10,16 @@ SRC=`{ls *.b}
 TARG=${SRC:%.b=%.dis}
 
 MODULES=
+SYSMODULES=
+DISBIN=/dis/lib
 
-SYSMODULES= `{sed -n '/^include "/s/.*"([^"]+)";.*$/\1/p'  *.b|sort |uniq}
-
-DISBIN=$ROOT/dis/lib
-
-<$ROOT/mkfiles/mkdis
-<$ROOT/mkfiles/mksubdirs
+</mkfiles/mkdis
+</mkfiles/mksubdirs
 
 $DISBIN/arg.dis: arg.dis
 	rm -f $DISBIN/arg.dis && cat arg.dis > $DISBIN/arg.dis
 
 $DISBIN/readdir.dis: readdir.dis
 	rm -f $DISBIN/readdir.dis && cat readdir.dis > $DISBIN/readdir.dis
+	
+<| sh -c '{grep ''^include'' *.b | sed ''s/\.b:/\.dis:/;s/include[ 	]+"/\/module\//;s/";//''}'

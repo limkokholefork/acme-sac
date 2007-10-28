@@ -1,22 +1,22 @@
-.TH MC 1
+.TH CALC 1
 .SH NAME
-mc \- interactive floating point mathematics calculator
+calc \- interactive floating point mathematics calculator
 .SH SYNOPSIS
-.B mc
+.B calc
 [
 .B -s
 ] [
 .I file
 ]
 .PP
-.B mc
+.B calc
 [
 .B -s
 ] [
 .I expression
 ]
 .SH DESCRIPTION
-.I Mc
+.I Calc
 interprets a simple language for floating point arithmetic
 with limbo-like syntax and
 functions.
@@ -26,10 +26,10 @@ If no
 or
 .I expression
 is given
-.I mc
+.I calc
 interprets the standard input.
 .PP
-.I Mc
+.I Calc
 input consists of
 .I expressions
 and
@@ -266,7 +266,7 @@ for(i = 0; i < 4; i++)
 	}
 .EE
 .SH SOURCE
-.B /appl/cmd/mc.b
+.B /appl/cmd/calc.b
 .SH "SEE ALSO"
 .IR fc (1),
 .IR math (2)

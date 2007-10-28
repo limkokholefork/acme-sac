@@ -1,0 +1,40 @@
+#!/dis/sh
+
+if {~ $#* 0} {
+	echo usage: mkpatch prog ... > /fd/2
+	raise fail:arg
+}
+
+bind '#U' /n/local
+bind /n/d/hold /n/hold
+
+if {~ $#baseline 0} {
+	baseline = `{basename `{ls -t /n/hold/stowage/acme* |sed 1q}}
+}
+
+if {~ $#baseline 0} {
+	echo baseline not set  > /fd/2
+	raise baseline
+}
+args := $*
+{
+echo 'To: acme-sac@googlegroups.com' 
+echo 'From: ' 
+echo 'Subject: PATCH ' $args
+echo 
+
+hold/holdfs -m /n/$baseline /n/hold/stowage/$baseline
+for i in $args {
+	s := `{src $i}
+	if { ~ $#s 0 } {
+		f := `{cleanname -d `{pwd} $i}
+		diff -u /n/$baseline ^ $f /n/local ^ $f
+	} {
+		diff -u /n/$baseline ^ $s /n/local ^ $s
+	}
+}
+} > /tmp/patch.${pid}
+
+cd /mnt/acme/new
+cat /tmp/patch.${pid} > body
+rm -f /tmp/patch.${pid}

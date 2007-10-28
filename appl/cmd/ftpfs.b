@@ -1513,7 +1513,7 @@ init(nil: ref Draw->Context, args: list of string)
 	# parse arguments
 	# [-/dpq] [-m mountpoint] [-a password] host
 	arg->init(args);
-	arg->setusage("ftpfs [-/dpq] [-m mountpoint] [-a password] ftphost");
+	arg->setusage("ftpfs [-/dpq] [-m mountpoint] [-a password] [-k keyspec] ftphost");
 	keyspec := "";
 	while((op := arg->opt()) != 0)
 		case op {
@@ -1609,17 +1609,21 @@ init(nil: ref Draw->Context, args: list of string)
 	(rv, l) = getreply(!quiet);
 	if (rv != Success)
 		fail(rv, l);
-	factotum := load Factotum Factotum->PATH;
-	if(factotum != nil){
-		factotum->init();
-		(user, password) = factotum->getuserpasswd(sys->sprint("proto=pass dom=%s service=ftp %s", hostname, keyspec));
-	}
 	if (user == nil) {
-		getuser();
-		user = myname;
-		user = prompt("User", user, 1);
-	}
-	rv = sendrequest("USER " + user, 0);
+		factotum := load Factotum Factotum->PATH;
+		if (factotum != nil) {
+			factotum->init();
+			(user, password) = factotum->getuserpasswd(
+				sys->sprint("proto=pass server=%s service=ftp %s", hostname, keyspec));
+		}
+		if (user != nil)
+			rv = sendrequest("USER " + user, 0);
+		else {
+			getuser();
+			rv = sendrequest("USER " + prompt("User", myname, 1), 0);
+		}
+	} else
+		rv = sendrequest("USER " + user, 0);
 	if (rv != Success)
 		sendfail(rv);
 	(rv, code, l) = getfullreply(!quiet);
@@ -1627,7 +1631,7 @@ init(nil: ref Draw->Context, args: list of string)
 		if (rv != Incomplete)
 			fail(rv, l);
 		if (code == 331) {
-			if(password == nil)
+			if (user == nil)
 				password = prompt("Password", nil, 0);
 			rv = sendrequest2("PASS " + password, 0, "PASS XXXX");
 			if (rv != Success)

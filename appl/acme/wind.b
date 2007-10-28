@@ -249,18 +249,17 @@ Window.lock(w : self ref Window, owner : int)
 
 Window.unlock(w : self ref Window)
 {
-	i : int;
 	f : ref File;
+	# subtle: loop runs backwards to avoid tripping over
+	# winclose indirectly editing f.text and freeing f
+	# on the last iteration of the loop
 
 	f = w.body.file;
-	for(i=0; i<f.ntext; i++){
+	for(i:=f.ntext-1; i>=0; i--){
 		w = f.text[i].w;
 		w.owner = 0;
 		w.qlock.unlock();
 		w.close();
-		# w.close() can change up f.text; beware 
-		if(f.ntext>0 && w != f.text[i].w)
-			--i;	# w.close() deleted window 
 	}
 }
 

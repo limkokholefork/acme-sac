@@ -9,9 +9,9 @@ win [command]
 	commands executed with button 2 are 'executed' by sending
 	their text to the standard input of the command, appending
 	a newline if necessary.
-new command
-	Run the non-interactive command, placing its standard and
-	diagnostic output in a new window.
+new [command]
+	Run the non-interactive command (default cat(1)), placing its
+	standard and diagnostic output in a new window.
 aspell file
 	Run spell on the file, labeling the output with addresses so
 	misspelled words can be found in context using button 3.

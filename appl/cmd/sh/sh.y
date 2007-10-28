@@ -142,7 +142,7 @@ optnl:  # null
 EPERM: con "permission denied";
 EPIPE: con "write on closed pipe";
 
-#SHELLRC: con "lib/profile";
+SHELLRC: con "lib/profile";
 LIBSHELLRC: con "/lib/sh/profile";
 BUILTINPATH: con "/dis/sh";
 
@@ -252,8 +252,8 @@ loop: while (argv != nil && hd argv != nil && (hd argv)[0] == '-') {
 		runscript(ctxt, LIBSHELLRC, nil, 0);
 
 	if (argv == nil) {
-#		if (opts.lflag)
-#			runscript(ctxt, SHELLRC, nil, 0);
+		if (opts.lflag)
+			runscript(ctxt, SHELLRC, nil, 0);
 		if (isconsole(sys->fildes(0)))
 			interactive |= ctxt.INTERACTIVE;
 		ctxt.setoptions(interactive, 1);
@@ -569,6 +569,28 @@ listjoin(left, right: list of ref Listnode): list of ref Listnode
 	return right;
 }
 
+pipecmd(ctxt: ref Context, cmd: list of ref Listnode, redir: ref Redir): ref Sys->FD
+{
+	if(redir.fd2 != -1 || (redir.rtype & OAPPEND))
+		ctxt.fail("bad redir", "sh: bad redirection");
+	r := *redir;
+	case redir.rtype {
+	Sys->OREAD =>
+		r.rtype = Sys->OWRITE;
+	Sys->OWRITE =>
+		r.rtype = Sys->OREAD;
+	}
+			
+	p := array[2] of ref Sys->FD;
+	if(sys->pipe(p) == -1)
+		ctxt.fail("no pipe", sys->sprint("sh: cannot make pipe: %r"));
+	startchan := chan of (int, ref Expropagate);
+	spawn runasync(ctxt, 1, cmd, ref Redirlist((p[1], nil, r) :: nil), startchan);
+	p[1] = nil;
+	<-startchan;
+	return p[0];
+}
+
 glomoperation(ctxt: ref Context, n: ref Node, redirs: ref Redirlist): list of ref Listnode
 {
 	if (n == nil)
@@ -580,11 +602,15 @@ glomoperation(ctxt: ref Context, n: ref Node, redirs: ref Redirlist): list of re
 		nlist = ref Listnode(nil, n.word) :: nil;
 	n_REDIR =>
 		wlist := glob(glom(ctxt, n.left, ref Redirlist(nil), nil));
-		if (len wlist != 1 || (hd wlist).word == nil)
+		if (len wlist != 1)
 			ctxt.fail("bad redir", "sh: single redirection operand required");
-
-		# add to redir list
-		redirs.r = Redirword(nil, (hd wlist).word, *n.redir) :: redirs.r;
+		if((hd wlist).cmd != nil){
+			fd := pipecmd(ctxt, wlist, n.redir);
+			redirs.r = Redirword(fd, nil, (n.redir.rtype, fd.fd, -1)) :: redirs.r;
+			nlist = ref Listnode(nil, "/fd/"+string fd.fd) :: nil;
+		}else{
+			redirs.r = Redirword(nil, (hd wlist).word, *n.redir) :: redirs.r;
+		}
 	n_DUP =>
 		redirs.r = Redirword(nil, "", *n.redir) :: redirs.r;
 	n_LIST =>
@@ -1626,6 +1652,8 @@ patquote(word: string): string
 			i++;
 			if (i >= len word)
 				return outword;
+			if(word[i] == '[' && i < len word - 1 && word[i+1] == '~')
+				word[i+1] = '^';
 		}
 		outword[len outword] = word[i];
 	}

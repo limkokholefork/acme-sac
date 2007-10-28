@@ -24,11 +24,6 @@ fn winstart {
 	echo start $args | os cmd > /dev/null
 }
 
-fn lookman {
-	look $* /man/index | sed 's/^.*	//' |sort |uniq |sed 's;/man/;;
-s;(.*)/(.*);man \1 \2 # \2(\1);'
-}
-
 fn who {
 	ps | sed '/Broken/d
 	/Exiting/d
