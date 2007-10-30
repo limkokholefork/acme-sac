@@ -1,8 +1,8 @@
-_SYSTARG=$SYSTARG
-_OBJTYPE=$OBJTYPE
+SYSTARG=MacOSX
+#OBJTYPE=power
 <../../mkconfig
-SYSTARG=$_SYSTARG
-OBJTYPE=$_OBJTYPE
+SYSTARG=MacOSX
+#OBJTYPE=power
 
 #Configurable parameters
 
@@ -41,21 +41,22 @@ KERNDATE=`{$NDATE}
 LDFLAGS=$LDFLAGS -L/usr/X11R6/lib
 
 SYSLIBS= \
-	-lm -lX11 -lXext\
+	-lm\
+	-lX11 -lXext\
 	-lpthread\
 	-framework CoreFoundation\
 	-framework IOKit\
 #	-framework ApplicationServices\
 
-default:V:	$O.$CONF
+default:V:	$O.$CONF-x11
 
 
-$O.$CONF:	$OBJ $CONF.c $CONF.root.h # $LIBNAMES
+$O.$CONF-x11:	$OBJ $CONF.c $CONF.root.h # $LIBNAMES
 	$CC $CFLAGS '-DKERNDATE='$KERNDATE $CONF.c
 	$LD $LDFLAGS -o $target $OBJ $CONF.$O $LIBFILES $SYSLIBS
 
-install:V: $O.$CONF
-	cp $O.$CONF $INSTALLDIR/$CONF
+install:V: $O.$CONF-x11
+	cp $O.$CONF-x11 $INSTALLDIR/$CONF-x11
 
 <../port/portmkfile
 

@@ -635,6 +635,13 @@ Text.delete(t : self ref Text, q0 : int, q1 : int, tofile : int)
 	}
 }
 
+Text.constrain(t : self ref Text, q0 : int, q1 : int) : (int, int)
+{
+	p0 := min(q0, t.file.buf.nc);
+	p1 := min(q1, t.file.buf.nc);
+	return (p0, p1);
+}
+
 onechar : ref Astring;
 
 Text.readc(t : self ref Text, q : int) : int

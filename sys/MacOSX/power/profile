@@ -15,7 +15,7 @@ fn 9c {
 		- $args
 	)
 	cwd=`{echo $emuroot ^ `pwd}
-	cc='cc'
+	cc='cc -arch ppc'
 	cflags=(
 		-O2
 		-c
@@ -34,20 +34,21 @@ fn 9c {
 		-I$emuroot/sys/emu/port)
 	file=$1
 	ofile = `{basename $file .c}
+	ofile = `{basename $ofile .s}
 	ofile = `{basename $ofile .S}
 	ofile = `{echo $emuroot ^ `{cleanname -d `pwd $ofile^.o}}
 	file=`{cleanname -d `pwd $file}
 	file=`{echo $emuroot ^ $file}
-	#echo $cc -o $ofile $cflags $flags $file
+#	echo $cc -o $ofile $cflags $flags $file
 	os `{echo $cc -o $ofile $cflags $flags $file}
 }
 
 fn 9l {
-	ld='cc'
+	ld=$cc
 	ldflags= (-multiply_defined suppress)
 	syslibs=()
 	args = $*
-	echo $ld $ldflags  `{file2root $args} $syslibs
+#	echo $ld $ldflags  `{file2root $args} $syslibs
 	os `{echo $ld $ldflags  `{file2root $args} $syslibs }
 }
 
@@ -75,7 +76,7 @@ fn 9ar {
 	file=`{cleanname -d `pwd $file}
 	file=`{echo $emuroot ^ $file }
 	args = ${tl $*}
-	#echo $ar $arflags $file  `{file2root $args}
+#	echo $ar $arflags $file  `{file2root $args}
 	os `{echo $ar $arflags $file `{file2root $args}}
 }
 

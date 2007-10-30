@@ -14,7 +14,7 @@ FALSE, TRUE, BUFSIZE, Empty, Null, Delete, Insert, Replace, Filename, Astring: i
 File: import filem;
 Buffer: import buffm;
 Text: import textm;
-error, warning, stralloc, strfree: import utils;
+error, warning, min, stralloc, strfree: import utils;
 editerror: import edit;
 
 init(mods : ref Dat->Mods)
@@ -260,6 +260,12 @@ elogapply(f: ref File)
 	#
 	q0 := t.q0;
 	q1 := t.q1;
+	#
+	# We constrain the addresses in here (with text.constrain()) because
+	# overlapping changes will generate bogus addresses.   We will warn
+	# about changes out of sequence but proceed anyway; here we must
+	# keep things in range.
+	#
 
 	while(log.nc > 0){
 		up = log.nc-Buflogsize;
@@ -284,14 +290,15 @@ elogapply(f: ref File)
 			#	t.replace(b.q0, b.q0+b.nd, buf.s, b.nr, TRUE, 0);
 			#	break;
 			# }
-			t.delete(b.q0, b.q0+b.nd, TRUE);
+			(tq0, tq1) := t.constrain(b.q0, b.q0+b.nd);
+			t.delete(tq0, tq1, TRUE);
 			up -= b.nr;
 			for(i=0; i<b.nr; i+=n){
 				n = b.nr - i;
 				if(n > BUFSIZE)
 					n = BUFSIZE;
 				log.read(up+i, buf, 0, n);
-				t.insert(b.q0+i, buf.s, n, TRUE, 0);
+				t.insert(tq0+i, buf.s, n, TRUE, 0);
 			}
 			# t.q0 = b.q0;
 			# t.q1 = b.q0+b.nr;
@@ -302,7 +309,8 @@ elogapply(f: ref File)
 				mod = TRUE;
 				f.mark();
 			}
-			t.delete(b.q0, b.q0+b.nd, TRUE);
+			(tq0, tq1) := t.constrain(b.q0, b.q0+b.nd);
+			t.delete(tq0, tq1, TRUE);
 			# t.q0 = b.q0;
 			# t.q1 = b.q0;
 			break;
@@ -312,13 +320,14 @@ elogapply(f: ref File)
 				mod = TRUE;
 				f.mark();
 			}
+			(tq0, nil) := t.constrain(b.q0, b.q0);
 			up -= b.nr;
 			for(i=0; i<b.nr; i+=n){
 				n = b.nr - i;
 				if(n > BUFSIZE)
 					n = BUFSIZE;
 				log.read(up+i, buf, 0, n);
-				t.insert(b.q0+i, buf.s, n, TRUE, 0);
+				t.insert(tq0+i, buf.s, n, TRUE, 0);
 			}
 			# t.q0 = b.q0;
 			# t.q1 = b.q0+b.nr;
@@ -344,10 +353,26 @@ elogapply(f: ref File)
 	}
 	strfree(buf);
 	strfree(a);
+	if(warned){
+		#
+		# Changes were out of order, so the q0 and q1
+		# computed while generating those changes are not
+		# to be trusted.
+		#
+		q1 = min(q1, f.buf.nc);
+		q0 = min(q0, q1);
+	}
 	elogterm(f);
+
+	#
+	# Bad addresses will cause bufload to crash, so double check.
+	#
+	if(q0 > f.buf.nc || q1 > f.buf.nc || q0 > q1){
+		warning(nil, sprint("elogapply: can't happen %d %d %d\n", q0, q1, f.buf.nc));
+		q1 = min(q1, f.buf.nc);
+		q0 = min(q0, q1);
+	}
 
 	t.q0 = q0;
 	t.q1 = q1;
-	if(t.q1 > f.buf.nc)	# can't happen
-		t.q1 = f.buf.nc;
 }

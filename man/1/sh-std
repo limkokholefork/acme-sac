@@ -76,13 +76,6 @@ std, if, while, ~, no, !, apply, getlines, status, pctl, fn, and, or, raise, res
 .B subfn
 .I name command
 .br
-.B if
-[
-.I condition action
-]... [
-.I elseaction
-]
-.br
 .B while
 .I condition command
 .br
@@ -341,8 +334,9 @@ raises the exception
 will be truncated if it is longer than
 that allowed by
 .I raise
-(see
-.IR sys-exception (2)).
+(128 bytes in
+.IR utf (6)
+representation).
 Control will be transferred to the innermost
 rescue block in the same process that
 matches
@@ -372,13 +366,13 @@ matching
 where
 .I pattern
 is of the same form accepted by
-.I rescue
-(see
-.IR sys-exception (2));
-i.e. an exact match, or a prefix
-followed by an asterisk
-.RB ( * )
-which will match an exception starting with the prefix.
+Limbo's
+.B exception
+handling statement.
+Specifically, the pattern is a string that matches literally,
+except that a trailing
+.RB ` * '
+character will match any sequence of characters.
 If an exception is caught,
 .B rescue
 executes
@@ -470,17 +464,10 @@ its standard input is connected; otherwise file descriptor
 is connected.
 .B Pipe
 yields the name of a file that can be opened to access
-the other end of the pipe. This allows the construction
-of non-linear pipelines. For example, the following runs two commands
-.B old
-and
-.B new
-and uses
-.B cmp
-to compare their outputs
-.EX
-	cmp ${pipe from {old}} ${pipe from {new}}
-.EE
+the other end of the pipe. Note that this command is now
+deprecated in favour of the
+.B <{}
+redirection operator built in to the shell.
 .TP
 .B ${split}
 .B Split
@@ -543,15 +530,3 @@ Mount point for named pipes.
 .IR sh (1),
 .IR sh-expr (1),
 .IR sh-tk (1)
-.SH BUGS
-As the shell does not know about functions,
-the
-.B whatis
-command cannot return information about
-their value. Use
-.BI "whatis fn-" name
-to find out the current definition of a function,
-or
-.BI "whatis sfn-" name
-to find out the current definition of a substitution function.
-
