@@ -4,7 +4,7 @@
 #include "interp.h"
 #include "cell.root.h"
 
-ulong ndevs = 18;
+ulong ndevs = 19;
 
 extern Dev  rootdevtab;
 extern Dev  consdevtab;
@@ -15,6 +15,7 @@ extern Dev  progdevtab;
 extern Dev  srvdevtab;
 extern Dev  dupdevtab;
 extern Dev  fsdevtab;
+extern Dev  cmddevtab;
 extern Dev  ipdevtab;
 
 Dev* devtab[]={
@@ -27,6 +28,7 @@ Dev* devtab[]={
 	&srvdevtab,
 	&dupdevtab,
 	&fsdevtab,
+	&cmddevtab,
 	&ipdevtab,
 	nil,
 	nil,

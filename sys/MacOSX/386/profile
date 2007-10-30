@@ -15,7 +15,6 @@ fn 9c {
 		- $args
 	)
 	cwd=`{echo $emuroot ^ `pwd}
-#	cc='i686-apple-darwin8-gcc-4.0.1'
 	cc='cc -arch i386'
 	cflags=(
 		-O2
@@ -35,6 +34,7 @@ fn 9c {
 		-I$emuroot/sys/emu/port)
 	file=$1
 	ofile = `{basename $file .c}
+	ofile = `{basename $ofile .s}
 	ofile = `{basename $ofile .S}
 	ofile = `{echo $emuroot ^ `{cleanname -d `pwd $ofile^.o}}
 	file=`{cleanname -d `pwd $file}
@@ -58,7 +58,7 @@ fn file2root {
 		(if {~ $i '-*' } { # exclude libraries
  			echo $i
 		}
-		{! ~ $i '*.*'} { # and their arguments (names w/o dots)
+		{! ~ $i '*.*'} { # and their arguments (names w/o dots -- i.e. -framework CoreFoundation, etc) 
 			echo $i
 		}
 		{

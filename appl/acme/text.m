@@ -47,6 +47,7 @@ Textm : module {
 		show : fn(t : self ref Text, p : int, q : int);
 		fill : fn(t : self ref Text);
 		commit : fn(t : self ref Text, n : int);
+		constrain : fn(t : self ref Text, p : int, q : int) : (int, int);
 		setorigin : fn(t : self ref Text, p : int, q : int);
 		readc : fn(t : self ref Text, n : int) : int;
 		reset : fn(t : self ref Text);

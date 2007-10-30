@@ -34,6 +34,7 @@ fn 9c {
 		-I$emuroot/sys/emu/port)
 	file=$1
 	ofile = `{basename $file .c}
+	ofile = `{basename $ofile .s}
 	ofile = `{basename $ofile .S}
 	ofile = `{echo $emuroot ^ `{cleanname -d `pwd $ofile^.o}}
 	file=`{cleanname -d `pwd $file}
