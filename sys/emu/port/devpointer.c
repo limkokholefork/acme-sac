@@ -88,7 +88,7 @@ mousetrack(int b, int x, int y, int isdelta)
 	mouse.v.y = y;
 	mouse.v.b = b;
 	mouse.v.msec = msec;
-	if(!ptrq.full && lastb != b){
+	if(!ptrq.full && (lastb != b || (b&(8|16)))){
 		e = mouse.v;
 		ptrq.clicks[ptrq.wr] = e;
 		if(++ptrq.wr >= Nevent)
@@ -107,7 +107,7 @@ static int
 ptrqnotempty(void *x)
 {
 	USED(x);
-	return ptrq.full || ptrq.put != ptrq.get;
+	return ptrq.full || ptrq.put != ptrq.get || ptrq.wr != ptrq.rd;
 }
 
 static Pointer
@@ -117,9 +117,7 @@ mouseconsume(void)
 
 	Sleep(&ptrq.r, ptrqnotempty, 0);
 	ptrq.full = 0;
-	ptrq.get++; /*= ptrq.put; */
-	if(ptrq.get > ptrq.put)
-		ptrq.get = ptrq.put;
+	ptrq.get = ptrq.put;
 	if(ptrq.rd != ptrq.wr){
 		e = ptrq.clicks[ptrq.rd];
 		if(++ptrq.rd >= Nevent)

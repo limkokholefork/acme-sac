@@ -258,8 +258,7 @@ elogapply(f: ref File)
 	# The text.insert and text.delete calls below will update it again, so save the
 	# current setting and restore it at the end.
 	#
-	q0 := t.q0;
-	q1 := t.q1;
+
 	#
 	# We constrain the addresses in here (with text.constrain()) because
 	# overlapping changes will generate bogus addresses.   We will warn
@@ -300,8 +299,8 @@ elogapply(f: ref File)
 				log.read(up+i, buf, 0, n);
 				t.insert(tq0+i, buf.s, n, TRUE, 0);
 			}
-			# t.q0 = b.q0;
-			# t.q1 = b.q0+b.nr;
+			if(t.q0 == b.q0 && t.q1 == b.q0)
+				t.q1 += b.nr;
 			break;
 
 		Delete =>
@@ -311,8 +310,6 @@ elogapply(f: ref File)
 			}
 			(tq0, tq1) := t.constrain(b.q0, b.q0+b.nd);
 			t.delete(tq0, tq1, TRUE);
-			# t.q0 = b.q0;
-			# t.q1 = b.q0;
 			break;
 
 		Insert =>
@@ -329,8 +326,8 @@ elogapply(f: ref File)
 				log.read(up+i, buf, 0, n);
 				t.insert(tq0+i, buf.s, n, TRUE, 0);
 			}
-			# t.q0 = b.q0;
-			# t.q1 = b.q0+b.nr;
+			if(t.q0 == b.q0 && t.q1 == b.q0)
+				t.q1 += b.nr;
 			break;
 
 #		Filename =>
@@ -353,26 +350,15 @@ elogapply(f: ref File)
 	}
 	strfree(buf);
 	strfree(a);
-	if(warned){
-		#
-		# Changes were out of order, so the q0 and q1
-		# computed while generating those changes are not
-		# to be trusted.
-		#
-		q1 = min(q1, f.buf.nc);
-		q0 = min(q0, q1);
-	}
 	elogterm(f);
 
 	#
 	# Bad addresses will cause bufload to crash, so double check.
 	#
-	if(q0 > f.buf.nc || q1 > f.buf.nc || q0 > q1){
-		warning(nil, sprint("elogapply: can't happen %d %d %d\n", q0, q1, f.buf.nc));
-		q1 = min(q1, f.buf.nc);
-		q0 = min(q0, q1);
+	if(t.q0 > f.buf.nc || t.q1 > f.buf.nc || t.q0 > t.q1){
+		if(!warned)
+			warning(nil, sprint("elogapply: can't happen %d %d %d\n", t.q0, t.q1, f.buf.nc));
+		t.q1 = min(t.q1, f.buf.nc);
+		t.q0 = min(t.q0, t.q1);
 	}
-
-	t.q0 = q0;
-	t.q1 = q1;
 }

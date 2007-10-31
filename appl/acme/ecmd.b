@@ -266,7 +266,7 @@ c_cmd(t: ref Text, cp: ref Cmd): int
 {
 	elogreplace(t.file, addr.r.q0, addr.r.q1, cp.text.r, cp.text.n);
 	t.q0 = addr.r.q0;
-	t.q1 = addr.r.q0+cp.text.n;
+	t.q1 = addr.r.q1;
 	return TRUE;
 }
 
