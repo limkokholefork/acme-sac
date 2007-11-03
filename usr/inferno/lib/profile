@@ -2,19 +2,6 @@
 load std
 autoload=std
 
-# For Debugging
-#listen -A 'tcp!*!6666' {export  /prog &}
-
-# Moved to /lib/sh/profile so that local user acme-home dir can be created --underspecified
-#mount -ac {mntgen} /n
-#if {~ $emuhost Linux}{
-#	bind -c '#U*' /n/local
-#}{~ $emuhost Nt}{
-#	for i in c d {  # add more drive letters to suit
-#		trfs '#U' ^ $i ^ ':/' /n/$i >[2] /dev/null
-#	}
-#}
-
 bind -c /dis /dis
 bind -a '#w' /dev
 bind -c '#splumber' /chan
