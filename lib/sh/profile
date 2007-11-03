@@ -3,7 +3,28 @@
 load std
 
 home=/usr/^"{cat /dev/user}
-if {ftest -d $home} {} {cp -r /usr/inferno $home}
+mount -ac {mntgen} /n
+if {~ $emuhost MacOSX}{
+#	bind -c '#U*' /n/local
+	trfs '#U*' /n/local >[2] /dev/null
+	ghome=`{echo 'echo $HOME' | os sh}
+	lhome=/n/local/^$ghome^/acme-home
+}{~ $emuhost Linux}{
+#	bind -c '#U*' /n/local
+	trfs '#U*' /n/local >[2] /dev/null
+	ghome=`{echo 'echo $HOME' | os sh}
+	lhome=/n/local/^$ghome^/acme-home
+}{~ $emuhost Nt}{
+	for i in c d {  # add more drive letters to suit
+		trfs '#U' ^ $i ^ ':/' /n/$i >[2] /dev/null
+	}
+	lhome='/n/c/Documents␣and␣Settings/'^"{cat /dev/user}^/acme-home
+}{ else
+	lhome=$home
+}
 
-cd $home || {mount -a {mntgen} /usr; bind /usr/inferno $home; cd $home}
+if {ftest -d $lhome} {} {cp -r /usr/inferno $lhome}
 
+mount -a {mntgen} /usr
+{bind -c $lhome $home; cd $home} || {bind -c /usr/inferno $home; cd $home}
+mkdir -p $home/tmp && bind -bc $home/tmp /tmp
