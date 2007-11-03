@@ -5,20 +5,22 @@ load std
 home=/usr/^"{cat /dev/user}
 mount -ac {mntgen} /n
 if {~ $emuhost MacOSX}{
-#	bind -c '#U*' /n/local
 	trfs '#U*' /n/local >[2] /dev/null
 	ghome=`{echo 'echo $HOME' | os sh}
 	lhome=/n/local/^$ghome^/acme-home
 }{~ $emuhost Linux}{
-#	bind -c '#U*' /n/local
 	trfs '#U*' /n/local >[2] /dev/null
 	ghome=`{echo 'echo $HOME' | os sh}
 	lhome=/n/local/^$ghome^/acme-home
 }{~ $emuhost Nt}{
-	for i in c d {  # add more drive letters to suit
+	for i in C D {  # add more drive letters to suit
 		trfs '#U' ^ $i ^ ':/' /n/$i >[2] /dev/null
 	}
-	lhome='/n/c/Documents␣and␣Settings/'^"{cat /dev/user}^/acme-home
+	appdata=`{os env | sed -n '
+s/ /␣/g
+s/\\/\//g
+s/^APPDATA=([A-Z]):/\/n\/\1/p'}
+	lhome=$appdata^/acme-home
 }{ else
 	lhome=$home
 }
