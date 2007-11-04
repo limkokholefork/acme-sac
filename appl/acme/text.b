@@ -756,6 +756,18 @@ Text.complete(t: self ref Text): string
 	return nil;
 }
 
+scrollup(t: ref Text, n: int)
+{
+	q0 := t.backnl(t.org, n);
+	t.setorigin(q0, FALSE);
+}
+
+scrolldown(t: ref Text, n: int)
+{
+	q0 := t.org+frcharofpt(t.frame, (t.frame.r.min.x, t.frame.r.min.y+n*t.frame.font.height));
+	t.setorigin(q0, FALSE);
+}
+
 Text.typex(t : self ref Text, r : int, echomode : int)
 {
 	q0, q1 : int;
@@ -813,28 +825,24 @@ Text.typex(t : self ref Text, r : int, echomode : int)
 	
 	case(r){
 		Dat->Kscrolldown=>
-			if(t.what != Body)
-				return;
-			n = 2;
-			q0 = t.org+frcharofpt(t.frame, (t.frame.r.min.x, t.frame.r.min.y+n*t.frame.font.height));
-			t.setorigin(q0, FALSE);
+			if(t.what == Body)
+				scrolldown(t, 2);
 			return;
 		Dat->Kscrollup =>
-			if(t.what != Body)
-				return;
-			n = 4;
-			q0 = t.backnl(t.org, n);
-			t.setorigin(q0, FALSE);
+			if(t.what == Body)
+				scrollup(t, 4);
 			return;
 		Keyboard->Down=>
-			n = t.frame.maxlines/2;
-			q0 = t.org+frcharofpt(t.frame, (t.frame.r.min.x, t.frame.r.min.y+n*t.frame.font.height));
-			t.setorigin(q0, FALSE);
+			scrolldown(t, t.frame.maxlines/2);
 			return;
 		Keyboard->Up=>
-			n = t.frame.maxlines/2;
-			q0 = t.backnl(t.org, n);
-			t.setorigin(q0, FALSE);
+			scrollup(t, t.frame.maxlines/2);
+			return;
+		Keyboard->Pgdown =>
+			scrolldown(t, 2*t.frame.maxlines/3);
+			return;
+		Keyboard->Pgup =>
+			scrollup(t, 2*t.frame.maxlines/3);
 			return;
 		Keyboard->Left =>
 			t.commit(TRUE);
