@@ -209,8 +209,6 @@ winproc(void *a)
 		;
 
 	CreateNewWindow(kDocumentWindowClass, windowAttrs, &winRect, &theWindow);
-	CreateWindowGroup(0, &winGroup);
-	SetWindowGroup(theWindow, winGroup);
 
 	SetWindowTitleWithCFString(theWindow, CFSTR("Acme SAC"));
 
