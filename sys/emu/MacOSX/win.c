@@ -250,9 +250,6 @@ winproc(void *a)
 	window_resized();
 	Rectangle rect =  { { 0, 0 }, { bounds.size.width, bounds.size.height } };
 	wmtrack(0, rect.max.x, rect.max.y, 0);
-//	drawqlock();
-//	flushmemscreen(rect);
-//	drawqunlock();
  
 	// Run the event loop
 	SelectWindow(theWindow);
