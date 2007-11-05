@@ -54,7 +54,6 @@ enum {
 	kFullScreenCmd = 2,
 };
 
-static WindowGroupRef winGroup = NULL;
 static WindowRef theWindow = NULL;
 static CGContextRef context;
 static CGDataProviderRef dataProviderRef;
@@ -69,7 +68,7 @@ static Boolean button2 = false;
 static Boolean button3 = false;
 
 static Boolean needflush = false;
-
+static Boolean fullscreen_race = false;
 
 static int
 isready(void*a)
@@ -176,7 +175,6 @@ static void
 winproc(void *a)
 {
 	MenuItemIndex index;
-	int dx, dy;
 
 	winRect.left = 30;
 	winRect.top = 60;
@@ -191,12 +189,9 @@ winproc(void *a)
 
 	CreateNewMenu(1004, 0, &viewMenu);
 	SetMenuTitleWithCFString(viewMenu, CFSTR("View"));
-	AppendMenuItemTextWithCFString(viewMenu, CFSTR("Full Screen"), 0,
-			kFullScreenCmd, &index);
-	SetMenuItemCommandKey(viewMenu, index, 0, 'F');
-	AppendMenuItemTextWithCFString(viewMenu, CFSTR("ctrl-opt to return"),
-			kMenuItemAttrDisabled,
-			kFullScreenCmd, &index);
+	AppendMenuItemTextWithCFString(viewMenu, CFSTR("Toggle Full Screen"), 0,
+								kFullScreenCmd, &index);
+	SetMenuItemCommandKey(viewMenu, index, FALSE, 'F');
 	InsertMenu(viewMenu, GetMenuID(windMenu));
 
 	DrawMenuBar();
@@ -325,7 +320,7 @@ static WindowRef oldWindow = NULL;
 static void
 leave_full_screen(void)
 {
-	if (0 && amFullScreen) {
+	if (amFullScreen) {
 		EndFullScreen(fullScreenRestore, 0);
 		theWindow = oldWindow;
 		ShowWindow(theWindow);
@@ -350,7 +345,7 @@ full_screen(void)
 		BeginFullScreen(&fullScreenRestore, device, 0, 0, &theWindow, 0, 0);
 		amFullScreen = 1;
 		window_resized();
-		Rectangle rect =  { { 0, 0 }, { bounds.size.width, bounds.size.height} };
+		Rectangle rect =  { { 0, 0 }, { bounds.size.width, bounds.size.height } };
 		wmtrack(0, rect.max.x, rect.max.y, 0);
 		drawqlock();
 		flushmemscreen(rect);
@@ -383,8 +378,6 @@ MainWindowEventHandler(EventHandlerCallRef nextHandler, EventRef event, void *us
 							sizeof(macKeyModifiers), NULL, &macKeyModifiers);
         switch(kind) {
 		case kEventRawKeyModifiersChanged:
-			if (macKeyModifiers == (controlKey | optionKey)) leave_full_screen();
-
 			switch(macKeyModifiers & (optionKey | cmdKey)) {
 			case (optionKey | cmdKey):
 				/* due to chording we need to handle the case when both
@@ -438,11 +431,20 @@ MainWindowEventHandler(EventHandlerCallRef nextHandler, EventRef event, void *us
 			break;
 		case kEventRawKeyDown:
 		case kEventRawKeyRepeat:
-			if(macKeyModifiers != cmdKey) {
+			if(macKeyModifiers == cmdKey) {
+				if(macCharCodes == 'f' || macCharCodes == 'F') {
+					if(fullscreen_race)
+						fullscreen_race = false;
+					else
+						full_screen();
+				} else {
+					int key = convert_key(macKeyCode, macCharCodes);
+					if (key != -1) gkbdputc(gkbdq, key);
+				}
+			} else {
 				int key = convert_key(macKeyCode, macCharCodes);
 				if (key != -1) gkbdputc(gkbdq, key);
-			} else
-				result = eventNotHandledErr;
+			}			
 			break;
 		default:
 			break;
@@ -515,15 +517,32 @@ MainWindowCommandHandler(EventHandlerCallRef nextHandler, EventRef event, void *
 	if(class == kEventClassCommand) {
 		HICommand theHICommand;
 		GetEventParameter(event, kEventParamDirectObject, typeHICommand,
-							NULL, sizeof(HICommand), NULL, &theHICommand);
+						NULL, sizeof(HICommand), NULL, &theHICommand);
 
 		switch(theHICommand.commandID) {
+		
+		/* since we won't see this event in full-screen mode we need
+		 * to intercept keyboard clicks too (apple-F). here we only turn fullscreen,
+		 * there we only turn it off. there is a race because the
+		 * way OSX handles keyboard shortcut: we enter here first,
+		 * then a keyboard event will be delivered to the app again,
+		 * effectively turning the fullscreen off. 
+		 *
+		 * the appropriate solution is to use an overlay window in
+		 * ScreenSaver Level to draw while our app is quiet 
+		 */
+
 		case kHICommandQuit:
 			cleanexit(0);
 			break;
 
 		case kFullScreenCmd:
-			full_screen();
+			if (fullscreen_race)
+				fullscreen_race = false;
+			else {
+				fullscreen_race = true;
+				full_screen();
+			}
 			break;
 
 		default:
@@ -532,13 +551,9 @@ MainWindowCommandHandler(EventHandlerCallRef nextHandler, EventRef event, void *
 		}
 	} else if(class == kEventClassWindow) {
 		WindowRef     window;
-		_Rect          rectPort = {0,0,0,0};
 
 		GetEventParameter(event, kEventParamDirectObject, typeWindowRef,
-							NULL, sizeof(WindowRef), NULL, &window);
-
-		if(window)
-			GetPortBounds(GetWindowPort(window), &rectPort);
+						NULL, sizeof(WindowRef), NULL, &window);
 
 		switch(kind) {
 		case kEventWindowClosed:
