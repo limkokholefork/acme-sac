@@ -35,9 +35,10 @@
 
 #define rWindowResource  128
 
-extern	void		flushmemscreen(Rectangle);
+extern void flushmemscreen(Rectangle);
+extern void wmtrack(int, int, int, int);
 
-Memimage	*gscreen;
+Memimage *gscreen;
 
 static int readybit;
 static Rendez	rend;
@@ -66,8 +67,12 @@ static _Rect winRect;
 static Boolean altPressed = false;
 static Boolean button2 = false;
 static Boolean button3 = false;
+static uint32_t mousebuttons = 0; // bitmask of buttons currently down
+static uint32_t mouseX = 0;
+static uint32_t mouseY = 0;
 
 static Boolean needflush = false;
+
 static Boolean fullscreen_race = false;
 
 static int
@@ -109,9 +114,9 @@ max_bounds()
 		r = CGDisplayBounds(d[i]);
 		rx = r.size.width;
 		ry = r.size.height;
-		if (rx > bx)
+		if(rx > bx)
 			bx = rx;
-		if (ry > by)
+		if(ry > by)
 			by = ry;
 	}
 	
@@ -128,14 +133,13 @@ screeninit(void)
 	SetFrontProcess(&psn);
 
 	fmt = XBGR32; //XRGB32;
-
 	devRect = max_bounds();
 	dx = devRect.size.width;
 	dy = devRect.size.height;
 
 	gscreen = allocmemimage(Rect(0,0,dx,dy), fmt);
 	dataProviderRef = CGDataProviderCreateWithData(0, gscreen->data->bdata,
-						dx * dy * 4, 0);
+					dx * dy * 4, 0);
 	fullScreenImage = CGImageCreate(dx, dy, 8, 32, dx * 4,
 				CGColorSpaceCreateDeviceRGB(),
 				kCGImageAlphaNoneSkipLast,
@@ -204,7 +208,6 @@ winproc(void *a)
 		;
 
 	CreateNewWindow(kDocumentWindowClass, windowAttrs, &winRect, &theWindow);
-
 	SetWindowTitleWithCFString(theWindow, CFSTR("Acme SAC"));
 
 	if(PasteboardCreate(kPasteboardClipboard, &appleclip) != noErr)
@@ -216,6 +219,14 @@ winproc(void *a)
 		{ kEventClassCommand, kEventCommandProcess }
 	};
 	const EventTypeSpec events[] = {
+		{ kEventClassTextInput, kEventTextInputUpdateActiveInputArea },
+		{ kEventClassTextInput, kEventTextInputUnicodeForKeyEvent },
+		{ kEventClassTextInput, kEventTextInputOffsetToPos },
+		{ kEventClassTextInput, kEventTextInputPosToOffset },
+		{ kEventClassTextInput, kEventTextInputShowHideBottomWindow },
+		{ kEventClassTextInput, kEventTextInputGetSelectedText },
+		{ kEventClassTextInput, kEventTextInputUnicodeText },
+		{ kEventClassTextInput, kEventTextInputFilterText },
 		{ kEventClassKeyboard, kEventRawKeyDown },
 		{ kEventClassKeyboard, kEventRawKeyModifiersChanged },
 		{ kEventClassKeyboard, kEventRawKeyRepeat },
@@ -243,11 +254,9 @@ winproc(void *a)
 	ShowWindow(theWindow);
 	ShowMenuBar();
 	window_resized();
-	Rectangle rect =  { { 0, 0 }, { bounds.size.width, bounds.size.height } };
-	wmtrack(0, rect.max.x, rect.max.y, 0);
- 
-	// Run the event loop
+	Rectangle rect =  { { 0, 0 }, { bounds.size.width, bounds.size.height } };		wmtrack(0, rect.max.x, rect.max.y, 0);
 	SelectWindow(theWindow);
+	// Run the event loop
 	readybit = 1;
 	Wakeup(&rend);
 	RunApplicationEventLoop();
@@ -307,6 +316,68 @@ convert_key(UInt32 key, UInt32 charcode)
 	}
 }
 
+/*
+enum {
+	kF1KeyCode	 = 0x7A,	// Undo
+	kF2KeyCode	 = 0x78,	// Cut
+	kF3KeyCode	 = 0x63,	// Copy
+	kF4KeyCode	 = 0x76,	// Paste
+	kF5KeyCode	 = 0x60,
+	kF6KeyCode	 = 0x61,
+	kF7KeyCode	 = 0x62,
+	kF8KeyCode	 = 0x64,
+	kF9KeyCode	 = 0x65,
+	kF10KeyCode	 = 0x6D,
+	kF11KeyCode	 = 0x67,
+	kF12KeyCode	 = 0x6F,
+	kF13KeyCode	 = 0x69,	// Print Screen
+	kF14KeyCode	 = 0x6B,	// Scroll Lock
+	kF15KeyCode	 = 0x71,	// Pause
+	};
+
+static int
+convert_unichar(UInt32 charcode)
+{
+	switch(charcode) {
+	case kEnterCharCode:
+	case kReturnCharCode: return '\n';
+	case kEscapeCharCode: return 27;
+	case kBackspaceCharCode: return '\b';
+	case kOptionUnicode: return Kalt;
+	case kControlUnicode: return Kctl;
+	case kShiftUnicode: return Kshift;
+	case kFunctionKeyCharCode:
+		switch(charcode) {
+		case kF1KeyCode: return KF+1;
+		case kF2KeyCode: return KF+2;
+		case kF3KeyCode: return KF+3;
+		case kF4KeyCode: return KF+4;
+		case kF5KeyCode: return KF+5;
+		case kF6KeyCode: return KF+6;
+		case kF7KeyCode: return KF+7;
+		case kF8KeyCode: return KF+8;
+		case kF9KeyCode: return KF+9;
+		case kF10KeyCode: return KF+10;
+		case kF11KeyCode: return KF+11;
+		case kF12KeyCode: return KF+12;
+		default: return charcode;
+		}
+//	case kInsertCharCode: return Kins;
+	case kDeleteCharCode: return 0x7F;
+	case kHomeCharCode: return Khome;
+	case kEndCharCode: return Kend;
+	case kTabCharCode: return '\t';
+	case kPageUpCharCode: return Kpgup;
+	case kPageDownCharCode: return Kpgdown;
+	case kUpArrowCharCode: return Kup;
+	case kDownArrowCharCode: return Kdown;
+	case kLeftArrowCharCode: return Kleft;
+	case kRightArrowCharCode: return Kright;
+	default: return charcode;
+	}
+}
+*/
+
 void
 sendbuttons(int b, int x, int y)
 {
@@ -320,7 +391,7 @@ static WindowRef oldWindow = NULL;
 static void
 leave_full_screen(void)
 {
-	if (amFullScreen) {
+	if(amFullScreen) {
 		EndFullScreen(fullScreenRestore, 0);
 		theWindow = oldWindow;
 		ShowWindow(theWindow);
@@ -337,7 +408,7 @@ leave_full_screen(void)
 static void
 full_screen(void)
 {
-	if (!amFullScreen) {
+	if(!amFullScreen) {
 		oldWindow = theWindow;
 		HideWindow(theWindow);
 		GDHandle device;
@@ -355,118 +426,196 @@ full_screen(void)
 }
 
 static OSStatus
-MainWindowEventHandler(EventHandlerCallRef nextHandler, EventRef event, void *userData)
+handle_key_event(EventRef event)
 {
 	OSStatus result = noErr;
-	result = CallNextEventHandler(nextHandler, event);
-	UInt32 class = GetEventClass (event);
+
+	char macCharCodes;
+	UInt32 macKeyCode;
+	UInt32 macKeyModifiers;
+
+	GetEventParameter(event, kEventParamKeyMacCharCodes, typeChar,
+					NULL, sizeof(macCharCodes), NULL, &macCharCodes);
+	GetEventParameter(event, kEventParamKeyCode, typeUInt32, NULL,
+					sizeof(macKeyCode), NULL, &macKeyCode);
+	GetEventParameter(event, kEventParamKeyModifiers, typeUInt32, NULL,
+					sizeof(macKeyModifiers), NULL, &macKeyModifiers);
+
 	UInt32 kind = GetEventKind (event);
-	static uint32_t mousebuttons = 0; // bitmask of buttons currently down
-	static uint32_t mouseX = 0;
-	static uint32_t mouseY = 0;
+	switch(kind) {
 
-	if(class == kEventClassKeyboard) {
-		char macCharCodes;
-		UInt32 macKeyCode;
-		UInt32 macKeyModifiers;
+	case kEventRawKeyModifiersChanged:
+		switch(macKeyModifiers & (optionKey | cmdKey)) {
 
-		GetEventParameter(event, kEventParamKeyMacCharCodes, typeChar,
-							NULL, sizeof(macCharCodes), NULL, &macCharCodes);
-		GetEventParameter(event, kEventParamKeyCode, typeUInt32, NULL,
-							sizeof(macKeyCode), NULL, &macKeyCode);
-		GetEventParameter(event, kEventParamKeyModifiers, typeUInt32, NULL,
-							sizeof(macKeyModifiers), NULL, &macKeyModifiers);
-        switch(kind) {
-		case kEventRawKeyModifiersChanged:
-			switch(macKeyModifiers & (optionKey | cmdKey)) {
-			case (optionKey | cmdKey):
-				/* due to chording we need to handle the case when both
-				 * modifier keys are pressed at the same time.
-				 * currently it's only 2-3 snarf and the 3-2 noop
-				 */
-				altPressed = true;
-				if(mousebuttons & 1 || mousebuttons & 2 || mousebuttons & 4) {
-					mousebuttons |= 2;	/* set button 2 */
-					mousebuttons |= 4;	/* set button 3 */
-					button2 = true;
-					button3 = true;
-					sendbuttons(mousebuttons, mouseX, mouseY);
-				}
-				break;
-			case optionKey:
-				altPressed = true;
-				if(mousebuttons & 1 || mousebuttons & 4) {
-					mousebuttons |= 2;	/* set button 2 */
-					button2 = true;
-					sendbuttons(mousebuttons, mouseX, mouseY);
-				}
-				break;
-			case cmdKey:
-				if(mousebuttons & 1 || mousebuttons & 2) {
-					mousebuttons |= 4;	/* set button 3 */
-					button3 = true;
-					sendbuttons(mousebuttons, mouseX, mouseY);
-				}
-				break;
-			case 0:
-			default:
-				if(button2 || button3) {
-					if(button2) {
-						mousebuttons &= ~2;	/* clear button 2 */
-						button2 = false;
-						altPressed = false;
-					}
-					if(button3) {
-						mousebuttons &= ~4;	/* clear button 3 */
-						button3 = false;
-					}
-					sendbuttons(mousebuttons, mouseX, mouseY);
-				}
-				if(altPressed) {
-					gkbdputc(gkbdq, Kalt);
-					altPressed = false;
-				}
-				break;
+		case (optionKey | cmdKey):
+			/* due to chording we need to handle the case when both
+			 * modifier keys are pressed at the same time.
+			 * currently it's only 2-3 snarf and the 3-2 noop
+			 */
+			altPressed = true;
+			if(mousebuttons & 1 || mousebuttons & 2 || mousebuttons & 4) {
+				mousebuttons |= 2;	/* set button 2 */
+				mousebuttons |= 4;	/* set button 3 */
+				button2 = true;
+				button3 = true;
+				sendbuttons(mousebuttons, mouseX, mouseY);
 			}
 			break;
-		case kEventRawKeyDown:
-		case kEventRawKeyRepeat:
-			if(macKeyModifiers == cmdKey) {
-				if(macCharCodes == 'f' || macCharCodes == 'F') {
-					if(fullscreen_race)
-						fullscreen_race = false;
-					else
-						full_screen();
-				} else {
-					int key = convert_key(macKeyCode, macCharCodes);
-					if (key != -1) gkbdputc(gkbdq, key);
-				}
-			} else {
-				int key = convert_key(macKeyCode, macCharCodes);
-				if (key != -1) gkbdputc(gkbdq, key);
-			}			
+		
+		case optionKey:
+			altPressed = true;
+			if(mousebuttons & 1 || mousebuttons & 4) {
+				mousebuttons |= 2;	/* set button 2 */
+				button2 = true;
+				sendbuttons(mousebuttons, mouseX, mouseY);
+			}
 			break;
+		
+		case cmdKey:
+			if(mousebuttons & 1 || mousebuttons & 2) {
+				mousebuttons |= 4;	/* set button 3 */
+				button3 = true;
+				sendbuttons(mousebuttons, mouseX, mouseY);
+			}
+			break;
+		
+		case 0:
 		default:
+			if(button2 || button3) {
+				if(button2) {
+					mousebuttons &= ~2;	/* clear button 2 */
+					button2 = false;
+					altPressed = false;
+				}
+				if(button3) {
+					mousebuttons &= ~4;	/* clear button 3 */
+					button3 = false;
+				}
+				sendbuttons(mousebuttons, mouseX, mouseY);
+			}
+			if(altPressed) {
+				gkbdputc(gkbdq, Kalt);
+				altPressed = false;
+			}
 			break;
 		}
-	}
-	else if(class == kEventClassMouse) {
-		_Point mousePos;
-
-		GetEventParameter(event, kEventParamMouseLocation, typeQDPoint,
-							0, sizeof mousePos, 0, &mousePos);
+		break;
 		
+	case kEventRawKeyDown:
+	case kEventRawKeyRepeat:
+		if(macKeyModifiers == cmdKey) {
+			if(macCharCodes == 'f' || macCharCodes == 'F') {
+				if(fullscreen_race)
+					fullscreen_race = false;
+				else
+					full_screen();
+//			} else if(macCharCodes == 'q' || macCharCodes == 'Q') {
+//				cleanexit(0);
+			} else
+				result = eventNotHandledErr; // let the unicode input event get it
+		} else
+			result = eventNotHandledErr; // let the unicode input event get it		
+				
+	default:
+		{
+			// before tossing event to unicode handler, check for and try to handle special characters
+			if(result == eventNotHandledErr) {
+				int key = convert_key(macKeyCode, macCharCodes);
+				if(key != macCharCodes) {
+					result = noErr;
+					gkbdputc(gkbdq, key);
+				}
+			}
+		}
+		break;
+
+	}
+
+	return result;
+}
+
+static OSStatus
+handle_unicode(EventRef event)
+{
+	UInt32 actual_size, i;
+	UniChar *text;
+	UniCharCount num_chars;
+
+	OSStatus result = GetEventParameter (event, kEventParamTextInputSendText,
+									typeUnicodeText, NULL, 0, &actual_size, NULL);
+	if(result == noErr) {
+		text = (UniChar*) NewPtr(actual_size);
+		result = GetEventParameter (event, kEventParamTextInputSendText,
+		   						typeUnicodeText, NULL, actual_size, NULL, text);
+		if(result == noErr) {
+			EventRef kevent;
+			result = GetEventParameter(event, kEventParamTextInputSendKeyboardEvent, typeEventRef,
+									NULL, sizeof(kevent), NULL, &kevent);
+			if(result == noErr) {
+				result = handle_key_event(kevent);
+				if(result == eventNotHandledErr) {
+					num_chars = actual_size / sizeof(UniChar);
+					for(i=0; i < num_chars; i++) {
+//						int key = convert_unichar(text[i]);
+//						gkbdputc(gkbdq, key);
+						gkbdputc(gkbdq, text[i]);
+					}
+				}
+			}
+		}
+	}
+
+	return result;
+}
+
+static OSStatus
+handle_text_input_event(EventRef event)
+{
+	OSStatus result;
+
+	UInt32 kind = GetEventKind (event);
+	switch(kind) {
+		
+	case kEventTextInputUpdateActiveInputArea:
+	case kEventTextInputUnicodeForKeyEvent:
+	case kEventTextInputUnicodeText:
+		result = handle_unicode(event);
+		break;
+	
+	case kEventTextInputOffsetToPos:
+	case kEventTextInputPosToOffset:
+	case kEventTextInputShowHideBottomWindow:
+	case kEventTextInputGetSelectedText:
+	case kEventTextInputFilterText:
+	default:
+		result = eventNotHandledErr;
+		break;
+		
+	}
+	return result;
+}
+
+static OSStatus
+handle_mouse_event(EventRef event)
+{
+	_Point mousePos;
+	OSStatus result = GetEventParameter(event, kEventParamMouseLocation, typeQDPoint,
+									0, sizeof mousePos, 0, &mousePos);
+	if(result == noErr) {
+		UInt32 kind = GetEventKind (event);
 		switch(kind) {
+
 		case kEventMouseWheelMoved:
 		{
-		    int32_t wheeldelta;
+			int32_t wheeldelta;
 			GetEventParameter(event,kEventParamMouseWheelDelta,typeSInt32,
-								0,sizeof(wheeldelta), 0, &wheeldelta);
+							0,sizeof(wheeldelta), 0, &wheeldelta);
 			mouseX = mousePos.h - winRect.left;
 			mouseY = mousePos.v - winRect.top;
 			sendbuttons(wheeldelta>0 ? 8 : 16, mouseX, mouseY);
 			break;
 		}
+			
 		case kEventMouseUp:
 		case kEventMouseDown:
 		{
@@ -488,18 +637,54 @@ MainWindowEventHandler(EventHandlerCallRef nextHandler, EventRef event, void *us
 			mousebuttons |= ((buttons & 2)<<1);
 			mousebuttons |= ((buttons & 4)>>1);
 
-		} /* Fallthrough */
+		}
+					
+		/* Fallthrough */
+		
 		case kEventMouseMoved:
 		case kEventMouseDragged:
 			mouseX = mousePos.h - winRect.left;
 			mouseY = mousePos.v - winRect.top;
 			sendbuttons(mousebuttons, mouseX, mouseY);
 			break;
+			
 		default:
 			result = eventNotHandledErr;
 			break;
+
 		}
 	}
+	
+	return result;
+}
+
+static OSStatus
+MainWindowEventHandler(EventHandlerCallRef nextHandler, EventRef event, void *userData)
+{
+	OSStatus result = noErr;
+	result = CallNextEventHandler(nextHandler, event);
+	
+	UInt32 class = GetEventClass (event);	
+	switch(class) {
+
+	case kEventClassTextInput:
+		handle_text_input_event(event);			
+		break;
+
+	case kEventClassKeyboard:
+//		handle_key_event(event);
+		break;
+
+	case kEventClassMouse:
+		handle_mouse_event(event);
+		break;
+			
+	default:
+		result = eventNotHandledErr;
+		break;
+
+	}
+	
 	return result;
 }
 
@@ -537,7 +722,7 @@ MainWindowCommandHandler(EventHandlerCallRef nextHandler, EventRef event, void *
 			break;
 
 		case kFullScreenCmd:
-			if (fullscreen_race)
+			if(fullscreen_race)
 				fullscreen_race = false;
 			else {
 				fullscreen_race = true;
@@ -551,7 +736,6 @@ MainWindowCommandHandler(EventHandlerCallRef nextHandler, EventRef event, void *
 		}
 	} else if(class == kEventClassWindow) {
 		WindowRef     window;
-
 		GetEventParameter(event, kEventParamDirectObject, typeWindowRef,
 						NULL, sizeof(WindowRef), NULL, &window);
 
@@ -561,7 +745,7 @@ MainWindowCommandHandler(EventHandlerCallRef nextHandler, EventRef event, void *
 			cleanexit(0); // only one window
 			break;
 
-		//resize window
+		// resize window
 		case kEventWindowBoundsChanged:
 			window_resized();
 			Rectangle rect =  { { 0, 0 }, { bounds.size.width, bounds.size.height } };
@@ -586,7 +770,7 @@ flushmemscreen(Rectangle r)
 	CGRect rbounds;
 
 	// sanity check.  Trips from the initial "terminal"
-	if (r.max.x < r.min.x || r.max.y < r.min.y)
+	if(r.max.x < r.min.x || r.max.y < r.min.y)
 		return;
 
 	rbounds.size.width = r.max.x - r.min.x;
@@ -663,7 +847,7 @@ clipread(void)
 	// Wow.  This is ridiculously complicated.
 	PasteboardSynchronize(appleclip);
 	if((err = PasteboardGetItemCount(appleclip, &nitems)) != noErr) {
-		fprint(2, "apple pasteboard GetItemCount failed - Error %d\n", err);
+		fprintf(stderr, "apple pasteboard GetItemCount failed - Error %d\n", (int)err);
 		return 0;
 	}
 
@@ -688,14 +872,14 @@ clipread(void)
 		for(flavorIndex = 0; flavorIndex < flavorCount; ++flavorIndex){
 			CFStringRef flavorType;
 			flavorType = (CFStringRef)CFArrayGetValueAtIndex(flavorTypeArray, flavorIndex);
-			if (UTTypeConformsTo(flavorType, CFSTR("public.utf16-plain-text"))){
+			if(UTTypeConformsTo(flavorType, CFSTR("public.utf16-plain-text"))){
 				if((err = PasteboardCopyItemFlavorData(appleclip, itemID,
 					CFSTR("public.utf16-plain-text"), &cfdata)) != noErr){
 					fprintf(stderr, "apple pasteboard CopyItem failed - Error %d\n", (int)err);
 					return 0;
 				}
 				CFIndex length = CFDataGetLength(cfdata);
-				if (length > sizeof rsnarf) length = sizeof rsnarf;
+				if(length > sizeof rsnarf) length = sizeof rsnarf;
 				CFDataGetBytes(cfdata, CFRangeMake(0, length), (uint8_t *)rsnarf);
 				snprint(snarf, sizeof snarf, "%.*S", length/sizeof(Rune), rsnarf);
 				for(s = snarf; *s; s++)
