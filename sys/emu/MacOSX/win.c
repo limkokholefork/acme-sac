@@ -348,7 +348,6 @@ full_screen(void)
 	if (!amFullScreen) {
 		oldWindow = theWindow;
 		HideWindow(theWindow);
-		BeginFullScreen(&fullScreenRestore, 0, 0, 0, &theWindow, 0, 0);
 		GDHandle device;
 		GetWindowGreatestAreaDevice(theWindow, kWindowTitleBarRgn, &device, NULL);
 		BeginFullScreen(&fullScreenRestore, device, 0, 0, &theWindow, 0, 0);
