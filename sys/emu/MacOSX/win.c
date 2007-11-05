@@ -212,7 +212,7 @@ winproc(void *a)
 	CreateWindowGroup(0, &winGroup);
 	SetWindowGroup(theWindow, winGroup);
 
-	SetWindowTitleWithCFString(theWindow, CFSTR("Inferno"));
+	SetWindowTitleWithCFString(theWindow, CFSTR("Acme SAC"));
 
 	if(PasteboardCreate(kPasteboardClipboard, &appleclip) != noErr)
 		sysfatal("pasteboard create failed");
