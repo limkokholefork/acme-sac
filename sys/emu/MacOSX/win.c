@@ -166,7 +166,7 @@ flushproc(void *a)
 			CGContextFlush(context);
 			QDEndCGContext(GetWindowPort(theWindow), &context);
 			needflush = false;
- 			drawqunlock();
+			drawqunlock();
 		}
 		usleep(33333);
 	}
@@ -233,8 +233,8 @@ winproc(void *a)
 		{ kEventClassMouse, kEventMouseWheelMoved },
 	};
 
- 	InstallApplicationEventHandler (
- 								NewEventHandlerUPP (MainWindowEventHandler),
+	InstallApplicationEventHandler (
+								NewEventHandlerUPP (MainWindowEventHandler),
 								GetEventTypeCount(events),
 								events,
 								NULL,
@@ -339,8 +339,8 @@ leave_full_screen(void)
 		Rectangle rect =  { { 0, 0 }, { bounds.size.width, bounds.size.height } };
 		wmtrack(0, rect.max.x, rect.max.y, 0);
 		drawqlock();
- 		flushmemscreen(rect);
- 		drawqunlock();
+		flushmemscreen(rect);
+		drawqunlock();
 	}
 }
 
@@ -359,8 +359,8 @@ full_screen(void)
 		Rectangle rect =  { { 0, 0 }, { bounds.size.width, bounds.size.height} };
 		wmtrack(0, rect.max.x, rect.max.y, 0);
 		drawqlock();
- 		flushmemscreen(rect);
- 		drawqunlock();
+		flushmemscreen(rect);
+		drawqunlock();
 	} else
 		leave_full_screen();
 }
@@ -558,8 +558,8 @@ MainWindowCommandHandler(EventHandlerCallRef nextHandler, EventRef event, void *
 			Rectangle rect =  { { 0, 0 }, { bounds.size.width, bounds.size.height } };
 			wmtrack(0, rect.max.x, rect.max.y, 0);
 			drawqlock();
- 			flushmemscreen(rect);
- 			drawqunlock();
+			flushmemscreen(rect);
+			drawqunlock();
 			break;
 
 		default:
