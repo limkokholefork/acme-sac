@@ -674,12 +674,12 @@ clipread(void)
 		CFIndex flavorCount;
 
 		if((err = PasteboardGetItemIdentifier(appleclip, i, &itemID)) != noErr){
-			fprint(2, "Can't get pasteboard item identifier: %d\n", err);
+			fprintf(stderr, "Can't get pasteboard item identifier: %d\n", (int)err);
 			return 0;
 		}
 
 		if((err = PasteboardCopyItemFlavors(appleclip, itemID, &flavorTypeArray))!=noErr){
-			fprint(2, "Can't copy pasteboard item flavors: %d\n", err);
+			fprintf(stderr, "Can't copy pasteboard item flavors: %d\n", (int)err);
 			return 0;
 		}
 
@@ -691,7 +691,7 @@ clipread(void)
 			if (UTTypeConformsTo(flavorType, CFSTR("public.utf16-plain-text"))){
 				if((err = PasteboardCopyItemFlavorData(appleclip, itemID,
 					CFSTR("public.utf16-plain-text"), &cfdata)) != noErr){
-					fprint(2, "apple pasteboard CopyItem failed - Error %d\n", err);
+					fprintf(stderr, "apple pasteboard CopyItem failed - Error %d\n", (int)err);
 					return 0;
 				}
 				CFIndex length = CFDataGetLength(cfdata);
@@ -717,22 +717,22 @@ clipwrite(char *snarf)
 
 	runeseprint(rsnarf, rsnarf+nelem(rsnarf), "%s", snarf);
 	if(PasteboardClear(appleclip) != noErr){
-		fprint(2, "apple pasteboard clear failed\n");
+		fprintf(stderr, "apple pasteboard clear failed\n");
 		return 0;
 	}
 	flags = PasteboardSynchronize(appleclip);
 	if((flags&kPasteboardModified) || !(flags&kPasteboardClientIsOwner)){
-		fprint(2, "apple pasteboard cannot assert ownership\n");
+		fprintf(stderr, "apple pasteboard cannot assert ownership\n");
 		return 0;
 	}
 	cfdata = CFDataCreate(kCFAllocatorDefault, (uchar*)rsnarf, runestrlen(rsnarf)*2);
 	if(cfdata == nil){
-		fprint(2, "apple pasteboard cfdatacreate failed\n");
+		fprintf(stderr, "apple pasteboard cfdatacreate failed\n");
 		return 0;
 	}
 	if(PasteboardPutItemFlavor(appleclip, (PasteboardItemID)1,
 		CFSTR("public.utf16-plain-text"), cfdata, 0) != noErr){
-		fprint(2, "apple pasteboard putitem failed\n");
+		fprintf(stderr, "apple pasteboard putitem failed\n");
 		CFRelease(cfdata);
 		return 0;
 	}
