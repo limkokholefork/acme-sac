@@ -45,10 +45,10 @@ fn 9c {
 
 fn 9l {
 	ld=$cc
-	ldflags= (-multiply_defined suppress)
+	ldflags= (-multiply_defined suppress )
 	syslibs=()
 	args = $*
-#	echo $ld $ldflags  `{file2root $args} $syslibs
+	echo $ld $ldflags $args $syslibs
 	os `{echo $ld $ldflags  `{file2root $args} $syslibs }
 }
 
@@ -78,6 +78,8 @@ fn 9ar {
 	args = ${tl $*}
 #	echo $ar $arflags $file  `{file2root $args}
 	os `{echo $ar $arflags $file `{file2root $args}}
+	echo ranlib $file
+	os `{echo ranlib $file}
 }
 
 fn svn {
