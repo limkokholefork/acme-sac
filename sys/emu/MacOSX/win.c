@@ -85,6 +85,40 @@ static OSStatus MainWindowCommandHandler(EventHandlerCallRef nextHandler, EventR
 static void winproc(void *a);
 static void flushproc(void *a);
 
+CGRect
+max_bounds()
+{
+	OSErr err;
+	CGDirectDisplayID* d; 
+	CGDisplayCount c, i;
+	CGRect r;
+	int bx=0, by=0, rx=0, ry=0;
+
+	err = CGGetActiveDisplayList(0, NULL, &c);
+	if(err != noErr)
+		sysfatal("can not enumerate active displays");
+
+	d = (CGDirectDisplayID *)malloc(c * sizeof(CGDirectDisplayID));
+	if(d == NULL)
+		sysfatal("can not allocate memory for display list");
+
+	err = CGGetActiveDisplayList(c, d, &c);
+	if(err != noErr)
+		sysfatal("can not obtain active display list");
+
+	for (i = 0; i < c; i++) {
+		r = CGDisplayBounds(d[i]);
+		rx = r.size.width;
+		ry = r.size.height;
+		if (rx > bx)
+			bx = rx;
+		if (ry > by)
+			by = ry;
+	}
+	
+	return CGRectMake(0,0,bx,by);
+}
+
 void
 screeninit(void)
 {
@@ -96,18 +130,9 @@ screeninit(void)
 
 	fmt = XBGR32; //XRGB32;
 
-	devRect = CGDisplayBounds(CGMainDisplayID());
-//	devRect.origin.x = 0;
-//	devRect.origin.y = 0;
-//	devRect.size.width = 1024;
-//	devRect.size.height = 768;
+	devRect = max_bounds();
 	dx = devRect.size.width;
 	dy = devRect.size.height;
-
-	if(1){	/* TO DO: new dev draw for changing screen size */
-		dx = Xsize;
-		dy = Ysize;
-	}
 
 	gscreen = allocmemimage(Rect(0,0,dx,dy), fmt);
 	dataProviderRef = CGDataProviderCreateWithData(0, gscreen->data->bdata,
@@ -116,6 +141,8 @@ screeninit(void)
 				CGColorSpaceCreateDeviceRGB(),
 				kCGImageAlphaNoneSkipLast,
 				dataProviderRef, 0, 0, kCGRenderingIntentDefault);
+
+	devRect = CGDisplayBounds(CGMainDisplayID());
 
 	kproc("osxscreen", winproc, nil, 0);
 	kproc("osxflush", flushproc, nil, 0);
@@ -126,7 +153,6 @@ void
 window_resized(void)
 {
 	GetWindowBounds(theWindow, kWindowContentRgn, &winRect);
-
 	bounds = CGRectMake(0, 0, winRect.right-winRect.left, winRect.bottom - winRect.top);
 }
 
@@ -154,14 +180,8 @@ winproc(void *a)
 
 	winRect.left = 30;
 	winRect.top = 60;
-	dx = devRect.size.width*0.75;	/* devRect is full screen; take only most of it */
-	dy = devRect.size.height*0.75;
-	if(1){	/* TO DO */
-		dx = Xsize;
-		dy = Ysize;
-	}
-	winRect.bottom = winRect.top + dy;
-	winRect.right = winRect.left + dx;
+	winRect.bottom = (devRect.size.height * 0.75) + winRect.top;
+	winRect.right = (devRect.size.width * 0.75) + winRect.left;
 
 	ClearMenuBar();
 	InitCursor();
@@ -183,9 +203,9 @@ winproc(void *a)
 	uint32_t windowAttrs = 0
 				| kWindowCloseBoxAttribute
 				| kWindowCollapseBoxAttribute
-//				| kWindowResizableAttribute		// TO DO
+				| kWindowResizableAttribute
 				| kWindowStandardHandlerAttribute
-//				| kWindowFullZoomAttribute		// TO DO
+				| kWindowFullZoomAttribute
 		;
 
 	CreateNewWindow(kDocumentWindowClass, windowAttrs, &winRect, &theWindow);
@@ -230,12 +250,17 @@ winproc(void *a)
 	ShowWindow(theWindow);
 	ShowMenuBar();
 	window_resized();
-	SelectWindow(theWindow);
+	Rectangle rect =  { { 0, 0 }, { bounds.size.width, bounds.size.height } };
+	wmtrack(0, rect.max.x, rect.max.y, 0);
+//	drawqlock();
+//	flushmemscreen(rect);
+//	drawqunlock();
+ 
 	// Run the event loop
+	SelectWindow(theWindow);
 	readybit = 1;
 	Wakeup(&rend);
 	RunApplicationEventLoop();
-
 }
 
 static int
@@ -311,7 +336,8 @@ leave_full_screen(void)
 		ShowWindow(theWindow);
 		amFullScreen = 0;
 		window_resized();
-		Rectangle rect =  { { 0, 0 }, { bounds.size.width, bounds.size.height} };
+		Rectangle rect =  { { 0, 0 }, { bounds.size.width, bounds.size.height } };
+		wmtrack(0, rect.max.x, rect.max.y, 0);
 		drawqlock();
  		flushmemscreen(rect);
  		drawqunlock();
@@ -321,19 +347,22 @@ leave_full_screen(void)
 static void
 full_screen(void)
 {
-	if (0 && !amFullScreen) {
+	if (!amFullScreen) {
 		oldWindow = theWindow;
 		HideWindow(theWindow);
 		BeginFullScreen(&fullScreenRestore, 0, 0, 0, &theWindow, 0, 0);
+		GDHandle device;
+		GetWindowGreatestAreaDevice(theWindow, kWindowTitleBarRgn, &device, NULL);
+		BeginFullScreen(&fullScreenRestore, device, 0, 0, &theWindow, 0, 0);
 		amFullScreen = 1;
 		window_resized();
-		Rectangle rect =  { { 0, 0 },
- 							{ bounds.size.width,
- 							  bounds.size.height} };
+		Rectangle rect =  { { 0, 0 }, { bounds.size.width, bounds.size.height} };
+		wmtrack(0, rect.max.x, rect.max.y, 0);
 		drawqlock();
  		flushmemscreen(rect);
  		drawqunlock();
-	}
+	} else
+		leave_full_screen();
 }
 
 static OSStatus
@@ -526,9 +555,8 @@ MainWindowCommandHandler(EventHandlerCallRef nextHandler, EventRef event, void *
 		//resize window
 		case kEventWindowBoundsChanged:
 			window_resized();
-			Rectangle rect =  { { 0, 0 },
- 									{ bounds.size.width,
- 									  bounds.size.height} };
+			Rectangle rect =  { { 0, 0 }, { bounds.size.width, bounds.size.height } };
+			wmtrack(0, rect.max.x, rect.max.y, 0);
 			drawqlock();
  			flushmemscreen(rect);
  			drawqunlock();
