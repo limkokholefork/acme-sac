@@ -10,7 +10,7 @@ GETTING STARTED
           manual page and Rob Pike's paper, Acme: A User Interface for
           Programmers. 
 
-          RICHT click on manual references to read a manual page.  E.g.,
+          RIGHT click on manual references to read a manual page.  E.g.,
           acme(1), cat(1), intro(1), and ls(1). A man page reference is an
           example of a notation that in Acme is also part of the user
           interface. 
