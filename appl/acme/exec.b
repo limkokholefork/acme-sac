@@ -122,7 +122,7 @@ runfun(fun : int, et, t, argt : ref Text, flag1, flag2 : int, arg : string, narg
 		F_LIMBO		=> limbo(et);
 		F_LINENO		=> lineno(et);
 		F_LOCAL 		=> local(et, argt, arg);
-		F_LOOK 		=> look(et, t, argt);
+		F_LOOK 		=> look(et, t, argt, arg, narg);
 		F_NEW 		=> lookx->new(et, t, argt, flag1, flag2, arg, narg);
 		F_NEWCOL	=> newcol(et);
 		F_PASTE		=> paste(et, t, flag1, flag2);
@@ -770,7 +770,7 @@ paste(et : ref Text, t : ref Text, selectall : int, tobody: int)
 		t.w.unlock();
 }
 
-look(et : ref Text, t : ref Text, argt : ref Text)
+look(et : ref Text, t : ref Text, argt : ref Text, arg : string, narg : int)
 {
 	r : string;
 	s : ref Astring;
@@ -778,6 +778,10 @@ look(et : ref Text, t : ref Text, argt : ref Text)
 
 	if(et != nil && et.w != nil){
 		t = et.w.body;
+		if(narg > 0){
+			lookx->search(t, arg, narg);
+			return;
+		}
 		(nil, r, n) = getarg(argt, FALSE, FALSE);
 		if(r == nil){
 			n = t.q1-t.q0;
