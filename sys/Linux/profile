@@ -15,6 +15,7 @@ fn 9c {
 		- $args
 	)
 	cwd=`{echo $emuroot ^ `pwd}
+	cc='gcc'
 	cflags=(
 		-O2
 		-c
@@ -37,20 +38,14 @@ fn 9c {
 	ofile = `{echo $emuroot ^ `{cleanname -d `pwd $ofile^.o}}
 	file=`{cleanname -d `pwd $file}
 	file=`{echo $emuroot ^ $file}
-	cmd = `{echo os gcc -o $ofile $cflags $file }
-#	echo $cmd
-#	$cmd
-	os `{echo gcc -o $ofile $cflags $flags $file }
+#	echo $cc -o $ofile $cflags $flags $file
+	os `{echo $cc -o $ofile $cflags $flags $file}
 }
 
 fn 9l {
-	ld=gcc
+	ld=$cc
 	ldflags=( )
-	syslibs=( -lm -lX11 -lXext)
-	
-#	file=$1
-#	file=`{cleanname -d `pwd $file}
-#	file=`{echo $emuroot ^ $file}
+#	syslibs=( -lm -lX11 -lXext)
 	args = $*
 	echo os $ld $ldflags  `{file2root $args} $syslibs
 	os `{echo $ld $ldflags  `{file2root $args} $syslibs }
@@ -59,21 +54,29 @@ fn 9l {
 fn file2root {
 	args = $*
 	for (i in $args) {
-		i = `{cleanname -d `pwd $i}
-		echo $emuroot ^ $i 
+		(if {~ $i '-*' } { # exclude libraries
+ 			echo $i
+		}
+		{! ~ $i '*.*'} { # and their arguments (names w/o dots -- i.e. -framework CoreFoundation, etc)
+			echo $i
+		}
+		{
+			i = `{cleanname -d `pwd $i}
+			echo $emuroot ^ $i
+		})
 	}
 }
 
 fn 9ar {
 	ar=ar
 	cwd=`{echo $emuroot ^ `pwd }
-	arflags=
+	arflags=(-r)
 	file=$1
 	file=`{cleanname -d `pwd $file}
 	file=`{echo $emuroot ^ $file }
 	args = ${tl $*}
 #	echo os $ar $arflags $file  `{file2root $args}
-	os `{echo ar -r $arflags $file `{file2root $args}}
+	os `{echo $ar $arflags $file `{file2root $args}}
 }
 
 fn svn {
