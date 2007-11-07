@@ -10,7 +10,7 @@ CONF=emu			#default configuration
 CONFLIST=emu
 CLEANCONFLIST=
 
-INSTALLDIR=$ROOT/$SYSTARG/$OBJTYPE/bin	#path of directory where kernel is installed
+INSTALLDIR=/sys/$SYSTARG/$OBJTYPE/bin	#path of directory where kernel is installed
 
 #end configurable parameters
 
@@ -30,16 +30,27 @@ OBJ=\
 #libs=${LIBS:%=$ROOT/$OBJDIR/lib/lib%.a}
 
 HFILES=\
-#'-DROOT="'$ROOT'"'
-CFLAGS= '''-DROOT="'.'"''' -DEMU -I. -I../port -I../../$SYSTARG/$OBJTYPE/include -I../../include -I../../libinterp $CTHREADFLAGS $CFLAGS $EMUOPTIONS
-#SYSLIBS= -lm -lX11 -lXext
+
+CFLAGS=\
+	'''-DROOT="'.'"'''\
+	-DEMU -I. -I../port\
+	-I../../$SYSTARG/$OBJTYPE/include\
+	-I../../include\
+	-I../../libinterp\
+	$CTHREADFLAGS $CFLAGS $EMUOPTIONS\
+
 KERNDATE=`{$NDATE}
+
+SYSLIBS=\
+	-lm\
+	-lX11\
+	-lXext\
 
 default:V:	$O.$CONF
 
-$O.$CONF:	$OBJ $CONF.c $CONF.root.h $LIBNAMES
+$O.$CONF:	$OBJ $CONF.c $CONF.root.h # $LIBNAMES
 	$CC $CFLAGS '-DKERNDATE='$KERNDATE $CONF.c
-	$LD $LDFLAGS  $OBJ $CONF.$O $LIBFILES
+	$LD $LDFLAGS -o $target $OBJ $CONF.$O $LIBFILES $SYSLIBS
 
 install:V: $O.$CONF
 	cp $O.$CONF $INSTALLDIR/$CONF
