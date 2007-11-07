@@ -21,7 +21,7 @@ then
 	OBJTYPE=power
 fi
 
-if [ $osMajorVer -lt 8 ]
+if [ "$SYSHOST" = "MacOSX" ] && [ "$osMajorVer" -lt 8 ]
 then
 	export EMU=emu-x11
 	export DISPLAY=":0"
