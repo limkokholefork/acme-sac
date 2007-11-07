@@ -20,7 +20,7 @@ look : Look;
 edit : Edit;
 ecmd : Editcmd;
 
-ALLLOOPER, ALLTOFILE, ALLMATCHFILE, ALLFILECHECK, ALLELOGTERM, ALLEDITINIT, ALLUPDATE: import Edit;
+ALLLOOPER, ALLTOFILE, ALLMATCHFILE, ALLFILECHECK, ALLELOGTERM, ALLEDITINIT, ALLUPDATE, ALLINCREF, ALLDECREF, FIXINDENT: import Edit;
 sprint : import sys;
 FALSE, TRUE, XXX : import Dat;
 Border, BUFSIZE, Astring : import Dat;
@@ -773,6 +773,12 @@ allwindows(o: int, aw: ref  Dat->Allwin)
 				edit->alleditinit(w);
 			ALLUPDATE =>
 				edit->allupdate(w);
+			ALLINCREF =>
+				w.refx.inc();
+			ALLDECREF =>
+				w.close();
+			FIXINDENT =>
+				w.autoindent = dat->globalautoindent;
 			}
 		}
 	}
