@@ -250,6 +250,7 @@ Dat : module {
 		}
 	};
 
+	globalincref: int;
 	globalautoindent: int;
 	seq : int;
 	maxtab : int;

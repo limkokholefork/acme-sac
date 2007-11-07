@@ -29,7 +29,7 @@ File : import filem;
 sprint : import sys;
 TRUE, FALSE, XXX, BUFSIZE : import Dat;
 Buffer : import bufferm;
-Row : import rowm;
+Row, allwindows : import rowm;
 Column : import columnm;
 Window : import windowm;
 setalphabet: import textm;
@@ -1095,9 +1095,9 @@ indent(et : ref Text, argt : ref Text, arg : string, narg : int)
 	w : ref Window;
 	na, leng, autoindent : int;
 
-	if(et==nil || et.w==nil)
-		return;
-	w = et.w;
+	w = nil;
+	if(et!=nil && et.w!=nil)
+		w = et.w;
 	autoindent = IError;
 	(nil, r, leng) = getarg(argt, FALSE, TRUE);
 
@@ -1108,12 +1108,10 @@ indent(et : ref Text, argt : ref Text, arg : string, narg : int)
 		if(a != arg)
 			autoindent = indentval(arg, narg-na);
 	}
-	if(w != nil){
-		case (autoindent) {
-			Ion or Ioff => w.autoindent = autoindent;
-			IGlobal => w.autoindent = dat->globalautoindent;
-		}
-	}
+	if(autoindent == IGlobal)
+		allwindows(Edit->FIXINDENT, nil);
+	else if(w!=nil && autoindent>=0)
+		w.autoindent = autoindent;
 }
 
 

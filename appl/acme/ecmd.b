@@ -583,7 +583,7 @@ s_cmd(t: ref Text, cp: ref Cmd): int
 	if(!didsub && nest==0)
 		editerror("no substitution");
 	t.q0 = addr.r.q0;
-	t.q1 = addr.r.q1+delta;
+	t.q1 = addr.r.q1;
 	return TRUE;
 }
 
@@ -785,7 +785,7 @@ append(f: ref File, cp: ref Cmd, p: int): int
 	if(cp.text.n > 0)
 		eloginsert(f, p, cp.text.r, cp.text.n);
 	f.curtext.q0 = p;
-	f.curtext.q1 = p+cp.text.n;
+	f.curtext.q1 = p;
 	return TRUE;
 }
 
@@ -973,15 +973,23 @@ filelooper(cp: ref Cmd, XY: int)
 		loopstruct = ref Looper;
 	loopstruct.cp = cp;
 	loopstruct.XY = XY;
-	if(loopstruct.w != nil)	# error'ed out last time
-		loopstruct.w = nil;
 	loopstruct.w = nil;
 	loopstruct.nw = 0;
 	aw := ref Allwin.LP(loopstruct);
 	allwindows(Edit->ALLLOOPER, aw);
 	aw = nil;
+	#
+	# add a ref to all windows to keep safe windows accessed by X
+	# that would not otherwise have a ref to hold them up during
+	# the shenanigans.  note this with globalincref so that any
+	# newly created windows start with an extra reference.
+	#
+	allwindows(Edit->ALLINCREF, nil);
+	dat->globalincref = 1;
 	for(i=0; i<loopstruct.nw; i++)
 		cmdexec(loopstruct.w[i].body, cp.cmd);
+	allwindows(Edit->ALLDECREF, nil);
+	dat->globalincref = 0;
 	loopstruct.w = nil;
 
 	--Glooping;
@@ -1198,7 +1206,7 @@ filematch(f: ref File, r: ref String): int
 {
 	buf: string;
 	w: ref Window;
-	match, i, dirty: int;
+	match, dirty: int;
 	s: Rangeset;
 
 	# compile expr first so if we get an error, we haven't allocated anything
@@ -1209,7 +1217,7 @@ filematch(f: ref File, r: ref String): int
 	dirty = !w.isdir && !w.isscratch && f.mod;
 	buf = sprint("%c%c%c %s\n", " '"[dirty],
 		'+', " ."[curtext!=nil && curtext.file==f], f.name);
-	(match, s) = rxexecute(nil, buf, 0, i);
+	(match, s) = rxexecute(nil, buf, 0, len buf);
 	buf = nil;
 	return match;
 }

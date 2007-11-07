@@ -76,6 +76,8 @@ Window.init(w : self ref Window, clone : ref Window, r : Rect)
 	w.body.w = w;
 	w.id = ++winid;
 	w.refx.inc();
+	if(dat->globalincref)
+		w.refx.inc();
 	w.ctlfid = ~0;
 	w.utflastqid = -1;
 	r1 = r;
