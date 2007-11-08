@@ -514,19 +514,19 @@ handle_key_event(EventRef event)
 			} else
 				result = eventNotHandledErr; // let the unicode input event get it
 		} else
-			result = eventNotHandledErr; // let the unicode input event get it		
-				
-	default:
-		{
-			// before tossing event to unicode handler, check for and try to handle special characters
-			if(result == eventNotHandledErr) {
-				int key = convert_key(macKeyCode, macCharCodes);
-				if(key != macCharCodes) {
-					result = noErr;
-					gkbdputc(gkbdq, key);
-				}
+			result = eventNotHandledErr; // let the unicode input event get it	
+	
+		// before tossing event to unicode handler, check for and try to handle special characters
+		if(result == eventNotHandledErr) {
+			int key = convert_key(macKeyCode, macCharCodes);
+			if(key != macCharCodes) {
+				result = noErr;
+				gkbdputc(gkbdq, key);
 			}
 		}
+		break;
+						
+	default:
 		break;
 
 	}
@@ -540,20 +540,25 @@ handle_unicode(EventRef event)
 	UInt32 actual_size, i;
 	UniChar *text;
 	UniCharCount num_chars;
+	OSStatus result = noErr;
 
-	OSStatus result = GetEventParameter (event, kEventParamTextInputSendText,
-									typeUnicodeText, NULL, 0, &actual_size, NULL);
+	// extract the keyboard event and check for special keys.
+	// try handling these with the old key event code.
+	EventRef kevent;
+	result = GetEventParameter(event, kEventParamTextInputSendKeyboardEvent, typeEventRef,
+							NULL, sizeof(kevent), NULL, &kevent);
 	if(result == noErr) {
-		text = (UniChar*) NewPtr(actual_size);
-		result = GetEventParameter (event, kEventParamTextInputSendText,
-		   						typeUnicodeText, NULL, actual_size, NULL, text);
-		if(result == noErr) {
-			EventRef kevent;
-			result = GetEventParameter(event, kEventParamTextInputSendKeyboardEvent, typeEventRef,
-									NULL, sizeof(kevent), NULL, &kevent);
+		result = handle_key_event(kevent);
+		// handle_key_event returns eventNotHandledErr if text is unicode.
+		// extract the unicode text and add it to the keyboard buffer.
+		if(result == eventNotHandledErr) { 
+			result = GetEventParameter (event, kEventParamTextInputSendText,
+									typeUnicodeText, NULL, 0, &actual_size, NULL);
 			if(result == noErr) {
-				result = handle_key_event(kevent);
-				if(result == eventNotHandledErr) {
+				text = (UniChar*) NewPtr(actual_size);
+				result = GetEventParameter (event, kEventParamTextInputSendText,
+		   								typeUnicodeText, NULL, actual_size, NULL, text);
+				if(result == noErr) {
 					num_chars = actual_size / sizeof(UniChar);
 					for(i=0; i < num_chars; i++) {
 //						int key = convert_unichar(text[i]);
@@ -581,8 +586,8 @@ handle_text_input_event(EventRef event)
 	case kEventTextInputUnicodeText:
 		result = handle_unicode(event);
 		break;
-	
-	case kEventTextInputOffsetToPos:
+
+	case kEventTextInputOffsetToPos:	
 	case kEventTextInputPosToOffset:
 	case kEventTextInputShowHideBottomWindow:
 	case kEventTextInputGetSelectedText:
@@ -601,6 +606,7 @@ handle_mouse_event(EventRef event)
 	_Point mousePos;
 	OSStatus result = GetEventParameter(event, kEventParamMouseLocation, typeQDPoint,
 									0, sizeof mousePos, 0, &mousePos);
+
 	if(result == noErr) {
 		UInt32 kind = GetEventKind (event);
 		switch(kind) {
@@ -636,7 +642,6 @@ handle_mouse_event(EventRef event)
 
 			mousebuttons |= ((buttons & 2)<<1);
 			mousebuttons |= ((buttons & 4)>>1);
-
 		}
 					
 		/* Fallthrough */
@@ -663,6 +668,10 @@ MainWindowEventHandler(EventHandlerCallRef nextHandler, EventRef event, void *us
 {
 	OSStatus result = noErr;
 	result = CallNextEventHandler(nextHandler, event);
+
+	// we need to reset the mouse coordinates to handling simulated button2 and button3 clicks
+	mouseX = 0;
+	mouseY = 0;
 	
 	UInt32 class = GetEventClass (event);	
 	switch(class) {
