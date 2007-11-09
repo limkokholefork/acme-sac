@@ -65,6 +65,7 @@ static PasteboardRef appleclip;
 static _Rect winRect;
 
 static Boolean altPressed = false;
+static Boolean cmdPressed = false;
 static Boolean button2 = false;
 static Boolean button3 = false;
 static uint32_t mousebuttons = 0; // bitmask of buttons currently down
@@ -262,6 +263,7 @@ winproc(void *a)
 	RunApplicationEventLoop();
 }
 
+/*
 static int
 convert_key(UInt32 key, UInt32 charcode)
 {
@@ -315,8 +317,8 @@ convert_key(UInt32 key, UInt32 charcode)
 	default: return charcode;
 	}
 }
+*/
 
-/*
 enum {
 	kF1KeyCode	 = 0x7A,	// Undo
 	kF2KeyCode	 = 0x78,	// Cut
@@ -376,11 +378,12 @@ convert_unichar(UInt32 charcode)
 	default: return charcode;
 	}
 }
-*/
+
 
 void
 sendbuttons(int b, int x, int y)
 {
+//	fprintf(stderr, "sendbuttons:	b: %d; x: %d; y: %d\n", b, x, y);
 	mousetrack(b, x, y, 0);
 }
 
@@ -426,7 +429,64 @@ full_screen(void)
 }
 
 static OSStatus
-handle_key_event(EventRef event)
+handle_unicode(EventRef event)
+{
+	UInt32 actual_size, i;
+	UniChar *text;
+	UniCharCount num_chars;
+	OSStatus result = noErr;
+
+	// hack to keep sequences like Cmd+f from writing to buffer
+	if(! cmdPressed) {
+		result = GetEventParameter (event, kEventParamTextInputSendText,
+								typeUnicodeText, NULL, 0, &actual_size, NULL);
+		if(result == noErr) {
+			text = (UniChar*) NewPtr(actual_size);
+			result = GetEventParameter (event, kEventParamTextInputSendText,
+		   							typeUnicodeText, NULL, actual_size, NULL, text);
+			if(result == noErr) {
+				num_chars = actual_size / sizeof(UniChar);
+				for(i=0; i < num_chars; i++) {
+					int key = convert_unichar(text[i]);
+					gkbdputc(gkbdq, key);
+				}
+			}
+		}
+	}
+
+	return result;
+}
+
+static OSStatus
+handle_text_input_event(EventRef event)
+{
+	OSStatus result;
+
+	UInt32 kind = GetEventKind (event);
+	switch(kind) {
+
+	case kEventTextInputUnicodeForKeyEvent:
+	case kEventTextInputUnicodeText:
+		result = handle_unicode(event);
+		break;
+
+	case kEventTextInputUpdateActiveInputArea:
+	case kEventTextInputOffsetToPos:	
+	case kEventTextInputPosToOffset:
+	case kEventTextInputShowHideBottomWindow:
+	case kEventTextInputGetSelectedText:
+	case kEventTextInputFilterText:
+	default:
+		result = eventNotHandledErr;
+		break;
+		
+	}
+	
+	return result;
+}
+
+static OSStatus
+handle_kbd_event(EventRef event)
 {
 	OSStatus result = noErr;
 
@@ -445,6 +505,7 @@ handle_key_event(EventRef event)
 	switch(kind) {
 
 	case kEventRawKeyModifiersChanged:
+//		fprintf(stderr, "kbd event:	key modifiers changed!\n");
 		switch(macKeyModifiers & (optionKey | cmdKey)) {
 
 		case (optionKey | cmdKey):
@@ -452,7 +513,10 @@ handle_key_event(EventRef event)
 			 * modifier keys are pressed at the same time.
 			 * currently it's only 2-3 snarf and the 3-2 noop
 			 */
+			 
+//			fprintf(stderr, "kbd event:	Opt|Cmd pressed!\n");
 			altPressed = true;
+			cmdPressed = true;
 			if(mousebuttons & 1 || mousebuttons & 2 || mousebuttons & 4) {
 				mousebuttons |= 2;	/* set button 2 */
 				mousebuttons |= 4;	/* set button 3 */
@@ -463,6 +527,7 @@ handle_key_event(EventRef event)
 			break;
 		
 		case optionKey:
+//			fprintf(stderr, "kbd event:	Opt pressed!\n");
 			altPressed = true;
 			if(mousebuttons & 1 || mousebuttons & 4) {
 				mousebuttons |= 2;	/* set button 2 */
@@ -472,6 +537,8 @@ handle_key_event(EventRef event)
 			break;
 		
 		case cmdKey:
+//			fprintf(stderr, "kbd event:	Cmd pressed!\n");
+			cmdPressed = true;
 			if(mousebuttons & 1 || mousebuttons & 2) {
 				mousebuttons |= 4;	/* set button 3 */
 				button3 = true;
@@ -485,18 +552,15 @@ handle_key_event(EventRef event)
 				if(button2) {
 					mousebuttons &= ~2;	/* clear button 2 */
 					button2 = false;
-					altPressed = false;
 				}
 				if(button3) {
 					mousebuttons &= ~4;	/* clear button 3 */
 					button3 = false;
 				}
 				sendbuttons(mousebuttons, mouseX, mouseY);
-			}
-			if(altPressed) {
-				gkbdputc(gkbdq, Kalt);
-				altPressed = false;
-			}
+			}		
+			altPressed = false;
+			cmdPressed = false;
 			break;
 		}
 		break;
@@ -504,99 +568,21 @@ handle_key_event(EventRef event)
 	case kEventRawKeyDown:
 	case kEventRawKeyRepeat:
 		if(macKeyModifiers == cmdKey) {
+			// catch fullscreen toggle key sequences while in fullscreen mode
 			if(macCharCodes == 'f' || macCharCodes == 'F') {
 				if(fullscreen_race)
 					fullscreen_race = false;
 				else
 					full_screen();
-//			} else if(macCharCodes == 'q' || macCharCodes == 'Q') {
-//				cleanexit(0);
-			} else
-				result = eventNotHandledErr; // let the unicode input event get it
-		} else
-			result = eventNotHandledErr; // let the unicode input event get it	
-	
-		// before tossing event to unicode handler, check for and try to handle special characters
-		if(result == eventNotHandledErr) {
-			int key = convert_key(macKeyCode, macCharCodes);
-			if(key != macCharCodes) {
-				result = noErr;
-				gkbdputc(gkbdq, key);
 			}
-		}
+		}		
 		break;
 						
 	default:
-		break;
-
-	}
-
-	return result;
-}
-
-static OSStatus
-handle_unicode(EventRef event)
-{
-	UInt32 actual_size, i;
-	UniChar *text;
-	UniCharCount num_chars;
-	OSStatus result = noErr;
-
-	// extract the keyboard event and check for special keys.
-	// try handling these with the old key event code.
-	EventRef kevent;
-	result = GetEventParameter(event, kEventParamTextInputSendKeyboardEvent, typeEventRef,
-							NULL, sizeof(kevent), NULL, &kevent);
-	if(result == noErr) {
-		result = handle_key_event(kevent);
-		// handle_key_event returns eventNotHandledErr if text is unicode.
-		// extract the unicode text and add it to the keyboard buffer.
-		if(result == eventNotHandledErr) { 
-			result = GetEventParameter (event, kEventParamTextInputSendText,
-									typeUnicodeText, NULL, 0, &actual_size, NULL);
-			if(result == noErr) {
-				text = (UniChar*) NewPtr(actual_size);
-				result = GetEventParameter (event, kEventParamTextInputSendText,
-		   								typeUnicodeText, NULL, actual_size, NULL, text);
-				if(result == noErr) {
-					num_chars = actual_size / sizeof(UniChar);
-					for(i=0; i < num_chars; i++) {
-//						int key = convert_unichar(text[i]);
-//						gkbdputc(gkbdq, key);
-						gkbdputc(gkbdq, text[i]);
-					}
-				}
-			}
-		}
-	}
-
-	return result;
-}
-
-static OSStatus
-handle_text_input_event(EventRef event)
-{
-	OSStatus result;
-
-	UInt32 kind = GetEventKind (event);
-	switch(kind) {
-		
-	case kEventTextInputUpdateActiveInputArea:
-	case kEventTextInputUnicodeForKeyEvent:
-	case kEventTextInputUnicodeText:
-		result = handle_unicode(event);
-		break;
-
-	case kEventTextInputOffsetToPos:	
-	case kEventTextInputPosToOffset:
-	case kEventTextInputShowHideBottomWindow:
-	case kEventTextInputGetSelectedText:
-	case kEventTextInputFilterText:
-	default:
 		result = eventNotHandledErr;
 		break;
-		
 	}
+
 	return result;
 }
 
@@ -633,10 +619,14 @@ handle_mouse_event(EventRef event)
 								0, sizeof buttons, 0, &buttons);
 			/* simulate other buttons via alt/apple key. like x11 */
 			if(modifiers & optionKey) {
+//				fprintf(stderr, "mouse event:	Opt pressed!\n");
 				mousebuttons = ((buttons & 1) ? 2 : 0);
 				altPressed = false;
-			} else if(modifiers & cmdKey)
+			} else if(modifiers & cmdKey) {
+//				fprintf(stderr, "mouse event:	Cmd pressed!\n");
 				mousebuttons = ((buttons & 1) ? 4 : 0);
+				cmdPressed = false;
+			}
 			else
 				mousebuttons = (buttons & 1);
 
@@ -669,7 +659,7 @@ MainWindowEventHandler(EventHandlerCallRef nextHandler, EventRef event, void *us
 	OSStatus result = noErr;
 	result = CallNextEventHandler(nextHandler, event);
 
-	// we need to reset the mouse coordinates to handling simulated button2 and button3 clicks
+	// we need to reset the mouse coordinates to handle simulated button2 and button3 clicks
 	mouseX = 0;
 	mouseY = 0;
 	
@@ -677,14 +667,17 @@ MainWindowEventHandler(EventHandlerCallRef nextHandler, EventRef event, void *us
 	switch(class) {
 
 	case kEventClassTextInput:
+//		fprintf(stderr, "text input event!\n");
 		handle_text_input_event(event);			
 		break;
 
 	case kEventClassKeyboard:
-//		handle_key_event(event);
+//		fprintf(stderr, "keyboard event!\n");
+		handle_kbd_event(event);
 		break;
 
 	case kEventClassMouse:
+//		fprintf(stderr, "mouse event!\n");
 		handle_mouse_event(event);
 		break;
 			
