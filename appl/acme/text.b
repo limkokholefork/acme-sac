@@ -811,11 +811,6 @@ Text.typex(t : self ref Text, r : int, echomode : int)
 				t.w.tagexpand = FALSE;
 				t.w.taglines = 1;
 				p := mouse.xy;
-				if(p.in(t.w.tag.all)
-					&& !p.in(t.w.tagtop)){
-					p.y = t.w.tagtop.min.y = t.w.tagtop.dy()/2;
-					graph->cursorset(p);
-				}
 				t.w.reshape(t.w.r, FALSE, TRUE);
 			}
 			return;
