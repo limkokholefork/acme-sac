@@ -13,7 +13,7 @@ utils : Utils;
 
 Font, Point, Rect, Image, Context, Screen, Display, Pointer : import draw;
 keyboardpid, mousepid : import acme;
-ckeyboard, cmouse : import dat;
+ckeyboard, cmouse, mouse : import dat;
 mousefd: ref Sys->FD;
 error : import utils;
 
@@ -110,6 +110,7 @@ mouseproc()
 cursorset(p: Point)
 {
 	wmclient->win.wmctl("ptr " + string p.x + " " + string p.y);
+	mouse.xy = p;
 }
 
 cursorswitch(cur: ref Dat->Cursor)
