@@ -5,4 +5,3 @@ cd /sys
 run /sys/MacOSX/Power/profile
 mk nuke
 mk install && mk clean
-rm -rf /tmp/*
