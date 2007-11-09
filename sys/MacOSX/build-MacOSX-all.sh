@@ -13,4 +13,3 @@ mk -f mkfile-x install clean
 
 cd /sys
 mk nuke
-rm -rf /tmp/*
