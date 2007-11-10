@@ -16,10 +16,10 @@ if {~ $emuhost MacOSX}{
 	for i in C D {  # add more drive letters to suit
 		trfs '#U' ^ $i ^ ':/' /n/$i >[2] /dev/null
 	}
-	appdata=`{os env | sed -n '
+	appdata=`{os cmd /c 'echo %APPDATA%' |tr -d ''| sed -n '
 s/ /␣/g
 s/\\/\//g
-s/^APPDATA=([A-Z]):/\/n\/\1/p'}
+s/^([A-Z]):/\/n\/\1/p'}
 	lhome=$appdata^/acme-home
 }{ else
 	lhome=$home
