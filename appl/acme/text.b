@@ -810,7 +810,6 @@ Text.typex(t : self ref Text, r : int, echomode : int)
 			if(t.w.tagexpand){
 				t.w.tagexpand = FALSE;
 				t.w.taglines = 1;
-				p := mouse.xy;
 				t.w.reshape(t.w.r, FALSE, TRUE);
 			}
 			return;
