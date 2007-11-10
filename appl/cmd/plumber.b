@@ -178,7 +178,7 @@ init(ctxt: ref Draw->Context, args: list of string)
 	input.inc = chan of ref Inmesg;
 	input.resc = chan of int;
 	spawn receiver(input);
- 	
+	
 	rulesio = makefile("plumb.rules");
 	if(rulesio == nil)
 		shutdown();
@@ -344,24 +344,24 @@ rulesproc(rulesio: ref Sys->FileIO)
 				rc <-= (nil, "");
 				break;
 			}			
-			if (count < len data){
+			if (count < len data - off){
 				rc <-= (nil, "buffer to short for message");
 				break;
 			}
-			rc <-= (array of byte data, nil);
+			rc <-= (array of byte data[off:], nil);
+			break;
 			
-		(nil, data, nil, wc) := <-rulesio.write =>
-			if(wc == nil)
+		(off, data, nil, wc) := <-rulesio.write =>
+			if(wc == nil){
 				break;	# not interested in EOF
-			else{
-				(urules, err) := plumbing->parse("/chan/plumb.rules", string data);
-				if(err != nil){
-					wc <-= (0, err);
-					break;
-				}
-				rules = updaterules (urules);
-				wc <-= (len data, "");
 			}
+			(urules, err) := plumbing->parse("/chan/plumb.rules", string data);
+			if(err != nil){
+				wc <-= (0, err);
+				break;
+			}
+			rules = updaterules (urules);
+			wc <-= (len data, "");
 			break;
 		}
 	}
