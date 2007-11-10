@@ -934,6 +934,8 @@ setpointer(int x, int y)
 	pnt.x = x + winRect.left;
 	pnt.y = y + winRect.top;
 	CGWarpMouseCursorPosition(pnt);
+	// apparently CGWarpMouseCursorPosition doesn't generate a mouse event, so we need to manually update the position
+	mousetrack(0, x, y, 0);
 }
 
 void
