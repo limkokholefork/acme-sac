@@ -1,5 +1,5 @@
 #!/dis/sh.dis
-load std
+load std; autoload=std
 
 cd /sys
 run /sys/Linux/profile
