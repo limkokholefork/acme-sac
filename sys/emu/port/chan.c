@@ -682,7 +682,7 @@ static char Edoesnotexist[] = "does not exist";
 int
 walk(Chan **cp, char **names, int nnames, int nomount, int *nerror)
 {
-	int dev, dotdot, i, n, nhave, ntry, type;
+	int dev, didmount, dotdot, i, n, nhave, ntry, type;
 	Chan *c, *nc;
 	Cname *cname;
 	Mount *f;
@@ -702,9 +702,13 @@ walk(Chan **cp, char **names, int nnames, int nomount, int *nerror)
 	 *    3. move to the first mountpoint along the way.
 	 *    4. repeat.
 	 *
-	 * An invariant is that each time through the loop, c is on the undomount
-	 * side of the mount point, and c's name is cname.
-	 */
+	 * Each time through the loop:
+	 *
+	 *	If didmount==0, c is on the undomount side of the mount point.
+	 *	If didmount==1, c is on the domount side of the mount point.
+	 * 	Either way, c's full path is path.
+  	 */
+	didmount = 0;
 	for(nhave=0; nhave<nnames; nhave+=n){
 		if((c->qid.type&QTDIR)==0){
 			if(nerror)
@@ -731,7 +735,7 @@ walk(Chan **cp, char **names, int nnames, int nomount, int *nerror)
 			}
 		}
 
-		if(!dotdot && !nomount)
+		if(!dotdot && !nomount && !didmount)
 			domount(&c, &mh);
 
 		type = c->type;
@@ -765,19 +769,26 @@ walk(Chan **cp, char **names, int nnames, int nomount, int *nerror)
 		}
 
 		nmh = nil;
+		didmount = 0;
 		if(dotdot) {
 			assert(wq->nqid == 1);
 			assert(wq->clone != nil);
 
 			cname = addelem(cname, "..");
 			nc = undomount(wq->clone, cname);
+			nmh = nil;
 			n = 1;
 		} else {
 			nc = nil;
-			if(!nomount)
-				for(i=0; i<wq->nqid && i<ntry-1; i++)
-					if(findmount(&nc, &nmh, type, dev, wq->qid[i]))
+			nmh = nil;
+			if(!nomount){
+				for(i=0; i<wq->nqid && i<ntry-1; i++){
+					if(findmount(&nc, &nmh, type, dev, wq->qid[i])){
+						didmount = 1;
 						break;
+					}
+				}
+			}
 			if(nc == nil){	/* no mount points along path */
 				if(wq->clone == nil){
 					cclose(c);
@@ -799,6 +810,7 @@ walk(Chan **cp, char **names, int nnames, int nomount, int *nerror)
 				n = wq->nqid;
 				nc = wq->clone;
 			}else{		/* stopped early, at a mount point */
+				didmount = 1;
 				if(wq->clone != nil){
 					cclose(wq->clone);
 					wq->clone = nil;
