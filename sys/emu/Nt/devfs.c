@@ -729,7 +729,7 @@ fslseek(HANDLE h, vlong offset)
 {
 	LONG hi;
 
-	if(offset <= 0x7ffffff){	/* TO DO: remove 1 || */
+	if(offset <= 0x7fffffff){
 		if(SetFilePointer(h, (LONG)offset, NULL, FILE_BEGIN) == INVALID_SET_FILE_POINTER)
 			oserror();
 	}else{
@@ -1691,7 +1691,7 @@ secstat(Dir *dir, char *file, Rune *srv)
 	sd = secsd(file, sdrock);
 	if(sd == nil){
 		int e = GetLastError();
-		if(e == ERROR_ACCESS_DENIED || e == ERROR_SHARING_VIOLATION || e == ERROR_NONE_MAPPED){
+		if(e == ERROR_ACCESS_DENIED || e == ERROR_SHARING_VIOLATION){
 			dir->uid = strdup("unknown");
 			dir->gid = strdup("unknown");
 			if(dir->uid == nil || dir->gid == nil){
@@ -1714,20 +1714,7 @@ secstat(Dir *dir, char *file, Rune *srv)
 		n = runenlen(st.group->name, runeslen(st.group->name));
 		dir->gid = smalloc(n+1);
 		runestoutf(dir->gid, st.group->name, n+1);
- 	}else{
- 		int e = GetLastError();
- 		if(e == ERROR_ACCESS_DENIED || e == ERROR_SHARING_VIOLATION || e == ERROR_NONE_MAPPED){
- 			dir->uid = strdup("unknown");
- 			dir->gid = strdup("unknown");
- 			if(dir->uid == nil || dir->gid == nil){
- 				free(dir->uid);
- 				error(Enomem);	/* will change to use kstrdup */
- 			}
- 			dir->mode = 0;
- 			return 1;
- 		}
- 		return 0;
- 	}
+	}
 	return ok;
 }
 
@@ -1880,8 +1867,10 @@ secsdstat(SECURITY_DESCRIPTOR *sd, Stat *st, Rune *srv)
 		gsid = osid;
 
 	owner = sidtouser(srv, osid);
+	if(owner == 0)
+		return 0;
 	group = sidtouser(srv, gsid);
-	if(owner == 0 || group == 0)
+	if(group == 0)
 		return 0;
 
 	/* no acl means full access */
@@ -2076,9 +2065,8 @@ sidtouser(Rune *srv, SID *s)
 
 	naname = sizeof(aname);
 	ndname = sizeof(dname);
-
 	if(!LookupAccountSidW(srv, s, aname, &naname, dname, &ndname, &type))
-		return nil;
+		return mkuser(s, SidTypeUnknown, L"unknown", L"unknown") ;
 	return mkuser(s, type, aname, dname);
 }
 
