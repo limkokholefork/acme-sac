@@ -713,7 +713,7 @@ xinitscreen(int xsize, int ysize, ulong c, ulong *chan, int *d)
 	/*
 	 * set up property as required by ICCCM
 	 */
-	name.value = (uchar*)"inferno";
+	name.value = (uchar*)"Acme SAC";
 	name.encoding = XA_STRING;
 	name.format = 8;
 	name.nitems = strlen((char*)name.value);
@@ -723,9 +723,9 @@ xinitscreen(int xsize, int ysize, ulong c, ulong *chan, int *d)
 	hints.flags = InputHint|StateHint;
 	hints.input = 1;
 	hints.initial_state = NormalState;
-	classhints.res_name = "inferno";
-	classhints.res_class = "Inferno";
-	argv[0] = "inferno";
+	classhints.res_name = "Acme SAC";
+	classhints.res_class = "Acme SAC";
+	argv[0] = "Acme SAC";
 	argv[1] = nil;
 	XSetWMProperties(xdisplay, xdrawable,
 		&name,			/* XA_WM_NAME property for ICCCM */
