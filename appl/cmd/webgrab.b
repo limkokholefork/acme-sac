@@ -539,12 +539,12 @@ writebytes(f: string, a: array of byte, fd: ref Sys->FD)
 				sys->fprint(stderr, "webgrab: write error: %r\n");
 				return;
 			}
+			clen += n;
 		}
 		if(n < 0) {
 			sys->fprint(stderr, "webgrab: read error: %r\n");
 			return;
 		}
-		clen += n;
 	}
 	if (f != "-")
 		sys->fprint(stderr, "created %s, %d bytes\n", f, clen);
