@@ -884,9 +884,6 @@ clipread(void)
 				if(length > sizeof rsnarf) length = sizeof rsnarf;
 				CFDataGetBytes(cfdata, CFRangeMake(0, length), (uint8_t *)rsnarf);
 				snprint(snarf, sizeof snarf, "%.*S", length/sizeof(Rune), rsnarf);
-				for(s = snarf; *s; s++)
-					if(*s == '\r')
-						*s = '\n';
 				CFRelease(cfdata);
 				return strdup(snarf);
 			}
