@@ -71,7 +71,7 @@ fn file2root {
 fn 9ar {
 	ar=ar
 	cwd=`{echo $emuroot ^ `pwd }
-	arflags=(-r)
+	arflags=(-r -s)
 	file=$1
 	file=`{cleanname -d `pwd $file}
 	file=`{echo $emuroot ^ $file }
