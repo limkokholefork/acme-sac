@@ -62,6 +62,12 @@ attr set	'action=showfile	addr=$3'
 plumb to edit
 plumb start /dis/acme.dis -c1 $file
 
+# man pages
+kind is text
+data matches '([a-zA-Z¡-￿0-9_\-./]+)\(([0-9]+)\)'
+plumb alwaysstart man # nasty plumbing hack
+plumb start /dis/sh.dis -c '/dis/man -b $2 $1'
+
 # existing files, possibly tagged by line number, go to acme
 kind is text
 data matches '([.a-zA-Z0-9_/\-]+[a-zA-Z0-9_/\-])(:(((#?[0-9]+)|(/[A-Za-z0-9_\^]+/?)|[.$])([,;+\-]((#?[0-9]+)|(/[A-Za-z0-9_\^]+/?)|[.$]))*))?'
@@ -71,18 +77,13 @@ attr set	'action=showfile	addr=$3'
 plumb to edit
 plumb start /dis/acme.dis -c1 $file
 
-# existing files go to acme
+# existing directories go to acme
 kind is text
 data matches '[a-zA-Z0-9_./\-]+'
-data isdir      $0
+data isdir	$0
+data set	$dir
 plumb to edit
 plumb start /dis/acme.dis -c1 $dir
-
-# man pages
-kind is text
-data matches '([a-zA-Z¡-￿0-9_\-./]+)\(([0-9]+)\)'
-plumb alwaysstart man # nasty plumbing hack
-plumb start /dis/sh.dis -c '/dis/man -b $2 $1'
 
 # change plumb namespace
 kind is text
