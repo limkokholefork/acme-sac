@@ -19,6 +19,7 @@ DWORD			consolestate;
 static			char*	path;
 static			HANDLE	kbdh = INVALID_HANDLE_VALUE;
 static			HANDLE	conh = INVALID_HANDLE_VALUE;
+static			HANDLE	errh = INVALID_HANDLE_VALUE;
 static			int sleepers = 0;
 
 	wchar_t	*widen(char *s);
@@ -239,7 +240,7 @@ readkbd(void)
 void
 cleanexit(int x)
 {
-	sleep(2);		/* give user a chance to see message */
+	/* sleep(2); */		/* give user a chance to see message */
 	termrestore();
 	ExitProcess(x);
 }
@@ -359,6 +360,7 @@ termset(void)
 		return;
 	conh = GetStdHandle(STD_OUTPUT_HANDLE);
 	kbdh = GetStdHandle(STD_INPUT_HANDLE);
+	errh = GetStdHandle(STD_ERROR_HANDLE);
 
 	// The following will fail if kbdh not from console (e.g. a pipe)
 	// in which case we don't care
@@ -568,6 +570,11 @@ close(int fd)
 int
 read(int fd, void *buf, uint n)
 {
+	if(fd == 0){
+		if(!ReadFile(kbdh, buf, n, &n, NULL))
+			return -1;
+		return n;
+	}
 	if(!ReadFile(ntfd2h(fd), buf, n, &n, NULL))
 		return -1;
 	return n;
@@ -576,13 +583,18 @@ read(int fd, void *buf, uint n)
 int
 write(int fd, void *buf, uint n)
 {
-	if(fd == 1 || fd == 2){
+	if(fd == 1){
 		if(conh == INVALID_HANDLE_VALUE){
 			termset();
 			if(conh == INVALID_HANDLE_VALUE)
 				return -1;
 		}
 		if(!WriteFile(conh, buf, n, &n, NULL))
+			return -1;
+		return n;
+	}
+	if(fd == 2){
+		if(!WriteFile(errh, buf, n, &n, NULL))
 			return -1;
 		return n;
 	}
