@@ -493,7 +493,7 @@ expandfile(t : ref Text, q0 : int, q1 : int, e : Expand) : (int, Expand)
 		
 		if(colon>=0 && colon<t.file.buf.nc-1 && isaddrc(t.readc(colon+1))){
 			q1 = colon+1;
-			while(q1<t.file.buf.nc-1 && isaddrc(t.readc(q1)))
+			while(q1<t.file.buf.nc && isaddrc(t.readc(q1)))
 				q1++;
 		}else if(colon >= 0)
 			q1 = colon;

@@ -176,8 +176,8 @@ fontcache : array of ref Reffont;
 nfontcache : int;
 reffonts : array of ref Reffont;
 deffontnames := array[2] of {
-	"/fonts/lucidasans/euro.8.font",
-	"/fonts/lucm/unicode.9.font",
+	"/fonts/vera/Vera/unicode.14.font",
+	"/fonts/vera/VeraMono/VeraMono.14.font",
 };
 
 command : ref Command;

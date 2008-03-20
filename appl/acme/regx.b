@@ -28,7 +28,7 @@ Line : con 1;
 
 isaddrc(r : int) : int
 {
-	if (utils->strchr("0123456789+-/$.#", r) >= 0)
+	if (utils->strchr("0123456789+-/$.#,;", r) >= 0)
 		return TRUE;
 	return FALSE;
 }
