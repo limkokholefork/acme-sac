@@ -595,6 +595,10 @@ putfile(f: ref File, q0: int, q1: int, name: string)
 					f.text[i].w.putseq = f.seq;
 					f.text[i].w.dirty = w.dirty;
 				}
+				if(w.isdir){
+					w.isdir = FALSE;
+					w.filemenu = TRUE;
+				}
 			}
 			strfree(s);
 			strfree(r);
@@ -625,7 +629,7 @@ put(et : ref Text, argt : ref Text, arg : string, narg : int)
 	name : string;
 	w : ref Window;
 
-	if(et==nil || et.w==nil || et.w.isdir)
+	if(et==nil || et.w==nil)
 		return;
 	w = et.w;
 	f := w.body.file;
