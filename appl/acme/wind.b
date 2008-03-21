@@ -212,7 +212,7 @@ Window.reshape(w : self ref Window, r : Rect, safe : int, keepextra: int) : int
 	r1.min.y = y;
 	if(tagresized || !safe || !w.body.frame.r.eq(r1)){
 		oy = y;
-		if(y+1 <= r.max.y ){ # no body was > r.max.y
+		if(y+1+w.body.frame.font.height <= r.max.y ){ # no body was > r.max.y
 			r1.min.y = y;
 			r1.max.y = y + 1;
 			draw(mainwin, r1, tagcols[BORD], nil, (0, 0));
