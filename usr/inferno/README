@@ -27,7 +27,8 @@ GETTING STARTED
           window.
 
           A window can be moved  by dragging the top left corner of the
-          window.
+          window. A column of windows can be moved by dragging the
+          top left corner of the column.
 
           Dragging the mouse while holding down the middle mouse
           button executes the selected text when you release the button.
@@ -57,12 +58,12 @@ GETTING STARTED
           	ps | wc
 
           You'll probably want to work on files in your host system.  The
-          local drives should already be mounted using there letter names
-          as directories, e.g., right-click on /n/c
+          local drives should already be mounted below /n, for example, 
+          on Nt see /n/C, on Linux or MacOSX see /n/local
 
 WIKI
-          You can read and edit the Inferno or Plan 9 wikis. Mount the wiki
-          filesystem,
+          You can read and edit the Inferno or Plan 9 wikis. Mount the 
+          Inferno wiki filesystem,
           	Local mount -A tcp!canto.hopto.org!wiki /mnt/wiki
           Then run the wiki browser,
           	Wiki
@@ -78,6 +79,6 @@ WEB
           Right-click on the following link
           	http://caerwyn.com/ipn
           You might find some scripts on the web page that are directly
-          runnable from inside acme ;)
+          runnable from inside acme.
 
                                                 Inferno Manual
