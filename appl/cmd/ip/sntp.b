@@ -60,7 +60,7 @@ ClientMode: con 3;
 ServerMode: con 4;
 Epoch: con big 86400*big (365*70 + 17);	# seconds between 1 Jan 1900 and 1 Jan 1970
 
-Microsec: con big 100000;
+Microsec: con big 1000000;
 
 server := "$ntp";
 stderr: ref Sys->FD;
@@ -187,17 +187,25 @@ quit(s: string)
 
 time(): int
 {
-	fd := sys->open("#r/rtctime", Sys->OREAD);
-	if(fd == nil){
-		fd = sys->open("/dev/time", Sys->OREAD);
-		if(fd == nil)
-			return 0;
-	}
+	n := rdn("#r/rtc");
+	if(n > big 300)	# ie, possibly set
+		return int n;
+	n = rdn("/dev/time");
+	if(n <= big 0)
+		return 0;
+	return int(n/big Microsec);
+}
+
+rdn(f: string): big
+{
+	fd := sys->open(f, Sys->OREAD);
+	if(fd == nil)
+		return big -1;
 	b := array[128] of byte;
 	n := sys->read(fd, b, len b);
 	if(n <= 0)
-		return 0;
-	return int (big string b[0:n] / big 1000000);
+		return big 0;
+	return big string b[0:n];
 }
 
 settime(f: string, t: big)
