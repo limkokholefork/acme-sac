@@ -20,17 +20,17 @@
 #include "keyboard.h"
 #include "keycodes.h"
 
-#define	Kup	Up
-#define	Kleft	Left
+#define	Kup		Up
+#define	Kleft		Left
 #define	Kdown	Down
 #define	Kright	Right
-#define	Kalt	LAlt
-#define	Kctl	LCtrl
+#define	Kalt		LAlt
+#define	Kctl		LCtrl
 #define	Kshift	LShift
 #define	Kpgup	Pgup
 #define	Kpgdown	Pgdown
 #define	Khome	Home
-#define	Kins	Ins
+#define	Kins		Ins
 #define	Kend	End
 
 #define rWindowResource  128
@@ -85,6 +85,7 @@ isready(void*a)
 CGContextRef QuartzContext;
 
 static OSStatus MainWindowEventHandler(EventHandlerCallRef nextHandler, EventRef event, void *userData);
+static OSStatus ApplicationHandleQuitEvent(const AppleEvent *theAppleEvent, AppleEvent *reply, long inRefcon);
 static OSStatus MainWindowCommandHandler(EventHandlerCallRef nextHandler, EventRef event, void *userData);
 
 static void winproc(void *a);
@@ -244,6 +245,13 @@ winproc(void *a)
 								events,
 								NULL,
 								NULL);
+								
+	AEInstallEventHandler(
+								kCoreEventClass,
+								kAEQuitApplication,
+								NewAEEventHandlerUPP(ApplicationHandleQuitEvent),
+								(long) theWindow, false);
+						
 	InstallWindowEventHandler (
 								theWindow,
 								NewEventHandlerUPP (MainWindowCommandHandler),
@@ -690,6 +698,18 @@ MainWindowEventHandler(EventHandlerCallRef nextHandler, EventRef event, void *us
 	return result;
 }
 
+// catch quit events to handle quits from menu, Cmd+Q, applescript, and task switcher
+static OSStatus ApplicationHandleQuitEvent(const AppleEvent *theAppleEvent, AppleEvent *reply, long inRefcon)
+{
+#pragma unused (theAppleEvent, reply)
+  
+	if (inRefcon) {
+		QuitApplicationEventLoop();
+		cleanexit(0);
+	}
+  
+	return noErr;
+}
 
 //default window command handler (from menus)
 static OSStatus
@@ -719,10 +739,6 @@ MainWindowCommandHandler(EventHandlerCallRef nextHandler, EventRef event, void *
 		 * ScreenSaver Level to draw while our app is quiet 
 		 */
 
-		case kHICommandQuit:
-			cleanexit(0);
-			break;
-
 		case kFullScreenCmd:
 			if(fullscreen_race)
 				fullscreen_race = false;
@@ -742,9 +758,18 @@ MainWindowCommandHandler(EventHandlerCallRef nextHandler, EventRef event, void *
 						NULL, sizeof(WindowRef), NULL, &window);
 
 		switch(kind) {
+		// send a quit apple event instead of directly calling cleanexit so that all quits are done in ApplicationHandleQuitEvent
 		case kEventWindowClosed:
 			theWindow = NULL;
-			cleanexit(0); // only one window
+			ProcessSerialNumber psn = { 0, kCurrentProcess };
+			AppleEvent quitEvent;
+			AEDesc target;
+			CallNextEventHandler(nextHandler, event);
+			AECreateDesc(typeProcessSerialNumber, (Ptr)&psn, sizeof(ProcessSerialNumber), &target);
+			AECreateAppleEvent(kCoreEventClass, kAEQuitApplication, &target, kAutoGenerateReturnID, kAnyTransactionID, &quitEvent);
+			AESend(&quitEvent, NULL, kAENoReply, kAENormalPriority, kNoTimeOut, NULL, NULL);
+			AEDisposeDesc(&quitEvent);
+			AEDisposeDesc(&target);
 			break;
 
 		// resize window
