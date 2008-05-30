@@ -263,7 +263,8 @@ winproc(void *a)
 	ShowWindow(theWindow);
 	ShowMenuBar();
 	window_resized();
-	Rectangle rect =  { { 0, 0 }, { bounds.size.width, bounds.size.height } };		wmtrack(0, rect.max.x, rect.max.y, 0);
+	Rectangle rect =  { { 0, 0 }, { bounds.size.width, bounds.size.height } };		
+	wmtrack(0, rect.max.x, rect.max.y, 0);
 	SelectWindow(theWindow);
 	// Run the event loop
 	readybit = 1;
@@ -271,61 +272,59 @@ winproc(void *a)
 	RunApplicationEventLoop();
 }
 
-/*
 static int
 convert_key(UInt32 key, UInt32 charcode)
 {
 	switch(key) {
 	case QZ_IBOOK_ENTER:
-	case QZ_RETURN: return '\n';
-	case QZ_ESCAPE: return 27;
-	case QZ_BACKSPACE: return '\b';
-	case QZ_LALT: return Kalt;
-	case QZ_LCTRL: return Kctl;
-	case QZ_LSHIFT: return Kshift;
-	case QZ_F1: return KF+1;
-	case QZ_F2: return KF+2;
-	case QZ_F3: return KF+3;
-	case QZ_F4: return KF+4;
-	case QZ_F5: return KF+5;
-	case QZ_F6: return KF+6;
-	case QZ_F7: return KF+7;
-	case QZ_F8: return KF+8;
-	case QZ_F9: return KF+9;
-	case QZ_F10: return KF+10;
-	case QZ_F11: return KF+11;
-	case QZ_F12: return KF+12;
-	case QZ_INSERT: return Kins;
-	case QZ_DELETE: return 0x7F;
-	case QZ_HOME: return Khome;
-	case QZ_END: return Kend;
-	case QZ_KP_PLUS: return '+';
-	case QZ_KP_MINUS: return '-';
-	case QZ_TAB: return '\t';
-	case QZ_PAGEUP: return Kpgup;
-	case QZ_PAGEDOWN: return Kpgdown;
-	case QZ_UP: return Kup;
-	case QZ_DOWN: return Kdown;
-	case QZ_LEFT: return Kleft;
-	case QZ_RIGHT: return Kright;
-	case QZ_KP_MULTIPLY: return '*';
-	case QZ_KP_DIVIDE: return '/';
-	case QZ_KP_ENTER: return '\n';
-	case QZ_KP_PERIOD: return '.';
-	case QZ_KP0: return '0';
-	case QZ_KP1: return '1';
-	case QZ_KP2: return '2';
-	case QZ_KP3: return '3';
-	case QZ_KP4: return '4';
-	case QZ_KP5: return '5';
-	case QZ_KP6: return '6';
-	case QZ_KP7: return '7';
-	case QZ_KP8: return '8';
-	case QZ_KP9: return '9';
-	default: return charcode;
+	case QZ_RETURN:			return '\n';
+	case QZ_ESCAPE: 		return 27;
+	case QZ_BACKSPACE:		return '\b';
+	case QZ_LALT:			return Kalt;
+	case QZ_LCTRL:			return Kctl;
+	case QZ_LSHIFT:			return Kshift;
+	case QZ_F1:				return KF+1;
+	case QZ_F2:				return KF+2;
+	case QZ_F3:				return KF+3;
+	case QZ_F4:				return KF+4;
+	case QZ_F5:				return KF+5;
+	case QZ_F6:				return KF+6;
+	case QZ_F7:				return KF+7;
+	case QZ_F8:				return KF+8;
+	case QZ_F9:				return KF+9;
+	case QZ_F10:			return KF+10;
+	case QZ_F11:			return KF+11;
+	case QZ_F12:			return KF+12;
+	case QZ_INSERT:			return Kins;
+	case QZ_DELETE:			return 0x7F;
+	case QZ_HOME:			return Khome;
+	case QZ_END:			return Kend;
+	case QZ_KP_PLUS:		return '+';
+	case QZ_KP_MINUS:		return '-';
+	case QZ_TAB:			return '\t';
+	case QZ_PAGEUP:			return Kpgup;
+	case QZ_PAGEDOWN:		return Kpgdown;
+	case QZ_UP:				return Kup;
+	case QZ_DOWN:			return Kdown;
+	case QZ_LEFT:			return Kleft;
+	case QZ_RIGHT:			return Kright;
+	case QZ_KP_MULTIPLY:	return '*';
+	case QZ_KP_DIVIDE:		return '/';
+	case QZ_KP_ENTER:		return '\n';
+	case QZ_KP_PERIOD:		return '.';
+	case QZ_KP0:			return '0';
+	case QZ_KP1:			return '1';
+	case QZ_KP2:			return '2';
+	case QZ_KP3:			return '3';
+	case QZ_KP4:			return '4';
+	case QZ_KP5:			return '5';
+	case QZ_KP6:			return '6';
+	case QZ_KP7:			return '7';
+	case QZ_KP8:			return '8';
+	case QZ_KP9:			return '9';
+	default:				return charcode;
 	}
 }
-*/
 
 enum {
 	kF1KeyCode	 = 0x7A,	// Undo
@@ -350,40 +349,40 @@ convert_unichar(UInt32 charcode)
 {
 	switch(charcode) {
 	case kEnterCharCode:
-	case kReturnCharCode: return '\n';
-	case kEscapeCharCode: return 27;
-	case kBackspaceCharCode: return '\b';
-	case kOptionUnicode: return Kalt;
-	case kControlUnicode: return Kctl;
-	case kShiftUnicode: return Kshift;
+	case kReturnCharCode:		return '\n';
+	case kEscapeCharCode:		return 27;
+	case kBackspaceCharCode:	return '\b';
+	case kOptionUnicode:		return Kalt;
+	case kControlUnicode:		return Kctl;
+	case kShiftUnicode:			return Kshift;
 	case kFunctionKeyCharCode:
 		switch(charcode) {
-		case kF1KeyCode: return KF+1;
-		case kF2KeyCode: return KF+2;
-		case kF3KeyCode: return KF+3;
-		case kF4KeyCode: return KF+4;
-		case kF5KeyCode: return KF+5;
-		case kF6KeyCode: return KF+6;
-		case kF7KeyCode: return KF+7;
-		case kF8KeyCode: return KF+8;
-		case kF9KeyCode: return KF+9;
-		case kF10KeyCode: return KF+10;
-		case kF11KeyCode: return KF+11;
-		case kF12KeyCode: return KF+12;
-		default: return charcode;
+		case kF1KeyCode:		return KF+1;
+		case kF2KeyCode:		return KF+2;
+		case kF3KeyCode:		return KF+3;
+		case kF4KeyCode:		return KF+4;
+		case kF5KeyCode:		return KF+5;
+		case kF6KeyCode:		return KF+6;
+		case kF7KeyCode:		return KF+7;
+		case kF8KeyCode:		return KF+8;
+		case kF9KeyCode:		return KF+9;
+		case kF10KeyCode:		return KF+10;
+		case kF11KeyCode:		return KF+11;
+		case kF12KeyCode:		return KF+12;
+		default:				return charcode;
 		}
-//	case kInsertCharCode: return Kins;
-	case kDeleteCharCode: return 0x7F;
-	case kHomeCharCode: return Khome;
-	case kEndCharCode: return Kend;
-	case kTabCharCode: return '\t';
-	case kPageUpCharCode: return Kpgup;
-	case kPageDownCharCode: return Kpgdown;
-	case kUpArrowCharCode: return Kup;
-	case kDownArrowCharCode: return Kdown;
-	case kLeftArrowCharCode: return Kleft;
-	case kRightArrowCharCode: return Kright;
-	default: return charcode;
+//	case kInsertCharCode:		return Kins;
+	case kDeleteCharCode:		return 0x7F;
+	case kHomeCharCode:			return Khome;
+	case kEndCharCode:			return Kend;
+	case kTabCharCode:			return '\t';
+	case kPageUpCharCode:		return Kpgup;
+	case kPageDownCharCode:		return Kpgdown;
+	case kUpArrowCharCode:		return Kup;
+	case kDownArrowCharCode:	return Kdown;
+	case kLeftArrowCharCode:	return Kleft;
+	case kRightArrowCharCode:	return Kright;
+	default:					return charcode;
 	}
 }
 
@@ -475,6 +474,7 @@ handle_text_input_event(EventRef event)
 
 	case kEventTextInputUnicodeForKeyEvent:
 	case kEventTextInputUnicodeText:
+//		fprintf(stderr, "unicode input event:\n");
 		result = handle_unicode(event);
 		break;
 
@@ -508,6 +508,9 @@ handle_kbd_event(EventRef event)
 					sizeof(macKeyCode), NULL, &macKeyCode);
 	GetEventParameter(event, kEventParamKeyModifiers, typeUInt32, NULL,
 					sizeof(macKeyModifiers), NULL, &macKeyModifiers);
+
+//	fprintf(stderr, "mac char is %04x=%c\n", macCharCodes, macCharCodes);
+//	fprintf(stderr, "mac key code is %ld\n", macKeyCode);
 
 	UInt32 kind = GetEventKind (event);
 	switch(kind) {
@@ -554,7 +557,6 @@ handle_kbd_event(EventRef event)
 			}
 			break;
 		
-		case 0:
 		default:
 			if(button2 || button3) {
 				if(button2) {
@@ -583,12 +585,18 @@ handle_kbd_event(EventRef event)
 				else
 					full_screen();
 			}
-		}		
+		}
+		else {
+			int key = convert_key(macKeyCode, macCharCodes);
+//			fprintf(stderr, "acme key code is %ld\n", key);
+			gkbdputc(gkbdq, key);
+		}
 		break;
 						
-	default:
+	default:	
 		result = eventNotHandledErr;
 		break;
+
 	}
 
 	return result;
