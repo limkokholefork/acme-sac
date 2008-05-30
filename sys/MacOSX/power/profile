@@ -31,7 +31,8 @@ fn 9c {
 		-I$emuroot/sys/MacOSX/power/include
 		-I$emuroot/sys/include
 		-I$emuroot/sys/libinterp
-		-I$emuroot/sys/emu/port)
+		-I$emuroot/sys/emu/port
+		-mmacosx-version-min=10.2)
 	file=$1
 	ofile = `{basename $file .c}
 	ofile = `{basename $ofile .s}
@@ -45,7 +46,7 @@ fn 9c {
 
 fn 9l {
 	ld=$cc
-	ldflags= (-multiply_defined suppress )
+	ldflags= (-multiply_defined suppress)
 	syslibs=()
 	args = $*
 	echo $ld $ldflags $args $syslibs
