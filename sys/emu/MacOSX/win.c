@@ -390,7 +390,7 @@ convert_unichar(UInt32 charcode)
 void
 sendbuttons(int b, int x, int y)
 {
-//	fprintf(stderr, "sendbuttons:	b: %d; x: %d; y: %d\n", b, x, y);
+//	fprint(2, "sendbuttons:	b: %d; x: %d; y: %d\n", b, x, y);
 	mousetrack(b, x, y, 0);
 }
 
@@ -474,7 +474,7 @@ handle_text_input_event(EventRef event)
 
 	case kEventTextInputUnicodeForKeyEvent:
 	case kEventTextInputUnicodeText:
-//		fprintf(stderr, "unicode input event:\n");
+//		fprint(2, "unicode input event:\n");
 		result = handle_unicode(event);
 		break;
 
@@ -509,14 +509,14 @@ handle_kbd_event(EventRef event)
 	GetEventParameter(event, kEventParamKeyModifiers, typeUInt32, NULL,
 					sizeof(macKeyModifiers), NULL, &macKeyModifiers);
 
-//	fprintf(stderr, "mac char is %04x=%c\n", macCharCodes, macCharCodes);
-//	fprintf(stderr, "mac key code is %ld\n", macKeyCode);
+//	fprint(2, "mac char is %04x=%c\n", macCharCodes, macCharCodes);
+//	fprint(2, "mac key code is %ld\n", macKeyCode);
 
 	UInt32 kind = GetEventKind (event);
 	switch(kind) {
 
 	case kEventRawKeyModifiersChanged:
-//		fprintf(stderr, "kbd event:	key modifiers changed!\n");
+//		fprint(2, "kbd event:	key modifiers changed!\n");
 		switch(macKeyModifiers & (optionKey | cmdKey)) {
 
 		case (optionKey | cmdKey):
@@ -525,7 +525,7 @@ handle_kbd_event(EventRef event)
 			 * currently it's only 2-3 snarf and the 3-2 noop
 			 */
 			 
-//			fprintf(stderr, "kbd event:	Opt|Cmd pressed!\n");
+//			fprint(2, "kbd event:	Opt|Cmd pressed!\n");
 			altPressed = true;
 			cmdPressed = true;
 			if(mousebuttons & 1 || mousebuttons & 2 || mousebuttons & 4) {
@@ -538,7 +538,7 @@ handle_kbd_event(EventRef event)
 			break;
 		
 		case optionKey:
-//			fprintf(stderr, "kbd event:	Opt pressed!\n");
+//			fprint(2, "kbd event:	Opt pressed!\n");
 			altPressed = true;
 			if(mousebuttons & 1 || mousebuttons & 4) {
 				mousebuttons |= 2;	/* set button 2 */
@@ -548,7 +548,7 @@ handle_kbd_event(EventRef event)
 			break;
 		
 		case cmdKey:
-//			fprintf(stderr, "kbd event:	Cmd pressed!\n");
+//			fprint(2, "kbd event:	Cmd pressed!\n");
 			cmdPressed = true;
 			if(mousebuttons & 1 || mousebuttons & 2) {
 				mousebuttons |= 4;	/* set button 3 */
@@ -588,7 +588,7 @@ handle_kbd_event(EventRef event)
 		}
 		else {
 			int key = convert_key(macKeyCode, macCharCodes);
-//			fprintf(stderr, "acme key code is %ld\n", key);
+//			fprint(2, "acme key code is %ld\n", key);
 			gkbdputc(gkbdq, key);
 		}
 		break;
@@ -635,11 +635,11 @@ handle_mouse_event(EventRef event)
 								0, sizeof buttons, 0, &buttons);
 			/* simulate other buttons via alt/apple key. like x11 */
 			if(modifiers & optionKey) {
-//				fprintf(stderr, "mouse event:	Opt pressed!\n");
+//				fprint(2, "mouse event:	Opt pressed!\n");
 				mousebuttons = ((buttons & 1) ? 2 : 0);
 				altPressed = false;
 			} else if(modifiers & cmdKey) {
-//				fprintf(stderr, "mouse event:	Cmd pressed!\n");
+//				fprint(2, "mouse event:	Cmd pressed!\n");
 				mousebuttons = ((buttons & 1) ? 4 : 0);
 				cmdPressed = false;
 			}
@@ -683,17 +683,17 @@ MainWindowEventHandler(EventHandlerCallRef nextHandler, EventRef event, void *us
 	switch(class) {
 
 	case kEventClassTextInput:
-//		fprintf(stderr, "text input event!\n");
+//		fprint(2, "text input event!\n");
 		handle_text_input_event(event);			
 		break;
 
 	case kEventClassKeyboard:
-//		fprintf(stderr, "keyboard event!\n");
+//		fprint(2, "keyboard event!\n");
 		handle_kbd_event(event);
 		break;
 
 	case kEventClassMouse:
-//		fprintf(stderr, "mouse event!\n");
+//		fprint(2, "mouse event!\n");
 		handle_mouse_event(event);
 		break;
 			
@@ -882,7 +882,7 @@ clipread(void)
 	// Wow.  This is ridiculously complicated.
 	PasteboardSynchronize(appleclip);
 	if((err = PasteboardGetItemCount(appleclip, &nitems)) != noErr) {
-		fprintf(stderr, "apple pasteboard GetItemCount failed - Error %d\n", (int)err);
+		fprint(2, "apple pasteboard GetItemCount failed - Error %d\n", (int)err);
 		return 0;
 	}
 
@@ -893,12 +893,12 @@ clipread(void)
 		CFIndex flavorCount;
 
 		if((err = PasteboardGetItemIdentifier(appleclip, i, &itemID)) != noErr){
-			fprintf(stderr, "Can't get pasteboard item identifier: %d\n", (int)err);
+			fprint(2, "Can't get pasteboard item identifier: %d\n", (int)err);
 			return 0;
 		}
 
 		if((err = PasteboardCopyItemFlavors(appleclip, itemID, &flavorTypeArray))!=noErr){
-			fprintf(stderr, "Can't copy pasteboard item flavors: %d\n", (int)err);
+			fprint(2, "Can't copy pasteboard item flavors: %d\n", (int)err);
 			return 0;
 		}
 
@@ -910,7 +910,7 @@ clipread(void)
 			if(UTTypeConformsTo(flavorType, CFSTR("public.utf16-plain-text"))){
 				if((err = PasteboardCopyItemFlavorData(appleclip, itemID,
 					CFSTR("public.utf16-plain-text"), &cfdata)) != noErr){
-					fprintf(stderr, "apple pasteboard CopyItem failed - Error %d\n", (int)err);
+					fprint(2, "apple pasteboard CopyItem failed - Error %d\n", (int)err);
 					return 0;
 				}
 				CFIndex length = CFDataGetLength(cfdata);
@@ -933,22 +933,22 @@ clipwrite(char *snarf)
 
 	runeseprint(rsnarf, rsnarf+nelem(rsnarf), "%s", snarf);
 	if(PasteboardClear(appleclip) != noErr){
-		fprintf(stderr, "apple pasteboard clear failed\n");
+		fprint(2, "apple pasteboard clear failed\n");
 		return 0;
 	}
 	flags = PasteboardSynchronize(appleclip);
 	if((flags&kPasteboardModified) || !(flags&kPasteboardClientIsOwner)){
-		fprintf(stderr, "apple pasteboard cannot assert ownership\n");
+		fprint(2, "apple pasteboard cannot assert ownership\n");
 		return 0;
 	}
 	cfdata = CFDataCreate(kCFAllocatorDefault, (uchar*)rsnarf, runestrlen(rsnarf)*2);
 	if(cfdata == nil){
-		fprintf(stderr, "apple pasteboard cfdatacreate failed\n");
+		fprint(2, "apple pasteboard cfdatacreate failed\n");
 		return 0;
 	}
 	if(PasteboardPutItemFlavor(appleclip, (PasteboardItemID)1,
 		CFSTR("public.utf16-plain-text"), cfdata, 0) != noErr){
-		fprintf(stderr, "apple pasteboard putitem failed\n");
+		fprint(2, "apple pasteboard putitem failed\n");
 		CFRelease(cfdata);
 		return 0;
 	}
