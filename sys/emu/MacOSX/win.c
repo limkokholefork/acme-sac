@@ -84,8 +84,8 @@ isready(void*a)
 
 CGContextRef QuartzContext;
 
+static OSStatus ApplicationQuitEventHandler(EventHandlerCallRef nextHandler, EventRef event, void *userData);
 static OSStatus MainWindowEventHandler(EventHandlerCallRef nextHandler, EventRef event, void *userData);
-static OSStatus ApplicationHandleQuitEvent(const AppleEvent *theAppleEvent, AppleEvent *reply, long inRefcon);
 static OSStatus MainWindowCommandHandler(EventHandlerCallRef nextHandler, EventRef event, void *userData);
 
 static void winproc(void *a);
@@ -215,6 +215,9 @@ winproc(void *a)
 	if(PasteboardCreate(kPasteboardClipboard, &appleclip) != noErr)
 		sysfatal("pasteboard create failed");
 
+	const EventTypeSpec app_events[] = {
+		{ kEventClassApplication, kEventAppQuit }
+	};
 	const EventTypeSpec commands[] = {
 		{ kEventClassWindow, kEventWindowClosed },
 		{ kEventClassWindow, kEventWindowBoundsChanged },
@@ -240,17 +243,18 @@ winproc(void *a)
 	};
 
 	InstallApplicationEventHandler (
+								NewEventHandlerUPP (ApplicationQuitEventHandler),
+								GetEventTypeCount(app_events),
+								app_events,
+								NULL,
+								NULL);
+
+	InstallApplicationEventHandler (
 								NewEventHandlerUPP (MainWindowEventHandler),
 								GetEventTypeCount(events),
 								events,
 								NULL,
 								NULL);
-								
-	AEInstallEventHandler(
-								kCoreEventClass,
-								kAEQuitApplication,
-								NewAEEventHandlerUPP(ApplicationHandleQuitEvent),
-								(long) theWindow, false);
 						
 	InstallWindowEventHandler (
 								theWindow,
@@ -707,15 +711,10 @@ MainWindowEventHandler(EventHandlerCallRef nextHandler, EventRef event, void *us
 }
 
 // catch quit events to handle quits from menu, Cmd+Q, applescript, and task switcher
-static OSStatus ApplicationHandleQuitEvent(const AppleEvent *theAppleEvent, AppleEvent *reply, long inRefcon)
+static OSStatus ApplicationQuitEventHandler(EventHandlerCallRef nextHandler, EventRef event, void *userData)
 {
-#pragma unused (theAppleEvent, reply)
-  
-	if (inRefcon) {
-		QuitApplicationEventLoop();
-		cleanexit(0);
-	}
-  
+	cleanexit(0);
+//	QuitApplicationEventLoop();
 	return noErr;
 }
 
@@ -766,18 +765,21 @@ MainWindowCommandHandler(EventHandlerCallRef nextHandler, EventRef event, void *
 						NULL, sizeof(WindowRef), NULL, &window);
 
 		switch(kind) {
-		// send a quit apple event instead of directly calling cleanexit so that all quits are done in ApplicationHandleQuitEvent
+		// send a quit carbon event instead of directly calling cleanexit 
+		// so that all quits are done in ApplicationHandleQuitEvent
 		case kEventWindowClosed:
-			theWindow = NULL;
-			ProcessSerialNumber psn = { 0, kCurrentProcess };
-			AppleEvent quitEvent;
-			AEDesc target;
-			CallNextEventHandler(nextHandler, event);
-			AECreateDesc(typeProcessSerialNumber, (Ptr)&psn, sizeof(ProcessSerialNumber), &target);
-			AECreateAppleEvent(kCoreEventClass, kAEQuitApplication, &target, kAutoGenerateReturnID, kAnyTransactionID, &quitEvent);
-			AESend(&quitEvent, NULL, kAENoReply, kAENormalPriority, kNoTimeOut, NULL, NULL);
-			AEDisposeDesc(&quitEvent);
-			AEDisposeDesc(&target);
+			{
+			EventRef quitEvent;
+			CreateEvent(NULL,
+						kEventClassApplication,
+						kEventAppQuit,
+						0,
+						kEventAttributeNone,
+						&quitEvent);
+			EventTargetRef target;
+			target = GetApplicationEventTarget();
+			SendEventToEventTarget(quitEvent, target);
+			}
 			break;
 
 		// resize window
