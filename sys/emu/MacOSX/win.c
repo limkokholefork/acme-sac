@@ -20,18 +20,18 @@
 #include "keyboard.h"
 #include "keycodes.h"
 
-#define	Kup		Up
+#define	Kup			Up
 #define	Kleft		Left
-#define	Kdown	Down
-#define	Kright	Right
+#define	Kdown		Down
+#define	Kright		Right
 #define	Kalt		LAlt
 #define	Kctl		LCtrl
-#define	Kshift	LShift
-#define	Kpgup	Pgup
-#define	Kpgdown	Pgdown
-#define	Khome	Home
+#define	Kshift		LShift
+#define	Kpgup		Pgup
+#define	Kpgdown		Pgdown
+#define	Khome		Home
 #define	Kins		Ins
-#define	Kend	End
+#define	Kend		End
 
 #define rWindowResource  128
 
@@ -276,6 +276,7 @@ winproc(void *a)
 	RunApplicationEventLoop();
 }
 
+/*
 static int
 convert_key(UInt32 key, UInt32 charcode)
 {
@@ -329,6 +330,7 @@ convert_key(UInt32 key, UInt32 charcode)
 	default:				return charcode;
 	}
 }
+*/
 
 enum {
 	kF1KeyCode	 = 0x7A,	// Undo
@@ -591,9 +593,10 @@ handle_kbd_event(EventRef event)
 			}
 		}
 		else {
-			int key = convert_key(macKeyCode, macCharCodes);
-//			fprint(2, "acme key code is %ld\n", key);
-			gkbdputc(gkbdq, key);
+			if(macKeyCode == QZ_ESCAPE)
+				gkbdputc(gkbdq, 27);
+			else
+				result = eventNotHandledErr;
 		}
 		break;
 						
@@ -766,7 +769,7 @@ MainWindowCommandHandler(EventHandlerCallRef nextHandler, EventRef event, void *
 
 		switch(kind) {
 		// send a quit carbon event instead of directly calling cleanexit 
-		// so that all quits are done in ApplicationHandleQuitEvent
+		// so that all quits are done in ApplicationQuitEventHandler
 		case kEventWindowClosed:
 			{
 			EventRef quitEvent;
