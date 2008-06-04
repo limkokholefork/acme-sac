@@ -1,5 +1,8 @@
 load arg
 
+sysroot=/Developer/SDKs/MacOSX10.3.9.sdk
+min=10.3
+
 fn awk {
 	os awk $*
 }
@@ -32,7 +35,9 @@ fn 9c {
 		-I$emuroot/sys/include
 		-I$emuroot/sys/libinterp
 		-I$emuroot/sys/emu/port
-		-mmacosx-version-min=10.2)
+		-I$sysroot
+		'-mmacosx-version-min='^$min
+		)
 	file=$1
 	ofile = `{basename $file .c}
 	ofile = `{basename $ofile .s}
@@ -46,7 +51,11 @@ fn 9c {
 
 fn 9l {
 	ld=$cc
-	ldflags= (-multiply_defined suppress)
+	ldflags= (
+		-multiply_defined suppress
+		-I$sysroot
+		'-mmacosx-version-min='^$min
+		)
 	syslibs=()
 	args = $*
 	echo $ld $ldflags $args $syslibs
