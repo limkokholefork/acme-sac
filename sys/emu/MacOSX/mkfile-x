@@ -33,7 +33,7 @@ CFLAGS=\
 	-I../../$SYSTARG/$OBJTYPE/include\
 	-I../../include\
 	-I../../libinterp\
-	-I$sysroot/usr/X11R6/include\
+	-I/usr/X11R6/include\
 	$CTHREADFLAGS $CFLAGS $EMUOPTIONS\
 
 KERNDATE=`{$NDATE}

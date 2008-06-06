@@ -1,6 +1,6 @@
 load arg
 
-sysroot=/Developer
+sysroot=/Developer/SDKs/MacOSX10.4u.sdk
 min=10.4
 
 fn awk {
@@ -35,7 +35,7 @@ fn 9c {
 		-I$emuroot/sys/include
 		-I$emuroot/sys/libinterp
 		-I$emuroot/sys/emu/port
-		-I$sysroot/SDKs/MacOSX^$min^u.sdk
+		-isysroot $sysroot
 		'-mmacosx-version-min='^$min
 		)
 	file=$1
@@ -53,7 +53,7 @@ fn 9l {
 	ld=$cc
 	ldflags= (
 		-multiply_defined suppress
-		-I$sysroot/SDKs/MacOSX^$min^u.sdk
+		-isysroot $sysroot
 		'-mmacosx-version-min='^$min
 		)
 	syslibs=()
