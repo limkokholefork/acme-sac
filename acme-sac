@@ -6,26 +6,35 @@ export OBJTYPE=386
 export EMU=emu
 export osMajorVer=`uname -r | cut -f1 -d.`
 
-if ( uname -s | grep -i linux >/dev/null )
-then
+if ( uname -s | grep -i linux >/dev/null ); then
 	SYSHOST=Linux
 fi
 
-if ( uname -p | grep -i power >/dev/null )
-then
+if ( uname -p | grep -i power >/dev/null ); then
         OBJTYPE=power
 fi
 
-if [ ! -f $acmedir/sys/$SYSHOST/386/bin/$EMU ]
-then
-	OBJTYPE=power
+if [ "$SYSHOST" = "MacOSX" ] && [ "$osMajorVer" -lt 8 ]; then
+	EMU=emu-x11
 fi
 
-if [ "$SYSHOST" = "MacOSX" ] && [ "$osMajorVer" -lt 8 ]
-then
-	export EMU=emu-x11
+case $1 in
+	-x|-x11|-X|-X11)
+		if [ -f sys/$SYSHOST/$OBJTYPE/bin/emu-x11 ]; then
+			EMU=emu-x11
+		fi
+		shift 1
+		;;
+	*)
+		break
+		;;
+esac
+
+if [ "$EMU" = "emu-x11" ]; then
 	export DISPLAY=":0"
-	open /Applications/Utilities/X11.app
+	if [[ $osMajorVer < 9 ]]; then
+		open /Applications/Utilities/X11.app
+	fi	
 fi
 
 cd $acmedir
