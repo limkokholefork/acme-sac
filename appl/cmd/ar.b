@@ -180,7 +180,7 @@ init(nil: ref Draw->Context, args: list of string)
 			cp = "error";
 		}
 	bout.flush();
-	if(cp != nil)
+	if(cp == "error")
 		raise "fail:"+cp;
 }
 
