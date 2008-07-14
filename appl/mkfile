@@ -6,7 +6,6 @@ DIRS=\
 	acme\
 	grid\
 	lib\
-	mapreduce\
 	math\
 	svc\
 
