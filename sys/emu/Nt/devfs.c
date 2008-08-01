@@ -2245,14 +2245,12 @@ addgroups(User *u, int force)
 		return;
 	u->gotgroup = 1;
 
-	rem = 1;
+	rem = 0;
 	n = 0;
 	srv = domsrv(u->dom, srvrock);
-	while(rem != n){
-		i = net.UserGetGroups(srv, u->name, 0,
-			(BYTE**)&grp, MAX_PREFERRED_LENGTH, &n, &rem);
-		if(i != NERR_Success && i != ERROR_MORE_DATA)
-			break;
+	i = net.UserGetGroups(srv, u->name, 0,
+		(BYTE**)&grp, MAX_PREFERRED_LENGTH, &n, &rem);
+	if(i == NERR_Success || i == ERROR_MORE_DATA){
 		for(i = 0; i < n; i++){
 			gu = domnametouser(srv, grp[i].grui0_name, u->dom);
 			if(gu == 0)
@@ -2265,18 +2263,13 @@ addgroups(User *u, int force)
 			u->group = g;
 		}
 		net.ApiBufferFree(grp);
-		
-		if(i != ERROR_MORE_DATA)
-			break;
 	}
 
-	rem = 1;
+	rem = 0;
 	n = 0;
-	while(rem != n){
-		i = net.UserGetLocalGroups(srv, u->name, 0, LG_INCLUDE_INDIRECT,
-			(BYTE**)&loc, MAX_PREFERRED_LENGTH, &n, &rem);
-		if(i != NERR_Success  && i != ERROR_MORE_DATA)
-			break;
+	i = net.UserGetLocalGroups(srv, u->name, 0, LG_INCLUDE_INDIRECT,
+		(BYTE**)&loc, MAX_PREFERRED_LENGTH, &n, &rem);
+	if(i == NERR_Success || i == ERROR_MORE_DATA){
 		for(i = 0; i < n; i++){
 			gu = domnametouser(srv, loc[i].lgrui0_name, u->dom);
 			if(gu == NULL)
@@ -2289,9 +2282,6 @@ addgroups(User *u, int force)
 			u->group = g;
 		}
 		net.ApiBufferFree(loc);
-		
-		if(i != ERROR_MORE_DATA)
-			break;
 	}
 }
 
