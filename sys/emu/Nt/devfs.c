@@ -383,6 +383,7 @@ fsinit(void)
 	 */
 	ntsrv = filesrv(rootdir);
 	usesec = PlatformId == VER_PLATFORM_WIN32_NT; 	/* true for NT and 2000 */
+/*	usesec = 0;   TODO: control by emu flag*/
 	if(usesec){
 		file_share_delete = FILE_SHARE_DELETE;	/* sensible handling of shared files by delete and rename */
 		secinit();
@@ -415,7 +416,8 @@ fsattach(char *spec)
 		strcpy(s, spec);
 		FS(c)->spec = s;
 		FS(c)->srv = filesrv(spec);
-		FS(c)->usesec = fsacls(spec);
+		if(usesec)
+			FS(c)->usesec = fsacls(spec);
 		FS(c)->checksec = FS(c)->usesec && isserver;
 		c->qid.path = fsqidpath(spec);
 		c->qid.type = QTDIR;
@@ -2248,7 +2250,7 @@ addgroups(User *u, int force)
 	srv = domsrv(u->dom, srvrock);
 	while(rem != n){
 		i = net.UserGetGroups(srv, u->name, 0,
-			(BYTE**)&grp, 1024, &n, &rem);
+			(BYTE**)&grp, MAX_PREFERRED_LENGTH, &n, &rem);
 		if(i != NERR_Success && i != ERROR_MORE_DATA)
 			break;
 		for(i = 0; i < n; i++){
@@ -2263,14 +2265,17 @@ addgroups(User *u, int force)
 			u->group = g;
 		}
 		net.ApiBufferFree(grp);
+		
+		if(i != ERROR_MORE_DATA)
+			break;
 	}
 
 	rem = 1;
 	n = 0;
 	while(rem != n){
 		i = net.UserGetLocalGroups(srv, u->name, 0, LG_INCLUDE_INDIRECT,
-			(BYTE**)&loc, 1024, &n, &rem);
-		if(i != NERR_Success && i != ERROR_MORE_DATA)
+			(BYTE**)&loc, MAX_PREFERRED_LENGTH, &n, &rem);
+		if(i != NERR_Success  && i != ERROR_MORE_DATA)
 			break;
 		for(i = 0; i < n; i++){
 			gu = domnametouser(srv, loc[i].lgrui0_name, u->dom);
@@ -2284,6 +2289,9 @@ addgroups(User *u, int force)
 			u->group = g;
 		}
 		net.ApiBufferFree(loc);
+		
+		if(i != ERROR_MORE_DATA)
+			break;
 	}
 }
 
