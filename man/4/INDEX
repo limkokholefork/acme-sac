@@ -8,6 +8,8 @@ rawdbfs dbfs
 9660srv dossrv
 dossrv dossrv
 export export
+factotum factotum
+feedkey factotum
 ftpfs ftpfs
 9export import
 import import
