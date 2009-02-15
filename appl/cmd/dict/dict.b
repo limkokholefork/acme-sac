@@ -44,7 +44,10 @@ dicts := array[] of {
 	Dictinfo("simple", "Simple test dictionary", "/lib/dict/simple", "/lib/dict/simpleindex", "/dis/dict/simple.dis"),
 	Dictinfo ("roget",	"Roget's Thesaurus from Project Gutenberg",	"/lib/dict/roget",	"/lib/dict/rogetindex", "/dis/dict/roget.dis"),
 	Dictinfo ("wp",	"Wikipedia",	"/lib/dict/wikipedia",	"/lib/dict/wpindex", "/dis/dict/wikipedia.dis"),
+	Dictinfo ("wd",	"Wiktionary",	"/lib/dict/wiktionary",	"/lib/dict/wdindex", "/dis/dict/wikipedia.dis"),
 	Dictinfo("oeis", "Online Encyclopedia of Integer Sequences",  "/lib/dict/oeis", "/lib/dict/oeisidx", "/dis/dict/oeis.dis"),
+	Dictinfo("pga", "Project Gutenberg Author Index", "/lib/dict/pga", "/lib/dict/pgaindex", "/dis/dict/pg.dis"),
+	Dictinfo("latin", "Latin-English Word List", "/lib/dict/latin", "/lib/dict/latinindex", "/dis/dict/simple.dis"),
 };
 
 argv0:= "dict";
