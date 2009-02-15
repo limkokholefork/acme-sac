@@ -7,6 +7,8 @@ TARG=\
 	pgw.dis\
 	roget.dis\
 	wikipedia.dis\
+	oeis.dis\
+	pg.dis\
 
 MODULES=\
 	dictm.m\
