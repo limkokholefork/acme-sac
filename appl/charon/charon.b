@@ -2283,7 +2283,7 @@ dumpff(w: ref Acmewin->Win, ff: ref Build->Formfield)
 
 i2suf(d: int): string
 {
-	suf := "⁰ⁱ⁲⁳⁴⁵⁶⁷⁸⁹";
+	suf := "₀₁₂₃₄₅₆₇₈₉";
 	s := sys->sprint("%d", d);
 	for(i:=0;i<len s;i++)
 		s[i] = suf[s[i] - '0'];
@@ -2356,7 +2356,7 @@ awin(w: ref Win, sync: chan of int)
 						nopen++;
 						s = s[t:];
 					}
-					while(s != nil && ! (s[t] >= '⁰' && s[t] <= '⁹'))
+					while(s != nil && ! (s[t] >= '₀' && s[t] <= '₉'))
 						s = s[1:];
 				}while(s != nil);
 				if(nopen == 0)	# send it back 
@@ -2397,8 +2397,8 @@ strtoi(s : string) : (int, int)
 		neg = 1;
 		t++;
 	}
-	while (t < ls && (s[t] >= '⁰' && s[t] <= '⁹')) {
-		m = 10*m + s[t]-'⁰';
+	while (t < ls && (s[t] >= '₀' && s[t] <= '₉')) {
+		m = 10*m + s[t]-'₀';
 		t++;
 	}
 	if (neg)
@@ -2484,7 +2484,7 @@ doexec(w: ref Win, cmd: string): int
 					}
 					s = s[t:];
 				}
-				while(s != nil && ! (s[t] >= '⁰' && s[t] <= '⁹'))
+				while(s != nil && ! (s[t] >= '₀' && s[t] <= '₉'))
 					s = s[1:];
 			}while(s != nil);
 		}else
