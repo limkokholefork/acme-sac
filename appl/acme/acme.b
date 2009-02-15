@@ -1000,6 +1000,9 @@ iconinit()
 	but3col = display.rgb(16r00, 16r66, 16r00);
 	but2colt = white;
 	but3colt = white;
+	
+	colbordercol = display.black;
+	rowbordercol = display.black;
 
 	graph->cursorswitch(arrowcursor);
 }

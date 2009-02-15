@@ -27,7 +27,7 @@ Window : import windowm;
 File : import filem;
 Columntag : import Textm;
 BACK : import Framem;
-tagcols, textcols : import acme;
+tagcols, textcols, colbordercol : import acme;
 
 init(mods : ref Dat->Mods)
 {
@@ -65,7 +65,7 @@ Column.init(c : self ref Column, r : Rect)
 	t.what = Columntag;
 	r1.min.y = r1.max.y;
 	r1.max.y += Border;
-	draw(mainwin, r1, black, nil, (0, 0));
+	draw(mainwin, r1, colbordercol, nil, (0, 0));
 	t.insert(0, "New Cut Paste Snarf Sort Zerox Delcol ", 38, TRUE, 0);
 	t.setselect(t.file.buf.nc, t.file.buf.nc);
 	draw(mainwin, t.scrollr, colbutton, nil, colbutton.r.min);
@@ -122,7 +122,7 @@ Column.add(c : self ref Column, w : ref Window, clone : ref Window, y : int) : r
 		r1.max.y = min(y, v.body.frame.r.min.y+v.body.frame.nlines*v.body.frame.font.height);
 		r1.min.y = v.reshape(r1, FALSE, FALSE);
 		r1.max.y = r1.min.y+Border;
-		draw(mainwin, r1, black, nil, (0, 0));
+		draw(mainwin, r1, colbordercol, nil, (0, 0));
 		r.min.y = r1.max.y;
 	}
 	if(w == nil){
@@ -234,7 +234,7 @@ Column.reshape(c : self ref Column, r : Rect)
 	draw(mainwin, c.tag.scrollr, colbutton, nil, colbutton.r.min);
 	r1.min.y = r1.max.y;
 	r1.max.y += Border;
-	draw(mainwin, r1, black, nil, (0, 0));
+	draw(mainwin, r1, colbordercol, nil, (0, 0));
 	r1.max.y = r.max.y;
 	for(i=0; i<c.nw; i++){
 		w = c.w[i];
@@ -247,7 +247,7 @@ Column.reshape(c : self ref Column, r : Rect)
 			r1.max.y = r1.min.y + Border+(graph->font).height;
 		r2 = r1;
 		r2.max.y = r2.min.y+Border;
-		draw(mainwin, r2, black, nil, (0, 0));
+		draw(mainwin, r2, colbordercol, nil, (0, 0));
 		r1.min.y = r2.max.y;
 		r1.min.y = w.reshape(r1, FALSE, i==c.nw-1);
 	}
@@ -330,7 +330,7 @@ Column.sort(c : self ref Column)
 			r.max.y = r.min.y+w.r.dy()+Border;
 		r1 = r;
 		r1.max.y = r1.min.y+Border;
-		draw(mainwin, r1, black, nil, (0, 0));
+		draw(mainwin, r1, colbordercol, nil, (0, 0));
 		r.min.y = r1.max.y;
 		y = w.reshape(r, FALSE, i==c.nw-1);
 	}
@@ -429,7 +429,7 @@ Column.grow(c : self ref Column, w : ref Window, but : int, mv : int)
 			r.max.y += 1 + nl[j]*v.body.frame.font.height;
 		r.min.y = v.reshape(r, c.safe, FALSE);
 		r.max.y += Border;
-		draw(mainwin, r, black, nil, (0, 0));
+		draw(mainwin, r, colbordercol, nil, (0, 0));
 		y1 = r.max.y;
 	}
 	# scan to see new size of everyone below 
@@ -456,7 +456,7 @@ Column.grow(c : self ref Column, w : ref Window, but : int, mv : int)
 	if(i < c.nw-1){
 		r.min.y = r.max.y;
 		r.max.y += Border;
-		draw(mainwin, r, black, nil, (0, 0));
+		draw(mainwin, r, colbordercol, nil, (0, 0));
 		for(j=i+1; j<c.nw; j++)
 			ny[j] -= (y2-r.max.y);
 	}
@@ -473,7 +473,7 @@ Column.grow(c : self ref Column, w : ref Window, but : int, mv : int)
 		if(j < c.nw-1){	# no border on last window 
 			r.min.y = y1;
 			r.max.y += Border;
-			draw(mainwin, r, black, nil, (0, 0));
+			draw(mainwin, r, colbordercol, nil, (0, 0));
 			y1 = r.max.y;
 		}
 	}
@@ -560,7 +560,7 @@ Column.dragwin(c : self ref Column, w : ref Window, but : int)
 	}
 	r.min.y = 	v.reshape(r, FALSE, FALSE); # c.safe
 	r.max.y = r.min.y+Border;
-	draw(mainwin, r, black, nil, (0, 0));
+	draw(mainwin, r, colbordercol, nil, (0, 0));
 	r.min.y = r.max.y;
 	if(i == c.nw-1)
 		r.max.y = c.r.max.y;

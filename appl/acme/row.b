@@ -26,7 +26,7 @@ FALSE, TRUE, XXX : import Dat;
 Border, BUFSIZE, Astring : import Dat;
 Reffont, reffont, Lock, Ref : import dat;
 row, home, mouse : import dat;
-fontnames : import acme;
+fontnames, rowbordercol, colbordercol: import acme;
 font, draw : import graph;
 Point, Rect, Image : import drawm;
 min, max, abs, error, warning, clearmouse, stralloc, strfree : import utils;
@@ -91,7 +91,7 @@ Row.init(row : self ref Row, r : Rect)
 	t.col = nil;
 	r1.min.y = r1.max.y;
 	r1.max.y += Border;
-	draw(mainwin, r1, black, nil, (0, 0));
+	draw(mainwin, r1, rowbordercol, nil, (0, 0));
 	t.insert(0, "Newcol Kill Putall Dump Exit ", 29, TRUE, 0);
 	t.setselect(t.file.buf.nc, t.file.buf.nc);
 }
@@ -129,7 +129,7 @@ Row.add(row : self ref Row, c : ref Column, x : int) : ref Column
 		d.reshape(r1);
 		r1.min.x = r1.max.x;
 		r1.max.x = r1.min.x+Border;
-		draw(mainwin, r1, black, nil, (0, 0));
+		draw(mainwin, r1, rowbordercol, nil, (0, 0));
 		r.min.x = r1.max.x;
 	}
 	if(c == nil){
@@ -165,7 +165,7 @@ Row.reshape(row : self ref Row, r : Rect)
 	row.tag.reshape(r1, TRUE);
 	r1.min.y = r1.max.y;
 	r1.max.y += Border;
-	draw(mainwin, r1, black, nil, (0, 0));
+	draw(mainwin, r1, colbordercol, nil, (0, 0));
 	r.min.y = r1.max.y;
 	r1 = r;
 	r1.max.x = r1.min.x;
@@ -179,7 +179,7 @@ Row.reshape(row : self ref Row, r : Rect)
 		if(i > 0){
 			r2 = r1;
 			r2.max.x = r2.min.x+Border;
-			draw(mainwin, r2, black, nil, (0, 0));
+			draw(mainwin, r2, rowbordercol, nil, (0, 0));
 			r1.min.x = r2.max.x;
 		}
 		c.reshape(r1);
@@ -244,7 +244,7 @@ Row.dragcol(row : self ref Row, c : ref Column)
 	r.min.x = p.x;
 	r.max.x = r.min.x;
 	r.max.x += Border;
-	draw(mainwin, r, black, nil, (0, 0));
+	draw(mainwin, r, rowbordercol, nil, (0, 0));
 	r.min.x = r.max.x;
 	r.max.x = c.r.max.x;
 	c.reshape(r);
@@ -585,7 +585,7 @@ Row.loadx(row : self ref Row, file : string, initing : int)
 					c2.reshape(r2);
 					r2.min.x = x;
 					r2.max.x = x+Border;
-					draw(mainwin, r2, black, nil, (0, 0));
+					draw(mainwin, r2, rowbordercol, nil, (0, 0));
 				}
 				if(i >= row.ncol)
 					row.add(nil, x);
