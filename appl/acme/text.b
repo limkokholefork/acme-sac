@@ -852,13 +852,13 @@ Text.typex(t : self ref Text, r : int, echomode : int)
 			nnb=0;
 			if (t.q0 > 0 && (t.readc(t.q0-1) != '\n'))
 				nnb = t.bswidth(16r15);
+			q0 = t.q0 - nnb - 1;
+			if(q0 < 0)
+				return;
 			if(t.navoffset == 0)
 				t.navoffset = nnb;
 			else
 				nnb = t.navoffset;
-			q0 = t.q0 - nnb - 1;
-			if(q0 < 0)
-				return;
 			while(q0 > 0 && (t.readc(q0-1) != '\n'))
 				q0--;
 			while(q0 < t.file.buf.nc && (t.readc(q0) != '\n') && nnb > 0){
