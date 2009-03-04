@@ -831,6 +831,10 @@ Text.typex(t : self ref Text, r : int, echomode : int)
 			nnb=0;
 			if (t.q0 > 0 && (t.readc(t.q0-1) != '\n'))
 				nnb = t.bswidth(16r15);
+			if(t.navoffset == 0)
+				t.navoffset = nnb;
+			else
+				nnb = t.navoffset;
 			q0 = t.q0;
 			while (q0 < t.file.buf.nc && (t.readc(q0) != '\n'))
 				q0++;
@@ -848,6 +852,10 @@ Text.typex(t : self ref Text, r : int, echomode : int)
 			nnb=0;
 			if (t.q0 > 0 && (t.readc(t.q0-1) != '\n'))
 				nnb = t.bswidth(16r15);
+			if(t.navoffset == 0)
+				t.navoffset = nnb;
+			else
+				nnb = t.navoffset;
 			q0 = t.q0 - nnb - 1;
 			if(q0 < 0)
 				return;
@@ -871,6 +879,7 @@ Text.typex(t : self ref Text, r : int, echomode : int)
 				t.show(t.q0, t.q0);
 			else if(t.q0 != 0)
 				t.show(t.q0-1, t.q0-1);
+			t.navoffset = 0;
 			return;
 		Keyboard->Right =>
 			t.commit(TRUE);
@@ -878,6 +887,7 @@ Text.typex(t : self ref Text, r : int, echomode : int)
 				t.show(t.q1, t.q1);
 			else if(t.q1 != t.file.buf.nc)
 				t.show(t.q1+1, t.q1+1);
+			t.navoffset = 0;
 			return;
 		16r06 or Keyboard->Ins =>
 			rp = t.complete();
@@ -1130,6 +1140,7 @@ Text.select(t : self ref Text, double : int)
 	b, x, y : int;
 	state : int;
 
+	t.navoffset = 0;
 	selecttext = t;
 	#
 	# To have double-clicking and chording, we double-click

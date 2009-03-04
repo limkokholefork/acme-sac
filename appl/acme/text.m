@@ -29,6 +29,7 @@ Textm : module {
 		ncachealloc : int;
 		cache : string;
 		nofill : int;
+		navoffset : int;
 
 		init : fn(t : self ref Text, f : ref Filem->File, r : Draw->Rect, rf : ref Dat->Reffont, cols : array of ref Draw->Image);
 		redraw : fn(t : self ref Text, r : Draw->Rect, f : ref Draw->Font, b : ref Draw->Image, n : int);
