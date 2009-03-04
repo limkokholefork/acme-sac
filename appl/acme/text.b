@@ -880,6 +880,14 @@ Text.typex(t : self ref Text, r : int, echomode : int)
 				q0++;
 			t.show (q0, q0);
 			return;
+		16r03 => # ^C: copy
+			t.commit(TRUE);
+			exec->cut(t, nil, TRUE, FALSE);
+			return;
+		16r1A => # ^Z: undo
+			t.commit(TRUE);
+			exec->undo(t, TRUE);
+			return;
 	}
 	if(t.what == Body){
 		seq++;
@@ -897,7 +905,15 @@ Text.typex(t : self ref Text, r : int, echomode : int)
 	}
 	t.show(t.q0, t.q0);
 	case(r){
-	16r1B =>
+	16r18 => # ^X: cut
+		t.commit(TRUE);
+		exec->cut(t, nil, TRUE, TRUE);
+		return;
+	16r16 => # ^V: paste
+		t.commit(TRUE);
+		exec->paste(t, nil, FALSE, TRUE);
+		return;
+	16r1B => # Escape key
 		if(t.eq0 != ~0)
 			t.setselect(t.eq0, t.q0);
 		if(t.ncache > 0){
