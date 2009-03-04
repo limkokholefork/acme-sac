@@ -827,10 +827,37 @@ Text.typex(t : self ref Text, r : int, echomode : int)
 				scrollup(t, 4);
 			return;
 		Keyboard->Down=>
-			scrolldown(t, t.frame.maxlines/2);
+			t.commit(TRUE);
+			nnb=0;
+			if (t.q0 > 0 && (t.readc(t.q0-1) != '\n'))
+				nnb = t.bswidth(16r15);
+			q0 = t.q0;
+			while (q0 < t.file.buf.nc && (t.readc(q0) != '\n'))
+				q0++;
+			if(q0 < t.file.buf.nc && (t.readc(q0) == '\n'))
+				q0++;
+			while(q0 < t.file.buf.nc && (t.readc(q0) != '\n') && nnb > 0){
+				nnb--;
+				q0++;
+			}
+			t.show (q0, q0);
 			return;
 		Keyboard->Up=>
-			scrollup(t, t.frame.maxlines/2);
+			t.commit(TRUE);
+			# go to where ^U would erase, if not already at BOL
+			nnb=0;
+			if (t.q0 > 0 && (t.readc(t.q0-1) != '\n'))
+				nnb = t.bswidth(16r15);
+			q0 = t.q0 - nnb - 1;
+			if(q0 < 0)
+				return;
+			while(q0 > 0 && (t.readc(q0-1) != '\n'))
+				q0--;
+			while(q0 < t.file.buf.nc && (t.readc(q0) != '\n') && nnb > 0){
+				nnb--;
+				q0++;
+			}
+			t.show (q0, q0);
 			return;
 		Keyboard->Pgdown =>
 			scrolldown(t, 2*t.frame.maxlines/3);
