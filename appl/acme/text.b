@@ -893,6 +893,16 @@ Text.typex(t : self ref Text, r : int, echomode : int)
 		seq++;
 		t.file.mark();
 	}
+	case(r){
+	16r18 => # ^X: cut
+		t.commit(TRUE);
+		exec->cut(t, nil, TRUE, TRUE);
+		return;
+	16r16 => # ^V: paste
+		t.commit(TRUE);
+		exec->paste(t, nil, FALSE, TRUE);
+		return;
+	}
 	if(t.q1 > t.q0){
 		if(t.ncache != 0)
 			error("text.type");
@@ -905,14 +915,6 @@ Text.typex(t : self ref Text, r : int, echomode : int)
 	}
 	t.show(t.q0, t.q0);
 	case(r){
-	16r18 => # ^X: cut
-		t.commit(TRUE);
-		exec->cut(t, nil, TRUE, TRUE);
-		return;
-	16r16 => # ^V: paste
-		t.commit(TRUE);
-		exec->paste(t, nil, FALSE, TRUE);
-		return;
 	16r1B => # Escape key
 		if(t.eq0 != ~0)
 			t.setselect(t.eq0, t.q0);
