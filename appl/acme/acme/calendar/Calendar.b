@@ -92,7 +92,7 @@ init(ctxt: ref Draw->Context, argv: list of string)
 		scheddir = hd argv;
 
 	(sched, err) := Schedule.new(scheddir);
-	if (sched == nil)
+	if (sched == nil && scheddir != SCHEDDIR)
 		sys->fprint(stderr, "cal: cannot load schedule: %s\n", err);
 	currtime := daytime->local(daytime->now());
 	if (currtime == nil) {
