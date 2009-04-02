@@ -154,7 +154,7 @@ newwin(k: ref Kid)
 	sys->pctl(Sys->NEWPGRP, nil);
 	w := Win.wnew();
 	w.openbody(Sys->OWRITE);
-	w.wtagwrite("Get Stmt Over Out Stop Cont Detach");
+	w.wtagwrite("Get Stmt Over Out Stop Cont Detach Break ");
 	w.ctlwrite("scroll");
 	k.w = w;
 	kidstate(k);
@@ -170,8 +170,10 @@ doexec(w: ref Win, k: ref Kid, cmd: string): int
 		arg = arg[1:];
 	case cmd {
 	"Break" =>
-		if(arg == nil)
+		if(arg == nil){
+			seebpt(w);
 			return 1;
+		}
 		setbpt(arg);
 	"Debug" =>
 		if(arg == nil)
@@ -547,7 +549,8 @@ getsel(s: string): (ref Mod, int)
 {
 	s = skip(s, "");
 	(src, index) := str->splitl(s, ":");
-	index = index[1:];
+	if(len index > 1)
+		index = index[1:];
 	m := ref Mod(src, nil, nil);
 	attachsym(m);
 	if(m.sym == nil){
@@ -556,7 +559,9 @@ getsel(s: string): (ref Mod, int)
 	}
 	(sline, spos) := str->splitl(index, ".");
 	line := int sline;
-	pos := int spos[1:];
+	pos := 0;
+	if(len spos > 1)
+		pos = int spos[1:];
 	pc := m.sym.srctopc(ref Src((m.src, line, pos), (m.src, line, pos)));
 	s1 := m.sym.pctosrc(pc);
 	if(s1 == nil){
@@ -605,7 +610,10 @@ setbpt(bs: string)
 	attachdis(m);
 	for(kl := kids; kl != nil; kl = tl kl){
 		k := hd kl;
-		k.prog.setbpt(m.dis, pc);
+		e := k.prog.setbpt(m.dis, pc);
+		if(e != nil){
+			alert(e);
+		}
 	}
 }
 
