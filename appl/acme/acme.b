@@ -1027,25 +1027,23 @@ cinit()
 
 col(s : string, n : int) : int
 {
-	return ((s[n]-'0') << 4) | (s[n+1]-'0');
+	d := 0;
+	if (s[n] >= 'A' && s[n] <= 'F')
+		d = ((s[n] - 'A' + 10)<<4);
+	else
+		d =  ((s[n]-'0') << 4);
+	n++;
+	if (s[n] >= 'A' && s[n] <= 'F')
+		d |= (s[n] - 'A' + 10);
+	else
+		d |=  (s[n]-'0');
+	
+	return d;
 }
 
 rgb(s : string, n : int) : (int, int, int)
 {
 	return (col(s, n), col(s, n+2), col(s, n+4));
-}
-
-imagemix(i1 : ref Image, i2 : ref Image, n1 : int, n2 : int) : ref Image
-{
-	# 2,2		1,3	only	: generalize later
-	i3 := balloc(((0, 0), (2, 2)), mainwin.chans, Draw->White);
-	draw(i3, i3.r, i2, nil, (0, 0));
-	draw(i3, ((0, 0), (1, 1)), i1, nil, (0, 0));
-	if (n1 == n2)
-		draw(i3, ((1, 1), (2, 2)), i1, nil, (0, 0));
-	i3.repl = 1;
-	i3.clipr = ((-1729, -1729), (1729, 1729));
-	return i3;
 }
 	
 cenv(s : string, t : string, but : int, i : ref Image) : ref Image
@@ -1055,16 +1053,19 @@ cenv(s : string, t : string, but : int, i : ref Image) : ref Image
 		c = utils->getenv("acme-" + s + "-" + string but);
 	if (c == nil && but != 0)
 		c = utils->getenv("acme-" + s);
+	if(c != nil && c[0] == '\''){
+		c = c[1:len c - 1];
+	}
 	if (c != nil) {
 		if (c[0] == '#' && len c >= 7) {
 			(r, g, b) := rgb(c, 1);
-			i1 := display.rgb(r, g, b);
+			cmap1 := (r<<24 | g <<16 | b << 8 | 16rff);
 			if (len c >= 15 && c[7] == '/' && c[8] == '#') {
 				(r, g, b) = rgb(c, 9);
-				i2 := display.rgb(r, g, b);
-				return imagemix(i1, i2, 2, 2);
+				cmap2 :=(r<<24 | g <<16 | b << 8 | 16rff);
+				return display.colormix(cmap1, cmap2);
 			}
-			return i1;
+			return display.color(cmap1);
 		}
 		for (j := 0; j < len c; j++)
 			if (c[j] >= 'A' && c[j] <= 'Z')
@@ -1091,6 +1092,10 @@ usercolinit()
 	tagcols[BACK] = cenv("bg", "tag", 0, tagcols[BACK]);
 	tagcols[HTEXT] = cenv("fg", "tag", 1, tagcols[HTEXT]);
 	tagcols[HIGH] = cenv("bg", "tag", 1, tagcols[HIGH]);
+	colbordercol = cenv("bord", "col", 0, display.black);
+	rowbordercol = cenv("bord", "row", 0, display.black);
+	tagcols[BORD] = cenv("bord", "tag", 0, tagcols[BORD]);
+	textcols[BORD] = cenv("bord", "text", 0, textcols[BORD]);
 }
 
 getsnarf()
