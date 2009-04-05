@@ -138,7 +138,7 @@ init(ctxt: ref Draw->Context, argv: list of string)
 				ptrfocus = c;
 				c.ctl <-= "raise";
 				setkbdfocus(c);
-			}else if(p.buttons & (1|2)){
+			}else if(p.buttons & (2)){
 				mc := ref Mousectl(win.ctxt.ptr, p.buttons, p.xy, p.msec);
 				n := menuhit->menuhit(p.buttons, mc, menu, nil);
 				if(n >= 0 && n < len menu.item){
