@@ -40,7 +40,7 @@ GETTING STARTED
           	/usr/inferno
 
           Acme is a multi-tasking system; each process has its own
-          namespace of visibile files. The namespace can be modified with
+          namespace of visible files. The namespace can be modified with
           bind(1) and mount commands. Change the acme namespace by
           prefixing mount and bind commands with 'Local'.  For example,
           mount the Plan 9 source code server by middle-selecting this
@@ -48,7 +48,7 @@ GETTING STARTED
           	Local mount -A tcp!sources.cs.bell-labs.com!9fs /n/sources
 
           Acme is also a shell and comes with a set of Unix-like
-          commands. Commands lines can be typed anywhere and
+          commands. Commandlines can be typed anywhere and
           executed by selecting them and clicking on the selected text
           with the middle mouse button. If you need to open a terminal
           window middle click on the command: win
@@ -59,7 +59,7 @@ GETTING STARTED
 
           You'll probably want to work on files in your host system.  The
           local drives should already be mounted below /n, for example, 
-          on Nt see /n/C, on Linux or MacOSX see /n/local
+          on Nt see /n/C on Linux or MacOSX see /n/local
 
 WIKI
           You can read and edit the Inferno or Plan 9 wikis. Mount the 
