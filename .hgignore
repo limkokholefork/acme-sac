@@ -1,0 +1,9 @@
+syntax: glob
+*.orig
+*.rej
+*~
+*.o
+*.sbl
+usr/inferno/tmp/*
+
+syntax: regexp
