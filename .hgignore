@@ -4,7 +4,18 @@ syntax: glob
 *~
 *.o
 *.sbl
+*.obj
+*.pdb
+*.a
+sys/emu/Nt/*.map
+sys/emu/Nt/*.exe
 usr/inferno/tmp/*
+sys/libinterp/drawmod.h
+sys/libinterp/keyring.h
+sys/libinterp/mathmod.h
+sys/libinterp/sysmod.h
+sys/libinterp/runt.h
+
 
 syntax: regexp
 ^appl.*\.dis$
