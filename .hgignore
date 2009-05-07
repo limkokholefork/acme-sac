@@ -7,3 +7,4 @@ syntax: glob
 usr/inferno/tmp/*
 
 syntax: regexp
+^appl.*\.dis$
