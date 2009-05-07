@@ -20,6 +20,7 @@ nuke:V:	nuke-std
 LIB1=${LIBRARY:%=$ARPREFIX%}
 
 $LIBRARY:	$LIBOBJ
+	mkdir -p $LIBDIR
 	$AR $ARFLAGS $LIB1 $OFILES
 
 $LIBRARY(%.$O):N:	%.$O
