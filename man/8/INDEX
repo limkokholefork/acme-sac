@@ -36,7 +36,6 @@ shutdown shutdown
 countersigner signer
 signer signer
 verify signer
-srv srv
 styxchat styxchat
 styxmon styxmon
 auth svc
