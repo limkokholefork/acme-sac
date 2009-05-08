@@ -351,7 +351,7 @@ rulesproc(rulesio: ref Sys->FileIO)
 			rc <-= (array of byte data[off:], nil);
 			break;
 			
-		(off, data, nil, wc) := <-rulesio.write =>
+		(nil, data, nil, wc) := <-rulesio.write =>
 			if(wc == nil){
 				break;	# not interested in EOF
 			}
