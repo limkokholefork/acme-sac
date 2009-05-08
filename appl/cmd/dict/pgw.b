@@ -925,7 +925,7 @@ printentry(e: Entry, cmd: int)
 	rprev = NONE;
 	changett(nil, nil, 0);
 	curentry = e;
-	if(cmd == 'h')
+	if(cmd == 'h' || cmd == 'H')
 		outinhibit = 1;
 	while(len p > 0){
 		if(cmd == 'r'){
@@ -993,7 +993,7 @@ printentry(e: Entry, cmd: int)
 			}
 			case(t){
 			Hw =>
-				if(cmd == 'h'){
+				if(cmd == 'h' || cmd == 'H'){
 					if(!tagstarts)
 						outrune(' ');
 					outinhibit = !tagstarts;
@@ -1009,7 +1009,7 @@ printentry(e: Entry, cmd: int)
 			}
 		}
 	}
-	if(cmd == 'h'){
+	if(cmd == 'h' || cmd == 'H'){
 		outinhibit = 0;
 		outnl(0);
 	}
@@ -1087,7 +1087,7 @@ gettag(f: string): string
 		tagstarts = 1;
 		tag[k++] = f[0];
 	}
-	for(i := 0; i < len f; i++){
+	for(i := 1; i < len f; i++){
 		if(f[i] == '>'){
 			i++;
 			break;
