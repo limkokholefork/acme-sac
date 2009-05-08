@@ -524,10 +524,10 @@ frinittick(f : ref Frame)
 	# background color
 	draw(f.tick, f.tick.r, f.cols[BACK], nil, (0, 0));
 	# vertical line
-	draw(f.tick, ((FRTICKW/2, 0), (FRTICKW/2+1, ft.height)), black, nil, (0, 0));
+	draw(f.tick, ((FRTICKW/2, 0), (FRTICKW/2+1, ft.height)), f.cols[TEXT], nil, (0, 0));
 	# box on each end
-	draw(f.tick, ((0,0),(FRTICKW, FRTICKW)), black, nil, (0,0));
-	draw(f.tick,  ((0, ft.height-FRTICKW), (FRTICKW, ft.height)), black, nil, (0,0));
+	draw(f.tick, ((0,0),(FRTICKW, FRTICKW)), f.cols[TEXT], nil, (0,0));
+	draw(f.tick,  ((0, ft.height-FRTICKW), (FRTICKW, ft.height)), f.cols[TEXT], nil, (0,0));
 }
 
 frsetrects(f : ref Frame, r : Rect, b : ref Image)
