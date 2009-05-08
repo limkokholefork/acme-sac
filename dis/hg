@@ -1,0 +1,9 @@
+#!/dis/sh
+load std
+
+wdir=`{hp `{pwd}}
+if {~ $emuhost Nt}{
+	os -d $wdir hg $* | tr -d ''
+}{
+	os -d $wdir hg $* 
+}
