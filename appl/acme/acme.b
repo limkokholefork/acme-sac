@@ -880,7 +880,7 @@ get(fix : int, save : int, setfont : int, name : string) : ref Reffont
 		font = r.f;
 		reffonts[0] = r;
 		r.r.inc();
-		iconinit();
+		#iconinit();
 	}
 	r.r.inc();
 	return r;
