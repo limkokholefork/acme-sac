@@ -22,7 +22,7 @@ if {! ftest -f /mnt/factotum/proto}{
 }
 
 if {! ftest -d /fonts/lucidasans}{
-	echo 'No fonts found. Run setupfonts to copy /fonts from www.vitanuova.com Inferno distribution.'
+	echo 'No Inferno fonts found. Run setupfonts to copy /fonts from www.vitanuova.com Inferno distribution.'
 	acme-font=/fonts/vera/Vera/unicode.14.font
 	acme-Font=/fonts/vera/VeraMono/VeraMono.14.font
 }
