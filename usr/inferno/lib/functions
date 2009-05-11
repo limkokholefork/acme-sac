@@ -5,23 +5,8 @@ fn % {
 	$*
 }
 
-fn ps {
-	sed '' /prog/*/status |sort -n
-}
-
 fn broke {
 	sed -n '/broke/s/^ +([0-9][0-9]*) +(.*)/echo kill >\/prog\/\1\/ctl # \2/p' /prog/*/status
-}
-
-fn kill {
-	sed -n '/' ^ $1 ^ '/s/^ +([0-9][0-9]*) +(.*)/echo kill >\/prog\/\1\/ctl # \2/p' /prog/*/status
-
-}
-
-fn winstart {
-	args := $*
-#	dial -A tcp!localhost!17890 {echo $args}
-	echo start $args | os cmd > /dev/null
 }
 
 fn who {
