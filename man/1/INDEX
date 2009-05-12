@@ -28,6 +28,7 @@ fcp cp
 cprof cprof
 cpu cpu
 date date
+dcr dcr
 dd dd
 deb deb
 diff diff
