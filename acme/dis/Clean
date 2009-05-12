@@ -8,9 +8,7 @@ if{~ $#* 0}(
 )
 for i in /mnt/acme/[0-9]* {
 	if{ftest -d $i}{
-		tag=`{cat $i/tag}
-		tagline = $"tag
-		file=$tag(1)
+		(file tagline)=`{cat $i/tag}
 
 		# must match our pattern if given, must be a clean window,
 		# and must not be an Errors window, mail, or win.
