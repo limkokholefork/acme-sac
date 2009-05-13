@@ -15,7 +15,7 @@ sys/libinterp/keyring.h
 sys/libinterp/mathmod.h
 sys/libinterp/sysmod.h
 sys/libinterp/runt.h
-
+services/webget/webget.log
 
 syntax: regexp
 ^appl.*\.dis$
