@@ -63,8 +63,8 @@ GETTING STARTED
 
 WIKI
           You can read and edit the Inferno or Plan 9 wikis. Mount the 
-          Inferno wiki filesystem,
-          	Local mount -A tcp!canto.hopto.org!wiki /mnt/wiki
+          Plan 9 wiki filesystem,
+          	Local mount -A tcp!plan9.bell-labs.com!wiki /mnt/wiki
           Then run the wiki browser,
           	Wiki
 

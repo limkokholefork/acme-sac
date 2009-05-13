@@ -1,8 +1,6 @@
 LICENCE
 NOTICE
-CHANGES
 Acme.exe
-acme-linux
 acme
 	+
 appl
@@ -16,8 +14,6 @@ appl
 	grid
 		+
 	lib
-		+
-	mapreduce
 		+
 	math
 		+
