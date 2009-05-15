@@ -101,6 +101,15 @@ awk(ifd, ofd : ref FD, f1, f2 : string)
 		if (s[0] >= '1' && s[0] <= '9') {
 			if ((n := strchrs(s, "acd")) >= 0)
 				s = f1 + ":" + s[0:n] + " " + s[n:n+1] + " " + f2 + ":" + s[n+1:];
+		}else if(s[0] == 'd' && s[1] == 'i' && s[2] == 'f'){
+			(n, l) := sys->tokenize(s, " \n");
+			if(n == 3){
+				l = tl l;
+				f1 = hd l;
+				l = tl l;
+				f2 = hd l;
+			}
+			continue;
 		}
 		fprint(ofd, "%s", s);
 	}
