@@ -262,8 +262,9 @@ main(argl : list of string)
 	nfontcache = 1;
 	fontcache[0] = reffont;
 
-	iconinit();
+	colinit();
 	usercolinit();
+	iconinit();
 	timerm->timerinit();
 	regx->rxinit();
 
@@ -880,7 +881,7 @@ get(fix : int, save : int, setfont : int, name : string) : ref Reffont
 		font = r.f;
 		reffonts[0] = r;
 		r.r.inc();
-		#iconinit();
+		iconinit();
 	}
 	r.r.inc();
 	return r;
@@ -950,10 +951,8 @@ boxbits := array[64] of {
 	 byte 16r7F, byte 16rFE, byte 16r00, byte 16r00,
 };
 
-iconinit()
+colinit()
 {
-	r : Rect;
-
 	tagcols = array[NCOL] of ref Draw->Image;
 	textcols = array[NCOL] of ref Draw->Image;
 
@@ -967,6 +966,20 @@ iconinit()
 	textcols[BORD] = display.color(Draw->Yellowgreen);
 	textcols[TEXT] = black;
 	textcols[HTEXT] = black;
+
+	but2col = display.rgb(16raa, 16r00, 16r00);
+	but3col = display.rgb(16r00, 16r66, 16r00);
+	but2colt = white;
+	but3colt = white;
+	modbutcol =  display.rgb(16r00, 16r00, 16r99);
+	
+	colbordercol = display.black;
+	rowbordercol = display.black;
+}
+
+iconinit()
+{
+	r : Rect;
 
 	if(button != nil)
 		button = modbutton = colbutton = nil;
@@ -985,7 +998,7 @@ iconinit()
 	r.max.x -= 2;
 	draw(modbutton, r, tagcols[BORD], nil, (0, 0));
 	r = r.inset(2);
-	draw(modbutton, r, display.rgb(16r00, 16r00, 16r99), nil, (0, 0));	# was DMedblue
+	draw(modbutton, r, modbutcol, nil, (0, 0));	# was DMedblue
 
 	r = button.r;
 	colbutton = balloc(r, mainwin.chans, Draw->White);
@@ -995,14 +1008,6 @@ iconinit()
 
 	arrowcursor = ref Cursor((-1, -1), (16, 32), arrowbits);
 	boxcursor = ref Cursor((-7, -7), (16, 32), boxbits);
-
-	but2col = display.rgb(16raa, 16r00, 16r00);
-	but3col = display.rgb(16r00, 16r66, 16r00);
-	but2colt = white;
-	but3colt = white;
-	
-	colbordercol = display.black;
-	rowbordercol = display.black;
 
 	graph->cursorswitch(arrowcursor);
 }
@@ -1088,6 +1093,7 @@ usercolinit()
 	but2col = cenv("bg", "text", 2, but2col);
 	but3colt = cenv("fg", "text", 3, but3colt);
 	but3col = cenv("bg", "text", 3, but3col);
+	modbutcol = cenv("mod", "but", 0, modbutcol);
 	tagcols[TEXT] = cenv("fg", "tag", 0, tagcols[TEXT]);
 	tagcols[BACK] = cenv("bg", "tag", 0, tagcols[BACK]);
 	tagcols[HTEXT] = cenv("fg", "tag", 1, tagcols[HTEXT]);
