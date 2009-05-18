@@ -15,6 +15,9 @@ include "readdir.m";
 	readdir: Readdir;
 include "names.m";
 	names: Names;
+include	"plumbmsg.m";
+	plumbmsg: Plumbmsg;
+	Msg: import plumbmsg;
 
 Navigator: module {
 	init: fn(ctxt: ref Draw->Context, args: list of string);
@@ -22,6 +25,7 @@ Navigator: module {
 
 stderr: ref Sys->FD;
 cwd: string;
+plumbed := 0;
 
 init(nil: ref Draw->Context, nil: list of string)
 {
@@ -32,10 +36,13 @@ init(nil: ref Draw->Context, nil: list of string)
 	stderr = fildes(2);
 	readdir = load Readdir Readdir->PATH;
 	names = load Names Names->PATH;
-	
+	plumbmsg = load Plumbmsg Plumbmsg->PATH;
+	if(plumbmsg->init(1, nil, 0) >= 0){
+		plumbed = 1;
+	}	
 	w := Win.wnew();
 	w.wname("/+Navigator");
-	w.wtagwrite("Get");
+	w.wtagwrite("Get Pin");
 	w.wclean();
 	cwd = "/";
 	dolook(w, "/");
@@ -64,6 +71,15 @@ doexec(w: ref Win, cmd: string): int
 	case cmd {
 	"Del" or "Delete" =>
 		return -1;
+	"Pin" =>
+		if(plumbed){
+			msg := ref Msg("Navigator", "", 
+			cwd, "text", "click=1",
+			array of byte sprint("%s", cwd));
+			if(msg.send() < 0)
+				fprint(sys->fildes(2), "Navigator: plumbing write error: %r\n");
+		}
+		return 1;
 	"Get" =>
 		return dolook(w, ".");
 	* =>
