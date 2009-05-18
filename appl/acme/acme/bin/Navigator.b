@@ -27,7 +27,7 @@ stderr: ref Sys->FD;
 cwd: string;
 plumbed := 0;
 
-init(nil: ref Draw->Context, nil: list of string)
+init(nil: ref Draw->Context, args: list of string)
 {
 	sys = load Sys Sys->PATH;
 	win = load Acmewin Acmewin->PATH;
@@ -39,13 +39,18 @@ init(nil: ref Draw->Context, nil: list of string)
 	plumbmsg = load Plumbmsg Plumbmsg->PATH;
 	if(plumbmsg->init(1, nil, 0) >= 0){
 		plumbed = 1;
-	}	
+	}
+	
+	args = tl args;
+	if (len args != 0)
+		cwd = names->cleanname(hd args);
+	else
+		cwd = "/";
 	w := Win.wnew();
 	w.wname("/+Navigator");
 	w.wtagwrite("Get Pin");
 	w.wclean();
-	cwd = "/";
-	dolook(w, "/");
+	dolook(w, cwd);
 	spawn mainwin(w);
 }
 
@@ -112,6 +117,7 @@ dolook(w: ref Win, file: string): int
 				s = "/";
 			w.wwritebody(sprint("%s%s\n", a[i].name, s));
 		}
+		w.ctlwrite("dump Navigator " + cwd + "\n");
 		w.wclean();
 	}else{
 		return 0;
