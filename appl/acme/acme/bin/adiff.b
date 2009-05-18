@@ -57,6 +57,16 @@ init(ctxt : ref Context, argl : list of string)
 	buf = "name " + workdir->init() + "/-diff-" + f1 + "\n";
 	b = array of byte buf;
 	write(icfd, b, len b);
+	
+	buf = "/chan/" + id + "/tag";
+	tfd := open(buf, OWRITE);
+	if(tfd == nil) {
+		fprint(stderr, "cannot open tag file\n");
+		return;
+	}
+	buf = "NextDiff";
+	b = array of byte buf;
+	write(tfd, b, len b);
 
 	fds := array[2] of ref FD;
 	if (sys->pipe(fds) < 0) {
