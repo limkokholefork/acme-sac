@@ -268,22 +268,25 @@ parseline(s: string)
 	file = fixfilename(file);
 	symbol := Symbol(sym, file, fixpattern(re), cmd);
 	if(typ != nil){
-		o := look(typ);
-		o.syms = symbol :: o.syms;
 		f := looksrc(file);
-		addobj(f, o);
+		o := look(f, typ);
+		o.syms = symbol :: o.syms;
+	}else{
+		f := looksrc(file);
+		o := look(f, "file:" + file);
+		o.syms = symbol :: o.syms;
 	}
 #	sys->print("%s, %s\n", sym, typ);
 }
 
-look(name: string): ref Obj
+look(sf: ref Srcfile, name: string): ref Obj
 {
-	for(l := classes; l != nil; l = tl l){
+	for(l := sf.objs; l != nil; l = tl l){
 		if((hd l).name == name)
 			return hd l;
 	}
 	o := ref Obj(name, nil);
-	classes = o :: classes;
+	sf.objs = o :: sf.objs;
 	return o;
 }
 
@@ -296,15 +299,6 @@ looksrc(name: string): ref Srcfile
 	o := ref Srcfile(name, nil);
 	srcfiles = o :: srcfiles;
 	return o;
-}
-
-addobj(sf: ref Srcfile, o: ref Obj)
-{
-	for(l := sf.objs; l != nil; l = tl l)
-		if(hd l == o)
-			return;
-	sf.objs = o :: sf.objs;
-	return;
 }
 
 reverse(l: list of Symbol): list of Symbol
