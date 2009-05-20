@@ -5,13 +5,16 @@ load std
 user="{cat /dev/user}
 home=/usr/^$"user
 mount -ac {mntgen} /n
+ftrans=()
 
 if {~ $emuhost MacOSX Linux}{
 	trfs '#U*' /n/local >[2] /dev/null
+	ftrans = $frans '#U*' /n/local
 	ghome=/n/local/^`{echo 'echo $HOME' | os sh}
 }{~ $emuhost Nt}{
 	for i in C D {  # add more drive letters to suit
 		trfs '#U' ^ $i ^ ':/' /n/$i >[2] /dev/null
+		ftrans = $ftrans '#U' ^ $i ^ ':/'  /n/$i
 	}
 	ghome=`{os cmd /c 'echo %APPDATA%' |
 		tr -d ''| sed -n '
