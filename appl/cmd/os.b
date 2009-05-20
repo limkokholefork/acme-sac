@@ -175,10 +175,11 @@ translatenames(args: list of string, dir: string, all: int): (string, list of st
 	env = load Env Env->PATH;
 	ftrans->init(nil, nil :: str->unquoted(env->getenv("ftrans")));
 	arg0 := translate1(hd args);
+	args = tl args;
 	dir = translate1(dir);
 	if(all){
 		na: list of string;
-		for(args = tl args; args != nil; args = tl args){
+		for(; args != nil; args = tl args){
 			a := hd args;
 			if(a != nil && (a[0] == '/' || len a > 1 && a[0:2] == "./" || (sys->stat(a).t0 != -1)))
 				a = translate1(a);
@@ -221,6 +222,8 @@ translate1(p: string): string
 		for(i := 0; i < len p; i++)
 			if(p[i] == '/')
 				p[i] = '\\';
+			else if(p[i] == '␣')	# HACK!
+				p[i] = ' ';
 	}
 	return p;
 }
