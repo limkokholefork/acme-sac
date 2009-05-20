@@ -204,7 +204,7 @@ translate1(p: string): string
 			if(!prefix(t, "U"))
 				fail(p+": not in local filesystem space");
 			t = t[1:];
-			if(prefix(t, "/")){
+			if(t == nil || prefix(t, "/")){
 				# #U/... - rooted at $emuroot
 				root := str->unquoted(env->getenv("emuroot"));
 				if(len root != 1)
