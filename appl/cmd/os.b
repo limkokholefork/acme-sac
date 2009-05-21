@@ -231,7 +231,7 @@ translate1(p: string): string
 
 hasdriveletter(p: string): int
 {
-	return len p > 2 && (p[0] >= 'a' && p[0] <= 'z' || p[0] >= 'A' && p[0] <= 'Z') && p[1] == ':' && (p[2] == '/' || p[2] == '\\');
+	return  len p > 1 && (p[0] >= 'a' && p[0] <= 'z' || p[0] >= 'A' && p[0] <= 'Z') && p[1] == ':' && (len p == 2 || (p[2] == '/' || p[2] == '\\'));
 }
 
 prefix(s, p: string): int
