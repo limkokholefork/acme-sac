@@ -181,8 +181,7 @@ translatenames(args: list of string, dir: string, all: int): (string, list of st
 		na: list of string;
 		for(; args != nil; args = tl args){
 			a := hd args;
-			if(a != nil && (a[0] == '/' || len a > 1 && a[0:2] == "./" || (sys->stat(a).t0 != -1)))
-				a = translate1(a);
+			a = translate1(a);
 			na = a :: na;
 		}
 		for(args = nil; na != nil; na = tl na)
@@ -195,6 +194,8 @@ translate1(p: string): string
 {
 	if(p == nil)
 		return nil;
+	if(! (p[0] == '/' || len p > 1 && p[0:2] == "./" || (sys->stat(p).t0 != -1)))
+		return p;
 	if(hasdriveletter(p) == 0){
 		(t, e) := ftrans->translate(p);
 		if(t == nil)
