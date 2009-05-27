@@ -1,8 +1,3 @@
 # In limbo mk none of this is actually used.
 ROOT=
-#SYSHOST=Plan9		# build system OS type (Hp, Inferno, Irix, Linux, Nt, Plan9, Solaris)
-#SYSTARG=$SYSHOST		# target system OS type (Hp, Inferno, Irix, Linux, Nt, Plan9, Solaris)
-#OBJTYPE=386			# target system object type (s800, mips, 386, arm, sparc)
-#OBJDIR=$SYSTARG/$OBJTYPE
-#<$ROOT/mkfiles/mkhost-$SYSHOST			# variables appropriate for host system
-#<$ROOT/mkfiles/mkfile-$SYSTARG-$OBJTYPE	# variables used to build target object type
+SHELLTYPE=rc
