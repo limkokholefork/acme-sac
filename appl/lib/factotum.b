@@ -57,12 +57,17 @@ Authinfo.unpack(a: array of byte): (int, ref Authinfo)
 	return (n, ai);
 }
 
+open(): ref Sys->FD
+{
+	return sys->open("/mnt/factotum/rpc", Sys->ORDWR);
+}
+
 mount(fd: ref Sys->FD, mnt: string, flags: int, aname: string, keyspec: string): (int, ref Authinfo)
 {
 	ai: ref Authinfo;
 	afd := sys->fauth(fd, aname);
 	if(afd != nil){
-		ai = proxy(afd, sys->open("/mnt/factotum/rpc", Sys->ORDWR), "proto=p9any role=client "+keyspec);
+		ai = proxy(afd, open(), "proto=p9any role=client "+keyspec);
 		if(debug && ai == nil){
 			sys->print("proxy failed: %r\n");
 			return (-1, nil);
@@ -286,12 +291,16 @@ done:
 	donec <-= (ai, err);
 }
 
+#
+# insecure passwords, role=client
+#
+
 getuserpasswd(keyspec: string): (string, string)
 {
 	str := load String String->PATH;
 	if(str == nil)
 		return (nil, nil);
-	fd := sys->open("/mnt/factotum/rpc", Sys->ORDWR);
+	fd := open();
 	if(fd == nil)
 		return (nil, nil);
 	if(((o, a) := dorpc(fd, "start", array of byte keyspec)).t0 != "ok" ||
@@ -305,4 +314,208 @@ getuserpasswd(keyspec: string): (string, string)
 		return (nil, nil);
 	}
 	return (hd flds, hd tl flds);
+}
+
+#
+# challenge/response, role=server
+#
+
+challenge(keyspec: string): ref Challenge
+{
+	c := ref Challenge;
+	if((c.afd = open()) == nil)
+		return nil;
+	if(rpc(c.afd, "start", array of byte keyspec).t0 != "ok")
+		return nil;
+	(w, val) := rpc(c.afd, "read", nil);
+	if(w != "ok")
+		return nil;
+	c.chal = string val;
+	return c;
+}
+
+response(c: ref Challenge, resp: string): ref Authinfo
+{
+	if(c.afd == nil){
+		sys->werrstr("auth_response: connection not open");
+		return nil;
+	}
+	if(resp == nil){
+		sys->werrstr("auth_response: nil response");
+		return nil;
+	}
+
+	if(c.user != nil){
+		if(rpc(c.afd, "write", array of byte c.user).t0 != "ok"){
+			# we're out of phase with factotum; give up
+			c.afd = nil;
+			return nil;
+		}
+	}
+
+	if(rpc(c.afd, "write", array of byte resp).t0 != "ok"){
+		# don't close the connection; we might try again
+		return nil;
+	}
+
+	(w, val) := rpc(c.afd, "read", nil);
+	if(w != "done"){
+		sys->werrstr(sys->sprint("unexpected factotum reply: %q %q", w, string val));
+		c.afd = nil;
+		return nil;
+	}
+	ai := Authinfo.read(c.afd);
+	c.afd = nil;
+	return ai;
+}
+
+#
+# challenge/response, role=client
+#
+
+respond(chal: string, keyspec: string): (string, string)
+{
+	if((afd := open()) == nil)
+		return (nil, nil);
+
+	if(dorpc(afd, "start", array of byte keyspec).t0 != "ok" ||
+	   dorpc(afd, "write", array of byte chal).t0 != "ok")
+		return (nil, nil);
+	(o, resp) := dorpc(afd, "read", nil);
+	if(o != "ok")
+		return (nil, nil);
+
+	return (string resp, findattrval(rpcattrs(afd), "user"));
+}
+
+rpcattrs(afd: ref Sys->FD): list of ref Attr
+{
+	(o, a) := rpc(afd, "attr", nil);
+	if(o != "ok")
+		return nil;
+	return parseattrs(string a);
+}
+
+#
+# attributes
+#
+
+parseattrs(s: string): list of ref Attr
+{
+	str := load String String->PATH;
+	fld := str->unquoted(s);
+	rfld := fld;
+	for(fld = nil; rfld != nil; rfld = tl rfld)
+		fld = (hd rfld) :: fld;
+	attrs: list of ref Attr;
+	for(; fld != nil; fld = tl fld){
+		n := hd fld;
+		a := "";
+		tag := Aattr;
+		for(i:=0; i<len n; i++)
+			if(n[i] == '='){
+				a = n[i+1:];
+				n = n[0:i];
+				tag = Aval;
+			}
+		if(len n == 0)
+			continue;
+		if(tag == Aattr && len n > 1 && n[len n-1] == '?'){
+			tag = Aquery;
+			n = n[0:len n-1];
+		}
+		attrs = ref Attr(tag, n, a) :: attrs;
+	}
+	# TO DO: eliminate answered queries
+	return attrs;
+}
+
+Attr.text(a: self ref Attr): string
+{
+	case a.tag {
+	Aattr =>
+		return a.name;
+	Aval =>
+		return sys->sprint("%q=%q", a.name, a.val);
+	Aquery =>
+		return sys->sprint("%q?", a.name);
+	* =>
+		return "??";
+	}
+}
+
+attrtext(attrs: list of ref Attr): string
+{
+	s := "";
+	for(; attrs != nil; attrs = tl attrs){
+		if(s != nil)
+			s[len s] = ' ';
+		s += (hd attrs).text();
+	}
+	return s;
+}
+
+findattr(attrs: list of ref Attr, n: string): ref Attr
+{
+	for(; attrs != nil; attrs = tl attrs)
+		if((a := hd attrs).tag != Aquery && a.name == n)
+			return a;
+	return nil;
+}
+
+findattrval(attrs: list of ref Attr, n: string): string
+{
+	if((a := findattr(attrs, n)) != nil)
+		return a.val;
+	return nil;
+}
+
+delattr(l: list of ref Attr, n: string): list of ref Attr
+{
+	rl: list of ref Attr;
+	for(; l != nil; l = tl l)
+		if((hd l).name != n)
+			rl = hd l :: rl;
+	return rev(rl);
+}
+
+copyattrs(l: list of ref Attr): list of ref Attr
+{
+	rl: list of ref Attr;
+	for(; l != nil; l = tl l)
+		rl = hd l :: rl;
+	return rev(rl);
+}
+
+takeattrs(l: list of ref Attr, names: list of string): list of ref Attr
+{
+	rl: list of ref Attr;
+	for(; l != nil; l = tl l){
+		n := (hd l).name;
+		for(nl := names; nl != nil; nl = tl nl)
+			if((hd nl) == n){
+				rl = hd l :: rl;
+				break;
+			}
+	}
+	return rev(rl);
+}
+
+publicattrs(l: list of ref Attr): list of ref Attr
+{
+	rl: list of ref Attr;
+	for(; l != nil; l = tl l){
+		a := hd l;
+		if(a.tag != Aquery || a.val == nil)
+			rl = a :: rl;
+	}
+	return rev(rl);
+}
+
+rev[T](l: list of T): list of T
+{
+	rl: list of T;
+	for(; l != nil; l = tl l)
+		rl = hd l :: rl;
+	return rl;
 }

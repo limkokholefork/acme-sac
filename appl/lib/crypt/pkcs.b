@@ -287,7 +287,7 @@ parse:
 # [public]
 # generate a pair of DSS public and private keys
 
-generateDSSKeyPair(nil: int): (ref DSSPublicKey, ref DSSPrivateKey)
+generateDSSKeyPair(strength: int): (ref DSSPublicKey, ref DSSPrivateKey)
 {
 	# TODO: need add getRandBetween in IPint
 	return (nil, nil);
@@ -295,7 +295,7 @@ generateDSSKeyPair(nil: int): (ref DSSPublicKey, ref DSSPrivateKey)
 
 # [public]
 
-dss_sign(nil: array of byte, nil: ref DSSPrivateKey): (string, array of byte)
+dss_sign(a: array of byte, sk: ref DSSPrivateKey): (string, array of byte)
 {
 	#signature, digest: array of byte;
 
@@ -319,7 +319,7 @@ dss_sign(nil: array of byte, nil: ref DSSPrivateKey): (string, array of byte)
 
 # [public]
 
-dss_verify(a, nil: array of byte, nil: ref DSSPublicKey): int
+dss_verify(a, signa: array of byte, pk: ref DSSPublicKey): int
 {
 	unsigned: array of byte;
 
@@ -346,7 +346,7 @@ dss_verify(a, nil: array of byte, nil: ref DSSPublicKey): int
 }
 
 # [public]
-decode_dsspubkey(nil: array of byte): (string, ref DSSPublicKey)
+decode_dsspubkey(a: array of byte): (string, ref DSSPublicKey)
 {
 	return ("unsupported error", nil);
 }
@@ -415,7 +415,7 @@ computeDHAgreedKey(dh: ref DHParams, mysk, upk: ref IPint)
 # [public]
 # ASN1 encoding
 
-decode_dhpubkey(nil: array of byte): (string, ref DHPublicKey)
+decode_dhpubkey(a: array of byte): (string, ref DHPublicKey)
 {
 	return ("unsupported error", nil);
 }
@@ -523,7 +523,7 @@ pbe_decrypt(state: ref DESstate, eb: array of byte): array of byte
 
 # [public]
 
-PrivateKeyInfo.encode(nil: self ref PrivateKeyInfo): (string, array of byte)
+PrivateKeyInfo.encode(p: self ref PrivateKeyInfo): (string, array of byte)
 {
 
 	return ("unsupported error", nil);
@@ -531,14 +531,14 @@ PrivateKeyInfo.encode(nil: self ref PrivateKeyInfo): (string, array of byte)
 
 # [public]
 
-PrivateKeyInfo.decode(nil: array of byte): (string, ref PrivateKeyInfo)
+PrivateKeyInfo.decode(a: array of byte): (string, ref PrivateKeyInfo)
 {
 	return ("unsupported error", nil);
 }
 
 # [public]
 
-EncryptedPrivateKeyInfo.encode(nil: self ref EncryptedPrivateKeyInfo)
+EncryptedPrivateKeyInfo.encode(p: self ref EncryptedPrivateKeyInfo)
 	: (string, array of byte)
 {
 
@@ -547,7 +547,7 @@ EncryptedPrivateKeyInfo.encode(nil: self ref EncryptedPrivateKeyInfo)
 
 # [public]
 
-EncryptedPrivateKeyInfo.decode(nil: array of byte)
+EncryptedPrivateKeyInfo.decode(a: array of byte)
 	: (string, ref EncryptedPrivateKeyInfo)
 {
 	return ("unsupported error", nil);
@@ -557,7 +557,7 @@ EncryptedPrivateKeyInfo.decode(nil: array of byte)
 
 decode_extcertorcert(a: array of byte): (int, int, array of byte)
 {
-	(err, nil) := asn1->decode(a);
+	(err, all) := asn1->decode(a);
 	if(err == "") {
 
 	}
@@ -565,7 +565,7 @@ decode_extcertorcert(a: array of byte): (int, int, array of byte)
 
 # [public]
 
-encode_extcertorcert(nil: array of byte, nil: int): (int, array of byte)
+encode_extcertorcert(a: array of byte, which: int): (int, array of byte)
 {
 
 }

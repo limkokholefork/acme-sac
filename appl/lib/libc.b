@@ -111,16 +111,19 @@ strrchr(s: string, n: int): int
 
 strncmp(s1: string, s2: string, n: int): int
 {
-       l1 := len s1;
-       l2 := len s2;
-       ei := min(n, min(l1, l2));
-       for(i := 0; i < ei; i++)
-               if(s1[i] != s2[i])
-                       return s1[i]-int s2[i];
-       if(i == n)
-               return 0;
-       else
-               return l1-l2;
+	l1 := len s1;
+	l2 := len s2;
+	m := n;
+	if(m > l1)
+		m = l1;
+	if(m > l2)
+		m = l2;
+	for(i := 0; i < m; i++)
+		if(s1[i] != s2[i])
+			return s1[i]-s2[i];
+	if(i == n)
+		return 0;
+	return l1-l2;
 }
 
 abs(n: int): int

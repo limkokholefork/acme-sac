@@ -95,20 +95,15 @@ init(nil : ref Draw->Context, args : list of string)
 		btoss : Convcs->State = nil;
 		stobs : Convcs->State = nil;
 
-		while ((n := sys->read(fd, inbuf[start:], len inbuf - start)) >= 0) {
+		while ((n := sys->read(fd, inbuf[start:], len inbuf - start)) > 0) {
 			s := "";
 			nc := 0;
 			outbuf : array of byte = nil;
-			n += start;
-			if (n)
-				(btoss, s, nc) = btos->btos(btoss, inbuf[0:n], -1);
-			else
-				(btoss, s, nc) = btos->btos(btoss, inbuf[0:n], 0);
-			if (s != nil || n == 0) {
+			(btoss, s, nc) = btos->btos(btoss, inbuf[0:n], -1);
+			if (s != nil)
 				(stobs, outbuf) = stob->stob(stobs, s);
+			if (outbuf != nil) {
 				out.write(outbuf, len outbuf);
-				if (s == nil)
-					break;
 			}
 			# copy down unconverted part of buffer
 			start = n - nc;

@@ -157,7 +157,7 @@ quoted(s: string, i: int): (string, int)
 delimited(s: string, i: int, qc: int): (string, int)
 {
 	o := "";
-
+	b := i;
 	for(; i < len s; i++){
 		c := s[i];
 		if(c == qc)

@@ -1126,7 +1126,7 @@ fatal("verifytypes bogus ok for " + stypeconv(t));
 			error(t.src.start, "cannot have a ref " + typeconv(t.tof));
 			return terror;
 		}
-		if(t.tof.kind == Tfn && t.tof.ids != nil && int t.tof.ids.implicit)
+		if(0 && t.tof.kind == Tfn && t.tof.ids != nil && int t.tof.ids.implicit)
 			error(t.src.start, "function references cannot have a self argument");
 		if(0 && t.tof.kind == Tfn && t.polys != nil)
 			error(t.src.start, "function references cannot be polymorphic");

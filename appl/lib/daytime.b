@@ -222,21 +222,26 @@ readtimezone(fname: string): ref Timezone
 	tz.stdiff = 0;
 	tz.stname = "GMT";
 
-	fd: ref Sys->FD;
+	s: string;
 	if(fname == nil){
-		fd = sys->open("/env/timezone", Sys->OREAD);
-		if(fd == nil)
-			fd = sys->open("/locale/timezone", Sys->OREAD);
-	}else
-		fd = sys->open("/locale/" + fname, sys->OREAD);
-	if(fd == nil)
+		s = readfile("/env/timezone");
+		if(s == nil)
+			s = readfile("/locale/timezone");
+	}else{
+		if(fname[0] != '/' && fname[0] != '#')
+			fname = "/locale/" + fname;
+		s = readfile(fname);
+	}
+	if(s == nil)
 		return tz;
-	buf := array[2048] of byte;
-	cnt := sys->read(fd, buf, len buf);
-	if(cnt <= 0)
-		return tz;
-
-	(n, val) := sys->tokenize(string buf[0:cnt], "\t \n\r");
+	if(s[0] == '/' || s[0] == '#'){
+		if(s[len s-1] == '\n')
+			s = s[0: len s-1];
+		s = readfile(s);
+		if(s == nil)
+			return tz;
+	}
+	(n, val) := sys->tokenize(s, "\t \n\r");
 	if(n < 4)
 		return tz;
 
@@ -253,6 +258,18 @@ readtimezone(fname: string): ref Timezone
 	for(j := 0; val != nil; val = tl val)
 		tz.dlpairs[j++] = int hd val;
 	return tz;
+}
+
+readfile(name: string): string
+{
+	fd := sys->open(name, Sys->OREAD);
+	if(fd == nil)
+		return nil;
+	buf := array[2048] of byte;
+	n := sys->read(fd, buf, len buf);
+	if(n <= 0)
+		return nil;
+	return string buf[0:n];
 }
 
 SEC2MIN:	con 60;
@@ -341,10 +358,26 @@ string2tm(date: string): ref Tm
 		if(!ok)
 			return nil;
 
+		# optional time zone
+		while(date != nil && date[0] == ' ')
+			date = date[1:];
+		if(date != nil && !(date[0] >= '0' && date[0] <= '9')){
+			for(i := 0; i < len date; i++)
+				if(date[i] == ' '){
+					(tm.zone, tm.tzoff) = tzinfo(date[0: i]);
+					date = date[i:];
+					break;
+				}
+		}
+
 		# YY|YYYY
-		(buf, tm.year) = datenum(date);
+		(nil, tm.year) = datenum(date);
 		if(tm.year > 1900)
 			tm.year -= 1900;
+		if(tm.zone == ""){
+			tm.zone = "GMT";
+			tm.tzoff = 0;
+		}
 	} else {
 		# Mon was not OK
 		date = odate;
@@ -364,10 +397,10 @@ string2tm(date: string): ref Tm
 		(ok, buf) = hhmmss(date, tm);
 		if(!ok)
 			return nil;
+		(tm.zone, tm.tzoff) = tzinfo(buf);
+		if(tm.zone == "")
+			return nil;
 	}
-	(tm.zone, tm.tzoff) = tzinfo(buf);
-	if(tm.zone == "")
-		return nil;
 
 	return tm;
 }

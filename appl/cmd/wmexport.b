@@ -98,7 +98,7 @@ init(drawctxt: ref Draw->Context, nil: list of string)
 		badmodule(Wmlib->PATH);
 	wmlib->init();
 
-	sys->pctl(Sys->FORKNS, nil);		# fork pgrp?
+	sys->pctl(Sys->FORKNS|Sys->NEWPGRP, nil);		# fork pgrp?
 
 	ctxt = drawctxt;
 	navops := chan of ref Navop;
@@ -129,7 +129,7 @@ Serve:
 			sys->fprint(sys->fildes(2), "wmexport: fatal read error: %s\n", m.error);
 			break Serve;
 		Open =>
-			(fid, nil, nil, err) := srv.canopen(m);
+			(fid, mode, d, err) := srv.canopen(m);
 			if(err != nil)
 				srv.reply(ref Rmsg.Error(m.tag, err));
 			else if(fid.qtype & Sys->QTDIR)
@@ -186,6 +186,7 @@ Serve:
 		}
 	}
 	navops <-= nil;
+	kill(sys->pctl(0, nil), "killgrp");
 }
 
 nameimage(nil: ref Conn, img: ref Draw->Image): string
@@ -409,6 +410,7 @@ navigator(navops: chan of ref Navop)
 			}
 			n.reply <-= dirgen(path);
 		Readdir =>
+			err := "";
 			d: array of int;
 			case path & Mask {
 			Qdir =>

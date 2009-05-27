@@ -383,7 +383,6 @@ fsinit(void)
 	 */
 	ntsrv = filesrv(rootdir);
 	usesec = PlatformId == VER_PLATFORM_WIN32_NT; 	/* true for NT and 2000 */
-/*	usesec = 0;   TODO: control by emu flag*/
 	if(usesec){
 		file_share_delete = FILE_SHARE_DELETE;	/* sensible handling of shared files by delete and rename */
 		secinit();
@@ -1869,10 +1868,10 @@ secsdstat(SECURITY_DESCRIPTOR *sd, Stat *st, Rune *srv)
 		gsid = osid;
 
 	owner = sidtouser(srv, osid);
-	if(owner == 0)
+	if(owner == nil)
 		return 0;
 	group = sidtouser(srv, gsid);
-	if(group == 0)
+	if(group == nil)
 		return 0;
 
 	/* no acl means full access */
@@ -2067,8 +2066,9 @@ sidtouser(Rune *srv, SID *s)
 
 	naname = sizeof(aname);
 	ndname = sizeof(dname);
+
 	if(!LookupAccountSidW(srv, s, aname, &naname, dname, &ndname, &type))
-		return mkuser(s, SidTypeUnknown, L"unknown", L"unknown") ;
+		return mkuser(s, SidTypeUnknown, L"unknown", L"unknown");
 	return mkuser(s, type, aname, dname);
 }
 
@@ -2245,7 +2245,6 @@ addgroups(User *u, int force)
 		return;
 	u->gotgroup = 1;
 
-	rem = 0;
 	n = 0;
 	srv = domsrv(u->dom, srvrock);
 	i = net.UserGetGroups(srv, u->name, 0,
@@ -2265,7 +2264,6 @@ addgroups(User *u, int force)
 		net.ApiBufferFree(grp);
 	}
 
-	rem = 0;
 	n = 0;
 	i = net.UserGetLocalGroups(srv, u->name, 0, LG_INCLUDE_INDIRECT,
 		(BYTE**)&loc, MAX_PREFERRED_LENGTH, &n, &rem);

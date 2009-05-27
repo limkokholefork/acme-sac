@@ -137,14 +137,17 @@ init(nil: ref Draw->Context, args: list of string)
 			exit;
 		if(err != nil)
 			error(sys->sprint("couldn't get key: %s", err));
-		pwd0 := pwd;
-		(pwd, err) = readconsline("Confirm key: ", 1);
-		if(pwd == nil || err == "exit")
-			exit;
-		if(pwd != pwd0)
-			error("key mismatch");
-		for(i := 0; i < len pwd0; i++)
-			pwd0[i] = ' ';	# clear it out
+		(rc, d) := sys->stat(keyfile);
+		if(rc == -1 || d.length == big 0){
+			pwd0 := pwd;
+			(pwd, err) = readconsline("Confirm key: ", 1);
+			if(pwd == nil || err == "exit")
+				exit;
+			if(pwd != pwd0)
+				error("key mismatch");
+			for(i := 0; i < len pwd0; i++)
+				pwd0[i] = ' ';	# clear it out
+		}
 	}
 
 	thekey = hashkey(pwd);

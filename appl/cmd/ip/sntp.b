@@ -13,6 +13,9 @@ include "ip.m";
 	ip: IP;
 	IPaddr: import ip;
 
+include "dial.m";
+	dial: Dial;
+
 include "timers.m";
 	timers: Timers;
 	Timer: import timers;
@@ -70,6 +73,7 @@ init(nil: ref Draw->Context, args: list of string)
 	sys = load Sys Sys->PATH;
 	ip = load IP IP->PATH;
 	timers = load Timers Timers->PATH;
+	dial = load Dial Dial->PATH;
 
 	ip->init();
 	arg := load Arg Arg->PATH;
@@ -95,8 +99,8 @@ init(nil: ref Draw->Context, args: list of string)
 	stderr = sys->fildes(2);
 	timers->init(100);
 
-	(ok, conn) := sys->dial(netmkaddr(server, "udp", "ntp"), nil);
-	if(ok < 0){
+	conn := dial->dial(dial->netmkaddr(server, "udp", "ntp"), nil);
+	if(conn == nil){
 		sys->fprint(stderr, "sntp: can't dial %s: %r\n", server);
 		raise "fail:dial";
 	}
@@ -141,7 +145,7 @@ init(nil: ref Draw->Context, args: list of string)
 				sys->print("%bd\n", now);
 			if(doset){
 				settime("#r/rtc", now);
-				settime("/dev/time", now * Microsec);
+				settime("/dev/time", now*Microsec);
 			}
 			quit(nil);
 		<-t.timeout =>
@@ -303,19 +307,4 @@ SNTP.new(vn, mode: int): ref SNTP
 	s.rcvtime = big 0;
 	s.xmttime = big 0;
 	return s;
-}
-
-netmkaddr(addr, net, svc: string): string
-{
-	if(net == nil)
-		net = "net";
-	(n, nil) := sys->tokenize(addr, "!");
-	if(n <= 1){
-		if(svc== nil)
-			return sys->sprint("%s!%s", net, addr);
-		return sys->sprint("%s!%s!%s", net, addr, svc);
-	}
-	if(svc == nil || n > 2)
-		return addr;
-	return sys->sprint("%s!%s", addr, svc);
 }

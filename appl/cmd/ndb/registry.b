@@ -82,8 +82,21 @@ Filter: adt {
 	remove:	fn(f: self ref Filter);
 };
 
-filters: list of ref Filter;
+Event: adt {
+	id:		int;					# fid reading from Qevents
+	vers:		int;					# last change seen
+	m:		ref Tmsg.Read;			# outstanding read request
 
+	new:		fn(id: int): ref Event;
+	find:		fn(id: int): ref Event;
+	remove:	fn(e: self ref Event);
+	queue:	fn(e: self ref Event, m: ref Tmsg.Read): string;
+	post:		fn(vers: int);
+	flush:	fn(tag: int);
+};
+
+filters: list of ref Filter;
+events: list of ref Event;
 
 services := array[9] of ref Service;
 nservices := 0;
@@ -105,11 +118,11 @@ init(nil: ref Draw->Context, args: list of string)
 	if(daytime == nil)
 		loaderr(Daytime->PATH);
 	styx = load Styx Styx->PATH;
-	if (styx == nil)
+	if(styx == nil)
 		loaderr(Styx->PATH);
 	styx->init();
 	styxservers = load Styxservers Styxservers->PATH;
-	if (styxservers == nil)
+	if(styxservers == nil)
 		loaderr(Styxservers->PATH);
 	styxservers->init(styx);
 
@@ -167,7 +180,7 @@ Serve:
 		err := "";
 		pick m := gm {
 		Readerror =>
-			error(sys->sprint("fatal read error: %s\n", m.error));
+			sys->fprint(sys->fildes(2), "registry: styx read error: %s\n", m.error);
 			break Serve;
 		Open =>
 			(fid, nil, nil, e) := srv.canopen(m);
@@ -202,6 +215,9 @@ Serve:
 			err = remove(fid);
 			if(err == nil)
 				srv.reply(ref Rmsg.Remove(m.tag));
+		Flush =>
+			Event.flush(m.oldtag);
+			srv.default(gm);
 		* =>
 			srv.default(gm);
 		}
@@ -219,6 +235,9 @@ open(m: ref Tmsg.Open, fid: ref Fid)
 		svc := Service.new(fid.uname);
 		svc.fid = fid.fid;
 		fid.open(m.mode, (big ((svc.id << Shift)|Qsvc), 0, Sys->QTFILE));
+	Qevent =>
+		Event.new(fid.fid);
+		fid.open(m.mode, (fid.path, 0, Sys->QTFILE));
 	* =>
 		fid.open(m.mode, (fid.path, 0, fid.qtype));
 	}
@@ -246,7 +265,16 @@ read(m: ref Tmsg.Read, fid: ref Fid): string
 		}
 		srv.reply(styxservers->readbytes(m, fid.data));
 	Qevent =>
-		return "not implemented yet";
+		e := Event.find(fid.fid);
+		if(e.vers == rootvers)
+			return e.queue(m);
+		else{
+			s := sys->sprint("%8.8d\n", rootvers);
+			e.vers = rootvers;
+			m.offset = big 0;
+			srv.reply(styxservers->readstr(m, s));
+			return nil;
+		}
 	* =>
 		return Egreg;
 	}
@@ -278,6 +306,7 @@ write(m: ref Tmsg.Write, fid: ref Fid): string
 		svc.vers++;
 		for(; toks != nil; toks = tl tl toks)
 			svc.set(hd toks, hd tl toks);
+		Event.post(++rootvers);
 	Qfind =>
 		s := string m.data;
 		toks := str->unquoted(s);
@@ -310,10 +339,13 @@ clunk(fid: ref Fid)
 	case path & Mask {
 	Qsvc =>
 		svc := Service.find(path >> Shift);
-		if(svc != nil && svc.fid == fid.fid && int svc.get("persist") == 0)
+		if(svc != nil && svc.fid == fid.fid && int svc.get("persist") == 0){
 			svc.remove();
+			Event.post(rootvers);
+		}
 	Qevent =>
-		; # remove queued events?
+		if((e := Event.find(fid.fid)) != nil)
+			e.remove();
 	Qfind =>
 		if((f := Filter.find(fid.fid)) != nil)
 			f.remove();
@@ -327,6 +359,7 @@ remove(fid: ref Fid): string
 		svc := Service.find(path >> Shift);
 		if(fid.uname == svc.owner){
 			svc.remove();
+			Event.post(rootvers);
 			return nil;
 		}
 	}
@@ -345,7 +378,8 @@ svcnameok(s: string): string
 	"new" or
 	"event" or
 	"find" or
-	"index" =>
+	"index" or
+	"" =>
 		return "bad service name";
 	}
 	for(i = 0; i < nservices; i++)
@@ -425,22 +459,31 @@ navigator(navops: chan of ref Navop)
 			d: array of int;
 			case path & Mask {
 			Qroot =>
-				Nstatic:	con 3;
+				Nstatic:	con 4;
 				d = array[Nstatic + nservices] of int;
 				d[0] = Qnew;
 				d[1] = Qindex;
 				d[2] = Qfind;
-#				d[3] = Qevent;
+				d[3] = Qevent;
+				nd := 0;
 				for(i := 0; i < nservices; i++)
-					if(services[i].name != nil)
-						d[i + Nstatic] = (services[i].id<<Shift) | Qsvc;
+					if(services[i].name != nil){
+						d[nd + Nstatic] = (services[i].id<<Shift) | Qsvc;
+						nd++;
+					}
+				d = d[0:Nstatic + nd];
 			}
 			if(d == nil){
 				n.reply <-= (nil, Enotdir);
 				break;
 			}
-			for (i := n.offset; i < len d; i++)
-				n.reply <-= dirgen(d[i]);
+			for(i := n.offset; i < len d; i++){
+				(dir, err) := dirgen(d[i]);
+				if(dir == nil)
+					sys->fprint(sys->fildes(2), "registry: bad qid %#ux: %s\n", d[i], err);
+				else
+					n.reply <-= (dir, err);
+			}
 			n.reply <-= (nil, nil);
 		}
 	}
@@ -619,6 +662,63 @@ Filter.match(f: self ref Filter, attrs: list of (string, string)): int
 			break;
 	}
 	return i == len f.attrs;
+}
+
+Event.new(id: int): ref Event
+{
+	e := ref Event(id, rootvers, nil);
+	events = e::events;
+	return e;
+}
+
+Event.find(id: int): ref Event
+{
+	for(l := events; l != nil; l = tl l)
+		if((hd l).id == id)
+			return hd l;
+	return nil;
+}
+
+Event.remove(e: self ref Event)
+{
+	rl: list of ref Event;
+	for(l := events; l != nil; l = tl l)
+		if((hd l).id != e.id)
+			rl = hd l :: rl;
+	events = rl;
+}
+
+Event.queue(e: self ref Event, m: ref Tmsg.Read): string
+{
+	if(e.m != nil)
+		return "concurrent read for event fid";
+	m.offset = big 0;
+	e.m = m;
+	return nil;
+}
+
+Event.post(vers: int)
+{
+	s := sys->sprint("%8.8d\n", vers);
+	for(l := events; l != nil; l = tl l){
+		e := hd l;
+		if(e.vers < vers && e.m != nil){
+			srv.reply(styxservers->readstr(e.m, s));
+			e.vers = vers;
+			e.m = nil;
+		}
+	}
+}
+
+Event.flush(tag: int)
+{
+	for(l := events; l != nil; l = tl l){
+		e := hd l;
+		if(e.m != nil && e.m.tag == tag){
+			e.m = nil;
+			break;
+		}
+	}
 }
 
 dbload(db: ref Db)

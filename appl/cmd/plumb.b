@@ -6,7 +6,6 @@ include "sys.m";
 include "draw.m";
 
 include "arg.m";
-	arg: Arg;
 
 include "plumbmsg.m";
 	plumbmsg: Plumbmsg;
@@ -20,45 +19,9 @@ Plumb: module
 	init:	fn(nil: ref Draw->Context, nil: list of string);
 };
 
-m : ref Msg;
-usage()
-{
-	sys->fprint(stderr(), "Usage: plumb [-s src] [-d dest] [-D dir] [-k kind] [-a name val] -i | ... data ...\n");
-	raise "fail:usage";
-}
-
-gather()
-{
-	buf := array[8192] of byte;
-	n, ndata: int;
-	
-	ndata = 0;
-	m.data = nil;
-	while((n = sys->read(sys->fildes(0), buf, len buf)) > 0){
-		b := array[ndata + len buf] of byte;
-		if(b == nil){
-			err(sys->sprint("alloc failed: %r\n"));
-			raise "alloc";
-		}
-		if (ndata > 0)
-			b[0:] = m.data[0:ndata];
-		b[ndata:] = buf[0:n];
-		m.data = b[0:ndata+n];
-		ndata += n;
-	}
-
-	if (n < 0){
-		err(sys->sprint("i/o error on input: %r\n"));
-		raise "read";
-	}
-}
-
 init(nil: ref Draw->Context, args: list of string)
 {
 	sys = load Sys Sys->PATH;
-	arg = load Arg Arg->PATH;
-	if(arg == nil)
-		nomod(Arg->PATH);
 	plumbmsg = load Plumbmsg Plumbmsg->PATH;
 	if(plumbmsg == nil)
 		nomod(Plumbmsg->PATH);
@@ -71,41 +34,42 @@ init(nil: ref Draw->Context, args: list of string)
 
 	attrs: list of ref Attr;
 	input := 0;
-	m = ref Msg("plumb", nil, workdir->init(), "text", nil, nil);
+	m := ref Msg("plumb", nil, workdir->init(), "text", nil, nil);
+	arg := load Arg Arg->PATH;
 	arg->init(args);
+	arg->setusage("plumb [-s src] [-d dest] [-w wdir] [-t type] [-a name val] -i | ... data ...");
 	while((c := arg->opt()) != 0)
 		case c {
 		's' =>
-			m.src = use(arg->arg(), c);
+			m.src = arg->earg();
 		'd' =>
-			m.dst = use(arg->arg(), c);
-		'D' =>
-			m.dir = use(arg->arg(), c);
+			m.dst = arg->earg();
+		'w' or 'D' =>
+			m.dir = arg->earg();
 		'i' =>
 			input++;
 		't' or 'k'=>
-			m.kind = use(arg->arg(), c);
+			m.kind = arg->arg();
 		'a' =>
-			name := use(arg->arg(), c);
-			val := use(arg->arg(), c);
+			name := arg->earg();
+			val := arg->earg();
 			attrs = tack(attrs, ref Attr(name, val));
 		* =>
-			usage();
+			arg->usage();
 		}
 	args = arg->argv();
-	if((input && len args > 0) || (!input && len args < 1))
-		usage();
+	if(input && args != nil || !input && args == nil)
+		arg->usage();
+	arg = nil;
+
 	if(input){
-		gather();
+		m.data = gather(sys->fildes(0));
 		(notfound, nil) := plumbmsg->lookup(plumbmsg->string2attrs(m.attr), "action");
-		if(notfound){
+		if(notfound)
 			tack(attrs, ref Attr("action", "showdata"));
-		}
 		m.attr = plumbmsg->attrs2string(attrs);
-		if(m.send() < 0){
-			err(sys->sprint("can't send message: %r\n"));
-			raise "error";
-		}
+		if(m.send() < 0)
+			err(sys->sprint("can't send message: %r"));
 		exit;
 	}
 	
@@ -127,6 +91,24 @@ init(nil: ref Draw->Context, args: list of string)
 		err(sys->sprint("can't plumb message: %r"));
 }
 
+gather(fd: ref Sys->FD): array of byte
+{
+	Chunk: con 8192;	# arbitrary
+	ndata := 0;
+	buf := array[Chunk] of byte;
+	while((n := sys->read(fd, buf[ndata:], len buf - ndata)) > 0){
+		ndata += n;
+		if(len buf - ndata < Chunk){
+			t := array[len buf+Chunk] of byte;
+			t[0:] = buf[0: ndata];
+			buf = t;
+		}
+	}
+	if(n < 0)
+		err(sys->sprint("error reading input: %r"));
+	return buf[0: ndata];
+}
+
 tack(l: list of ref Attr, v: ref Attr): list of ref Attr
 {
 	if(l == nil)
@@ -134,26 +116,13 @@ tack(l: list of ref Attr, v: ref Attr): list of ref Attr
 	return hd l :: tack(tl l, v);
 }
 
-use(s: string, c: int): string
-{
-	if(s == nil)
-		err(sys->sprint("missing value for -%c", c));
-	return s;
-}
-
 nomod(m: string)
 {
-	err(sys->sprint("can't load %s: %r\n", m));
+	err(sys->sprint("can't load %s: %r", m));
 }
 
 err(s: string)
 {
-	sys->fprint(stderr(), "plumb: %s\n", s);
+	sys->fprint(sys->fildes(2), "plumb: %s\n", s);
 	raise "fail:error";
 }
-
-stderr(): ref Sys->FD
-{
-	return sys->fildes(2);
-}
-

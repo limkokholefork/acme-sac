@@ -610,8 +610,6 @@ exslave(void *a)
 		notkilled();
 		exfreeq(q);
 	}
-	print("exslave %ld shut down", up->pid);	/* not reached */
-	pexit("exslave shut down", 0);
 }
 
 static void
@@ -1029,7 +1027,7 @@ Exread(Export *fs, Fcall *t, Fcall *r)
 	Fid *f;
 	Chan *c;
 	Lock *cl;
-	long off;
+	vlong off;
 	int dir, n, seek;
 
 	f = Exgetfid(fs, t->fid);

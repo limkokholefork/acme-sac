@@ -136,6 +136,7 @@ readslave(fd: ref Iobuf, ch: chan of (ref Rawimage, string))
 		ch <-= (nil, err);
 		exit;
 	}
+	buf := header.buf;
 	nseg := 0;
 
     Loop:
@@ -497,7 +498,7 @@ decodescan(h: ref Header): (ref Rawimage, string)
 		# JPEG requires scan components to be in same order as in frame,
 		# so if both have 3 we know scan is Y Cb Cr and there's no need to
 		# reorder
-#		cs := int ss[1+2*comp];
+		cs := int ss[1+2*comp];
 		(Td[comp], Ta[comp]) = nibbles(ss[2+2*comp]);
 		H[comp] = h.comp[comp].H;
 		V[comp] = h.comp[comp].V;

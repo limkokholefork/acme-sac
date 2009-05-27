@@ -1,12 +1,16 @@
-implement gettar;
+implement Gettar;
 
 include "sys.m";
 	sys: Sys;
 	print, sprint, fprint: import sys;
 	stdin, stderr: ref sys->FD;
+
 include "draw.m";
 
+include "arg.m";
+
 TBLOCK: con 512;	# tar logical blocksize
+
 Header: adt{
 	name: string;
 	size: int;
@@ -15,28 +19,33 @@ Header: adt{
 	skip: int;
 };
 
-gettar: module{
+Gettar: module
+{
 	init:   fn(nil: ref Draw->Context, nil: list of string);
 };
 
-Error(mess: string){
-	fprint(stderr,"gettar: %s: %r\n",mess);
+error(mess: string)
+{
+	fprint(stderr,"gettar: %s\n",mess);
 	raise "fail:error";
 }
+
 verbose := 0;
-NBLOCK: con 20;		# blocking factor for efficient read
+NBLOCK: con 20;		# traditional blocking factor for efficient read
 tarbuf := array[NBLOCK*TBLOCK] of byte;	# static buffer
 nblock := NBLOCK;			# how many blocks of data are in tarbuf
 recno := NBLOCK;			# how many blocks in tarbuf have been consumed
-getblock():array of byte{
+
+getblock(): array of byte
+{
 	if(recno>=nblock){
 		i := sys->read(stdin,tarbuf,TBLOCK*NBLOCK);
 		if(i==0)
 			return nil;
 		if(i<0)
-			Error("read error");
+			error(sys->sprint("read error: %r"));
 		if(i%TBLOCK!=0)
-			Error("blocksize error");
+			error("blocksize error");
 		nblock = i/TBLOCK;
 		recno = 0;
 	}
@@ -45,7 +54,8 @@ getblock():array of byte{
 }
 
 
-octal(b:array of byte):int{
+octal(b:array of byte): int
+{
 	sum := 0;
 	for(i:=0; i<len b; i++){
 		bi := int b[i];
@@ -56,13 +66,15 @@ octal(b:array of byte):int{
 	return sum;
 }
 
-nullterm(b:array of byte):string{
+nullterm(b:array of byte): string
+{
 	for(i:=0; i<len b; i++)
 		if(b[i]==byte 0) break;
 	return string b[0:i];
 }
 
-getdir():ref Header{
+getdir(): ref Header
+{
 	dblock := getblock();
 	if(len dblock==0)
 		return nil;
@@ -72,16 +84,23 @@ getdir():ref Header{
 	name := nullterm(dblock[0:100]);
 	if(int dblock[345]!=0)
 		name = nullterm(dblock[345:500])+"/"+name;
+	if(!absolute){
+		if(name[0] == '#')
+			name = "./"+name;
+		else if(name[0] == '/')
+			name = "."+name;
+	}
 
 	magic := string(dblock[257:262]);
 	if(magic[0]!=0 && magic!="ustar")
-		Error("bad magic "+name);
+		error("bad magic "+name);
 	chksum := octal(dblock[148:156]);
-	for(ci:=148; ci<156; ci++) dblock[ci] = byte ' ';
+	for(ci:=148; ci<156; ci++)
+		dblock[ci] = byte ' ';
 	for(i:=0; i<TBLOCK; i++)
 		chksum -= int dblock[i];
 	if(chksum!=0)
-		Error("directory checksum error "+name);
+		error("directory checksum error "+name);
 
 	skip := 1;
 	size := 0;
@@ -94,42 +113,58 @@ getdir():ref Header{
 		mode = 8r777 & octal(dblock[100: 108]);
 		mtime = octal(dblock[136:148]);
 	'1' =>
-		fprint(stderr,"skipping link %s -> %s\n",name,string(dblock[157:257]));
+		fprint(stderr,"gettar: skipping link %s -> %s\n",name,string(dblock[157:257]));
 	'2' or 's' =>
-		fprint(stderr,"skipping symlink %s\n",name);
+		fprint(stderr,"gettar: skipping symlink %s\n",name);
 	'3' or '4' or '6' =>
-		fprint(stderr,"skipping special file %s\n",name);
+		fprint(stderr,"gettar: skipping special file %s\n",name);
 	'5' =>
 		if(name[(len name)-1]=='/')
 			checkdir(name+".");
 		else
 			checkdir(name+"/.");
 	* =>
-		Error(sprint("unrecognized typeflag %d for %s",int dblock[156],name));
+		error(sprint("unrecognized typeflag %d for %s",int dblock[156],name));
 	}
 	return ref Header(name, size, mode, mtime, skip);
 }
 
+keep := 0;
+absolute := 0;
 
-init(nil: ref Draw->Context, argv: list of string){
+init(nil: ref Draw->Context, args: list of string)
+{
 	sys = load Sys Sys->PATH;
 	stdin = sys->fildes(0);
 	stderr = sys->fildes(2);
 	ofile: ref sys->FD;
 
-	if(argv != nil && tl argv != nil && hd tl argv == "-v")
-		verbose = 1;
+	arg := load Arg Arg->PATH;
+	arg->init(args);
+	arg->setusage("gettar [-kTRv] [file ...]");
+	while((o := arg->opt()) != 0)
+		case o {
+		'k' =>	keep = 1;
+		'v' =>	verbose = 1;
+		'R' =>	absolute = 1;
+		* =>	arg->usage();
+		}
+	args = arg->argv();
+	arg = nil;
 
 	while((file := getdir())!=nil){
 		if(!file.skip){
-			if(verbose)
-				sys->print("%s\n", file.name);
-			checkdir(file.name);
-			ofile = sys->create(file.name,sys->OWRITE,8r666);
-			if(ofile==nil){
-				fprint(stderr,"cannot create %s: %r\n",file.name);
+			if((args == nil || matched(file.name, args)) && !(keep && exists(file.name))){
+				if(verbose)
+					sys->fprint(stderr, "%s\n", file.name);
+				checkdir(file.name);
+				ofile = sys->create(file.name, Sys->OWRITE, 8r666);
+				if(ofile==nil){
+					fprint(stderr, "gettar: cannot create %s: %r\n",file.name);
+					file.skip = 1;
+				}
+			}else
 				file.skip = 1;
-			}
 		}
 		bytes := file.size;
 		blocks := (bytes+TBLOCK-1)/TBLOCK;
@@ -141,9 +176,11 @@ init(nil: ref Draw->Context, argv: list of string){
 
 		for(; blocks>0; blocks--){
 			buf := getblock();
-			nwrite := bytes; if(nwrite>TBLOCK) nwrite = TBLOCK;
+			nwrite := bytes;
+			if(nwrite>TBLOCK)
+				nwrite = TBLOCK;
 			if(sys->write(ofile,buf,nwrite)!=nwrite)
-				Error(sprint("write error for %s",file.name));
+				error(sprint("write error for %s: %r",file.name));
 			bytes -= nwrite;
 		}
 		ofile = nil;
@@ -156,21 +193,19 @@ init(nil: ref Draw->Context, argv: list of string){
 			stat.mtime = ~0;
 			rc = sys->wstat(file.name, stat);
 			if(rc < 0)
-				fprint(stderr,"cannot set mode/mtime %s %#o %ud: %r\n",file.name, file.mode, file.mtime);
+				fprint(stderr,"gettar: cannot set mode/mtime %s %#o %ud: %r\n",file.name, file.mode, file.mtime);
 		}
 	}
 }
 
-
-checkdir(name:string){
-	if(name[0]=='/')
-		Error("absolute pathnames forbidden");
+checkdir(name: string)
+{
 	(nc,compl) := sys->tokenize(name,"/");
 	path := "";
 	while(compl!=nil){
 		comp := hd compl;
 		if(comp=="..")
-			Error(".. pathnames forbidden");
+			error(".. pathnames forbidden");
 		if(nc>1){
 			if(path=="")
 				path = comp;
@@ -180,11 +215,34 @@ checkdir(name:string){
 			if(rc<0){
 				fd := sys->create(path,Sys->OREAD,Sys->DMDIR+8r777);
 				if(fd==nil)
-					Error(sprint("cannot mkdir %s",path));
+					error(sprint("cannot mkdir %s: %r",path));
 				fd = nil;
 			}else if(stat.mode&Sys->DMDIR==0)
-				Error(sprint("found non-directory at %s",path));
+				error(sprint("found non-directory at %s",path));
 		}
 		nc--; compl = tl compl;
 	}
+}
+
+exists(path: string): int
+{
+	return sys->stat(path).t0 >= 0;
+}
+
+matched(n: string, names: list of string): int
+{
+	for(; names != nil; names = tl names){
+		p := hd names;
+		if(prefix(p, n))
+			return 1;
+	}
+	return 0;
+}
+
+prefix(p: string, s: string): int
+{
+	l := len p;
+	if(l > len s)
+		return 0;
+	return p == s[0:l] && (l == len s || s[l] == '/');
 }

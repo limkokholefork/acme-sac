@@ -500,7 +500,7 @@ ffts(a,b:array of real, ntot,n,nspan,isn:int){
 			}
 			jc = k3;
 		}else{
-			for(;0;){
+			for(;;){
 				#  permutation for single-variate transform (optional code)
 				ak = a[kk-1];
 				a[kk-1] = a[k2-1];

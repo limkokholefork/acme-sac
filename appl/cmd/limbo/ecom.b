@@ -557,7 +557,7 @@ sumark(n: ref Node): ref Node
 			if(int n.flags & FNPTR){
 				if(int n.flags == FNPTR2)
 					n.addable = Roff;
-				else if(int n.flags == FNPTR2|FNPTRN)
+				else if(int n.flags == (FNPTR2|FNPTRN))
 					n.addable = Rnoff;
 			}
 			else
@@ -1081,6 +1081,7 @@ ecom(src: Src, nto, n: ref Node): ref Node
 			tto = talloc(n.ty, nto);
 			genrawop(src, INEW, mktn(usetype(tfnptr)), nil, tto);
 			tright = ref znode;
+			tright.src = src;
 			tright.op = Oind;
 			tright.left = tto;
 			tright.right = nil;

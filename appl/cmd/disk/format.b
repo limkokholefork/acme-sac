@@ -1,53 +1,44 @@
 implement Format;
 
 include "sys.m";
+	sys: Sys;
+
 include "draw.m";
+
 include "daytime.m";
+	daytime: Daytime;
+
+include "disks.m";
+	disks: Disks;
+	Disk: import disks;
+
 include "arg.m";
 
-sys : Sys;
-daytime : Daytime;
-
-Format : module
+Format: module
 {
-	init : fn(nil : ref Draw->Context, argv : list of string);
+	init: fn(nil: ref Draw->Context, args: list of string);
 };
 
 #
 #  floppy types (all MFM encoding)
 #
-Type : adt {
-	name : string;
-	bytes : int;		# bytes/sector
-	sectors : int;	# sectors/track
-	heads : int;	# number of heads
-	tracks : int;	# tracks/disk
-	media : int;	# media descriptor byte
-	cluster : int;	# default cluster size
+Type: adt {
+	name:	string;
+	bytes:	int;	# bytes/sector
+	sectors:	int;	# sectors/track
+	heads:	int;	# number of heads
+	tracks:	int;	# tracks/disk
+	media:	int;	# media descriptor byte
+	cluster:	int;	# default cluster size
 };
 
-NTYPES : con 5;
-
-floppytype := array[NTYPES] of  {
+floppytype := array[] of  {
 	Type ( "3½HD",	512, 18,	2,	80,	16rf0,	1 ),
 	Type ( "3½DD",	512,	  9,	2,	80,	16rf9,	2 ),
+	Type ( "3½QD",	512, 36,	2,	80,	16rf9,	2 ),	# invented
 	Type ( "5¼HD",	512,	15,	2,	80,	16rf9,	1 ),
 	Type ( "5¼DD",	512,	  9,	2,	40,	16rfd,	2 ),
 	Type	( "hard",	512,	  0,	0,	  0,	16rf8,	4 ),
-};
-
-Geom : adt {
-	h: int;	# number of heads
-	s: int;	# sectors/track
-};
-
-guess := array[] of {
-	Geom ( 9, 2 ),		# daft one to cover very small partitions
-	Geom ( 64, 32 ),
-	Geom ( 64, 63 ),
-	Geom ( 128, 63 ),
-	Geom ( 255, 63 ),
-	Geom ( 0, 0 ),
 };
 
 # offsets in DOS boot area
@@ -59,20 +50,20 @@ DB_NRESRV	: con 14;
 DB_NFATS	: con 16;
 DB_ROOTSIZE	: con	17;
 DB_VOLSIZE	: con	19;
-DB_MEDIADESC : con 21;
+DB_MEDIADESC: con 21;
 DB_FATSIZE	: con 22;
 DB_TRKSIZE	: con 24;
 DB_NHEADS	: con 26;
 DB_NHIDDEN	: con 28;
-DB_BIGVOLSIZE : con 32;
+DB_BIGVOLSIZE: con 32;
 DB_DRIVENO 	: con 36;
-DB_RESERVED0 : con 37;
+DB_RESERVED0: con 37;
 DB_BOOTSIG	: con 38;
 DB_VOLID	: con 39;
 DB_LABEL	: con 43;
 DB_TYPE		: con 54;
 
-DB_VERSIONSIZE : con 8;
+DB_VERSIONSIZE: con 8;
 DB_LABELSIZE	: con 11;
 DB_TYPESIZE	: con 8;
 DB_SIZE		: con 62;
@@ -98,10 +89,8 @@ DVLABEL	: con byte 16r08;
 DDIR	: con byte 16r10;
 DARCH	: con byte 16r20;
 
-BP_SIZE	: con 512;
-
 #  the boot program for the boot sector.
-bootprog := array[BP_SIZE] of {
+bootprog := array[512] of {
 16r000 =>
 	byte 16rEB, byte 16r3C, byte 16r90, byte 16r00, byte 16r00, byte 16r00, byte 16r00, byte 16r00,
 	byte 16r00, byte 16r00, byte 16r00, byte 16r00, byte 16r00, byte 16r00, byte 16r00, byte 16r00,
@@ -129,303 +118,465 @@ bootprog := array[BP_SIZE] of {
 	byte 16r00,
 };
 
-dev : string;
-clustersize : int;
+dev: string;
+clustersize := 0;
 fat: array of byte;	# the fat
-fatbits : int;
-fatsecs : int;
-fatlast : int;	# last cluster allocated
-clusters : int;
-volsecs : int;
-root : array of byte;	# first block of root
-rootsecs : int;
-rootfiles : int;
-rootnext : int;
-t : Type;
-fflag : int;
-file : string = nil;	# output file name
-bootfile : string = nil;
-typ : string = nil;
+fatbits: int;
+fatsecs: int;
+fatlast: int;	# last cluster allocated
+clusters: int;
+volsecs: int;
+root: array of byte;	# first block of root
+rootsecs: int;
+rootfiles: int;
+rootnext: int;
+chatty := 0;
+xflag := 0;
+nresrv := 1;
+dos := 0;
+fflag := 0;
+file: string;	# output file name
+pbs: string;
+typ: string;
 
-Sof : con 1;	# start of file
-Eof : con 2;	# end of file
+Sof: con 1;	# start of file
+Eof: con 2;	# end of file
 
-stdin, stdout, stderr : ref Sys->FD;
+stdin, stdout, stderr: ref Sys->FD;
 
-usage()
+fatal(str: string)
 {
-	sys->fprint(stderr, "usage: format [-b bfile] [-c csize] [-df] [-l label] [-t type] file [args ...]\n");
-	exit;
-}
-
-fatal(str : string)
-{
-	sys->fprint(stderr, "format : ");
-	sys->fprint(stderr, "%s\n", str);
+	sys->fprint(stderr, "format: %s\n", str);
 	if(fflag && file != nil)
 		sys->remove(file);
-	exit;
+	raise "fail:error";
 }
 
-init(nil : ref Draw->Context, args : list of string)
+init(nil: ref Draw->Context, args: list of string)
 {
-	n, dos : int;
-	buf, label, a : string;
-	cfd : ref Sys->FD;
-
 	sys = load Sys Sys->PATH;
 	daytime = load Daytime Daytime->PATH;
-	if(daytime == nil){
-		sys->fprint(stderr, "rm: can't load %s: %r\n", Daytime->PATH);
-		raise "fail:load";
-	}
+	disks = load Disks Disks->PATH;
 	arg := load Arg Arg->PATH;
-	if(arg == nil){
-		sys->fprint(stderr, "rm: can't load %s: %r\n", Arg->PATH);
-		raise "fail:load";
-	}
 	stdin = sys->fildes(0);
 	stdout = sys->fildes(1);
 	stderr = sys->fildes(2);
 
+	disks->init();
+
 	fflag = 0;
-	dos = 0;
 	typ = nil;
 	clustersize = 0;
-	label = "CYLINDRICAL";
+	writepbs := 0;
+	label := array[DB_LABELSIZE] of {* => byte ' '};
+	label[0:] = array of byte "CYLINDRICAL";
 	arg->init(args);
+	arg->setusage("disk/format [-df] [-b bootblock] [-c csize] [-l label] [-r nresrv] [-t type] disk [files ...]");
 	while((o := arg->opt()) != 0)
 		case o {
 		'b' =>
-			bootfile = arg->arg();
+			pbs = arg->earg();
+			writepbs = 1;
 		'd' =>
 			dos = 1;
+			writepbs = 1;
 		'c' =>
-			clustersize = int arg->arg();
+			clustersize = int arg->earg();
 		'f' =>
 			fflag = 1;
 		'l' =>
-			label = arg->arg();
-			if (len label > DB_LABELSIZE)
-				label = a[0 : DB_LABELSIZE];
-			while (len label < DB_LABELSIZE)
-				label = label + " ";
+			a := array of byte arg->earg();
+			if(len a > len label)
+				a = a[0:len label];
+			label[0:] = a;
+			for(i := len a; i < len label; i++)
+				label[i] = byte ' ';
+		'r' =>
+			nresrv = int arg->earg();
 		't' =>
-			typ = arg->arg();
+			typ = arg->earg();
+		'v' =>
+			chatty = 1;
+		'x' =>
+			xflag = 1;
 		* =>
-			usage();
+			arg->usage();
 	}
-
 	args = arg->argv();
-	arg = nil;
 	if(args == nil)
-		usage();
+		arg->usage();
+	arg = nil;
 
 	dev = hd args;
-	cfd = nil;
-	if(fflag == 0){
-		n = len dev;
-		if(n > 4 && dev[n-4 : ] == "disk")
-			dev = dev[0 : n-4];
-		else if(n > 3 && dev[n-3 : ] == "ctl")
-			dev = dev[0 : n-3];
-
-		buf = dev + "ctl";
-		cfd = sys->open(buf, Sys->ORDWR);
-		if(cfd == nil)
-			fatal(sys->sprint("opening %s: %r", buf));
-		sys->print("Formatting floppy %s\n", dev);
-		buf = "format";
-		if(typ != nil)
-			buf = buf + " " + typ;
-		if(sys->write(cfd, array of byte buf, len buf) < 0)
-			fatal(sys->sprint("formatting tracks: %r"));
+	disk := Disk.open(dev, Sys->ORDWR, 0);
+	if(disk == nil){
+		if(fflag){
+			fd := sys->create(dev, Sys->ORDWR, 8r666);
+			if(fd != nil){
+				fd = nil;
+				disk = Disk.open(dev, Sys->ORDWR, 0);
+			}
+		}
+		if(disk == nil)
+			fatal(sys->sprint("opendisk %q: %r", dev));
 	}
 
-	if(dos)
-		dosfs(cfd, label, tl args);
+	if(disk.dtype == "file")
+		fflag = 1;
+
+	if(typ == nil){
+		case disk.dtype {
+		"file" =>
+			typ = "3½HD";
+		"floppy" =>
+			sys->seek(disk.ctlfd, big 0, 0);
+			buf := array[10] of byte;
+			n := sys->read(disk.ctlfd, buf, len buf);
+			if(n <= 0 || n >= 10)
+				fatal("reading floppy type");
+			typ = string buf[0:n];
+		"sd" =>
+			typ = "hard";
+		* =>
+			typ = "unknown";
+		}
+	}
+
+	if(!fflag && disk.dtype == "floppy")
+		if(sys->fprint(disk.ctlfd, "format %s", typ) < 0)
+			fatal(sys->sprint("formatting floppy as %s: %r", typ));
+
+	if(disk.dtype != "floppy" && !xflag)
+		sanitycheck(disk);
+
+	# check that everything will succeed
+	dosfs(dos, writepbs, disk, label, tl args, 0);
+
+	# commit
+	dosfs(dos, writepbs, disk, label, tl args, 1);
+
+	sys->print("used %bd bytes\n", big fatlast*big clustersize*big disk.secsize);
 	exit;
 }
 
-guessgeometry(sectors: big): (int, int, int)
+#
+# look for a partition table on sector 1, as would be the
+# case if we were erroneously formatting 9fat without -r 2.
+# if it's there and nresrv is not big enough, complain and exit.
+# i've blown away my partition table too many times.
+#
+sanitycheck(disk: ref Disk)
 {
-	c := big 1024;
-	for (i := 0; guess[i].h; i++)
-		if (c * big guess[i].h * big guess[i].s >= sectors)
-			return (guess[i].h, guess[i].s, int (sectors / big (guess[i].h * guess[i].s)));
-	return (255, 63, int(sectors / big (255 * 63)));
+	buf := array[512] of byte;
+	bad := 0;
+	if(dos && nresrv < 2 && sys->seek(disk.fd, big disk.secsize, 0) == big disk.secsize &&
+	    sys->read(disk.fd, buf, len buf) >= 5 && string buf[0:5] == "part "){
+		sys->fprint(sys->fildes(2), "there's a plan9 partition on the disk\n"+
+			"and you didn't specify -r 2 (or greater).\n" +
+			"either specify -r 2 or -x to disable this check.\n");
+		bad = 1;
+	}
+
+	if(disk.dtype == "sd" && disk.offset == big 0){
+		sys->fprint(sys->fildes(2), "you're attempting to format your disk (/dev/sdXX/data)\n"+
+			"rather than a partition such as /dev/sdXX/9fat;\n" +
+			"this is probably a mistake.  specify -x to disable this check.\n");
+		bad = 1;
+	}
+
+	if(bad)
+		raise "fail:failed disk sanity check";
 }
 
-dosfs(cfd : ref Sys->FD, label : string, arg : list of string)
+#
+# return the BIOS driver number for the disk.
+# 16r80 is the first fixed disk, 16r81 the next, etc.
+# We map sdC0=16r80, sdC1=16r81, sdD0=16r82, sdD1=16r83
+#
+getdriveno(disk: ref Disk): int
 {
-	r : string;
-	b : array of byte;
-	i, n : int;
-	x, err : int;
-	length: big;
-	fd, sysfd : ref Sys->FD;
-	d : Sys->Dir;
+	if(disk.dtype != "sd")
+		return 16r80;	# first hard disk
 
-	sys->print("Initialising MS-DOS file system\n");
+	name := sys->fd2path(disk.fd);
+	if(len name < 3)
+		return 16r80;
+
+	#
+	# The name is of the format #SsdC0/foo 
+	# or /dev/sdC0/foo.
+	# So that we can just look for /sdC0, turn 
+	# #SsdC0/foo into #/sdC0/foo.
+	#
+	if(name[0:1] == "#S")
+		name[1] = '/';
+
+	for(p := name; len p >= 4; p = p[1:])
+		if(p[0:2] == "sd" && (p[2]=='C' || p[2]=='D') && (p[3]=='0' || p[3]=='1'))
+			return 16r80 + (p[2]-'c')*2 + (p[3]-'0');
+
+	return 16r80;
+}
+
+writen(fd: ref Sys->FD, buf: array of byte, n: int): int
+{
+	# write 8k at a time, to be nice to the disk subsystem
+	m: int;
+	for(tot:=0; tot<n; tot+=m){
+		m = n - tot;
+		if(m > 8192)
+			m = 8192;
+		if(sys->write(fd, buf[tot:], m) != m)
+			break;
+	}
+	return tot;
+}
+
+dosfs(dofat: int, dopbs: int, disk: ref Disk, label: array of byte, arg: list of string, commit: int)
+{
+	if(dofat == 0 && dopbs == 0)
+		return;
+
+	for(i := 0; i < len floppytype; i++)
+		if(typ == floppytype[i].name)
+			break;
+	if(i == len floppytype)
+		fatal(sys->sprint("unknown floppy type %q", typ));
+
+	t := floppytype[i];
+	if(t.sectors == 0 && typ == "hard"){
+		t.sectors = disk.s;
+		t.heads = disk.h;
+		t.tracks = disk.c;
+	}
+
+	if(t.sectors == 0 && dofat)
+		fatal(sys->sprint("cannot format fat with type %s: geometry unknown", typ));
 
 	if(fflag){
-		t = floppytype[0];
-		if(typ != nil){
-			for (i = 0; i < NTYPES; i++) {
-				t = floppytype[i];
-				if (t.name == typ)
-					break;
-			}
-			if(i == NTYPES)
-				fatal(sys->sprint("unknown disk type %s", typ));
-		}
-		file = dev;
-		if (t.tracks == 0 && t.name == "hard") {
-			fd = sys->open(dev, Sys->ORDWR);
-			if (fd == nil)
-				fatal(sys->sprint("open: %s: %r", file));
-			(err, d) = sys->fstat(fd);
-			if (err < 0)
-				fatal(sys->sprint("fstat: %s: %r", file));
-			(t.sectors, t.heads, t.tracks) = guessgeometry(d.length / big t.bytes);
-		}
-		else if ((fd = sys->create(dev, Sys->ORDWR, 8r666)) == nil)
-			fatal(sys->sprint("create %s: %r", file));
-		length = big t.bytes * big t.sectors * big t.heads * big t.tracks;
+		disk.size = big (t.bytes*t.sectors*t.heads*t.tracks);
+		disk.secsize = t.bytes;
+		disk.secs = disk.size / big disk.secsize;
 	}
-	else{
-		file = dev + "disk";
-		fd = sys->open(file, Sys->ORDWR);
-		if(fd == nil)
-			fatal(sys->sprint("open %s: %r", file));
-		(err, d) = sys->fstat(fd);
-		if(err < 0)
-			fatal(sys->sprint("stat %s: %r", file));
-		length = d.length;
-	
-		t = floppytype[0];
-		buf := array[64] of byte;
-		sys->seek(cfd, big 0, 0);
-		n = sys->read(cfd, buf, 64-1);
-		if(n < 0)
-			fatal("reading floppy type");
-		else {
-			typ = string buf[0 : n];
-			for (i = 0; i < NTYPES; i++) {
-				t = floppytype[i];
-				if (t.name == typ)
-					break;
-			}
-			if(i == NTYPES)
-				fatal(sys->sprint("unknown floppy type %s", typ));
-		}
-	}
-	sys->print("disk type %s, %d tracks, %d heads, %d sectors/track, %d bytes/sec\n",
-		t.name, t.tracks, t.heads, t.sectors, t.bytes);
 
-	if(clustersize == 0)
-		clustersize = t.cluster;
-	clusters = int (length/(big t.bytes*big clustersize));
-	if(clusters < 4087)
-		fatbits = 12;
-	else
-		fatbits = 16;
-	volsecs = int (length/big t.bytes);
-	fatsecs = (fatbits*clusters + 8*t.bytes - 1)/(8*t.bytes);
-	rootsecs = volsecs/200;
-	rootfiles = rootsecs * (t.bytes/DD_SIZE);
-	b = array[t.bytes] of byte;
-	if(b == nil)
-		fatal("out of memory");
-	memset(b, 0, t.bytes);
+	secsize := disk.secsize;
+	length := disk.size;
 
 	#
-	# write bootstrap & parameter block
+	# make disk full size if a file
 	#
-	if(bootfile != nil){
-		if((sysfd = sys->open(bootfile, Sys->OREAD)) == nil)
-			fatal(sys->sprint("open %s: %r", bootfile));
-		if(sys->read(sysfd, b, t.bytes) < 0)
-			fatal(sys->sprint("read %s: %r", bootfile));
+	if(fflag && disk.dtype == "file"){
+		(ok, d) := sys->fstat(disk.wfd);
+		if(ok < 0)
+			fatal(sys->sprint("fstat disk: %r"));
+		if(commit && d.length < disk.size){
+			if(sys->seek(disk.wfd, disk.size-big 1, 0) < big 0)
+				fatal(sys->sprint("seek to 9: %r"));
+			if(sys->write(disk.wfd, array[] of {0 => byte '9'}, 1) < 0)
+				fatal(sys->sprint("writing 9: @%bd %r", sys->seek(disk.wfd, big 0, 1)));
+		}
 	}
-	else
-		memmove(b, bootprog, BP_SIZE);
+
+	buf := array[secsize] of byte;
+
+	#
+	# start with initial sector from disk
+	#
+	if(sys->seek(disk.fd, big 0, 0) < big 0)
+		fatal(sys->sprint("seek to boot sector: %r"));
+	if(commit && sys->read(disk.fd, buf, secsize) != secsize)
+		fatal(sys->sprint("reading boot sector: %r"));
+
+	if(dofat)
+		memset(buf, 0, DB_SIZE);
+
+	#
+	# Jump instruction and OEM name
+	#
+	b := buf;	# hmm.
 	b[DB_MAGIC+0] = byte 16rEB;
 	b[DB_MAGIC+1] = byte 16r3C;
 	b[DB_MAGIC+2] = byte 16r90;
-	memmove(b[DB_VERSION : ], array of byte "Plan9.00", DB_VERSIONSIZE);
-	putshort(b[DB_SECTSIZE : ], t.bytes);
-	b[DB_CLUSTSIZE] = byte clustersize;
-	putshort(b[DB_NRESRV : ], 1);
-	b[DB_NFATS] = byte 2;
-	putshort(b[DB_ROOTSIZE : ], rootfiles);
-	if(volsecs < (1<<16)){
-		putshort(b[DB_VOLSIZE : ], volsecs);
+	memmove(b[DB_VERSION: ], array of byte "Plan9.00", DB_VERSIONSIZE);
+
+	#
+	# Add bootstrapping code; assume it starts
+	# at 16r3E (the destination of the jump we just
+	# wrote to b[DB_MAGIC]
+	#
+	if(dopbs){
+		pbsbuf := array[secsize] of byte;
+		npbs: int;
+		if(pbs != nil){
+			if((sysfd := sys->open(pbs, Sys->OREAD)) == nil)
+				fatal(sys->sprint("open %s: %r", pbs));
+			npbs = sys->read(sysfd, pbsbuf, len pbsbuf);
+			if(npbs < 0)
+				fatal(sys->sprint("read %s: %r", pbs));
+			if(npbs > secsize-2)
+				fatal("boot block too large");
+		}else{
+			pbsbuf[0:] = bootprog;
+			npbs = len bootprog;
+		}
+		if(npbs <= 16r3E)
+			sys->fprint(sys->fildes(2), "warning: pbs too small\n");
+		else
+			buf[16r3E:] = pbsbuf[16r3E:npbs];
 	}
-	putlong(b[DB_BIGVOLSIZE : ], volsecs);
-	b[DB_MEDIADESC] = byte t.media;
-	putshort(b[DB_FATSIZE : ], fatsecs);
-	putshort(b[DB_TRKSIZE : ], t.sectors);
-	putshort(b[DB_NHEADS : ], t.heads);
-	putlong(b[DB_NHIDDEN : ], 0);
-	b[DB_DRIVENO] = byte 0;
-	b[DB_BOOTSIG] = byte 16r29;
-	x = daytime->now();
-	putlong(b[DB_VOLID : ], x);
-	memmove(b[DB_LABEL : ], array of byte label, DB_LABELSIZE);
-	r = sys->sprint("FAT%d    ", fatbits);
-	memmove(b[DB_TYPE : ], array of byte r, DB_TYPESIZE);
-	b[t.bytes-2] = byte 16r55;
-	b[t.bytes-1] = byte 16rAA;
-	if(sys->seek(fd, big 0, 0) < big 0)
-		fatal(sys->sprint("seek to boot sector: %r\n"));
-	if(sys->write(fd, b, t.bytes) != t.bytes)
-		fatal(sys->sprint("writing boot sector: %r"));
+
+	#
+	# Add FAT BIOS parameter block
+	#
+	if(dofat){
+		if(commit){
+			sys->print("Initializing FAT file system\n");
+			sys->print("type %s, %d tracks, %d heads, %d sectors/track, %d bytes/sec\n",
+					t.name, t.tracks, t.heads, t.sectors, secsize);
+		}
+
+ 		if(clustersize == 0)
+	 		clustersize = t.cluster;
+		#
+		# the number of fat bits depends on how much disk is left
+		# over after you subtract out the space taken up by the fat tables.
+		# try both.  what a crock.
+		#
+		for(fatbits = 12;;){
+	 		volsecs = int (length/big secsize);
+			#
+			# here's a crock inside a crock.  even having fixed fatbits,
+			# the number of fat sectors depends on the number of clusters,
+			# but of course we don't know yet.  maybe iterating will get us there.
+			# or maybe it will cycle.
+			#
+			clusters = 0;
+			for(i=0;; i++){
+			 	fatsecs = (fatbits*clusters + 8*secsize - 1)/(8*secsize);
+			 	rootsecs = volsecs/200;
+			 	rootfiles = rootsecs * (secsize/DD_SIZE);
+				if(rootfiles > 512){
+					rootfiles = 512;
+					rootsecs = rootfiles/(secsize/DD_SIZE);
+				}
+				data := nresrv + 2*fatsecs + (rootfiles*DD_SIZE + secsize-1)/secsize;
+				newclusters := 2 + (volsecs - data)/clustersize;
+				if(newclusters == clusters)
+					break;
+				clusters = newclusters;
+				if(i > 10)
+					fatal(sys->sprint("can't decide how many clusters to use (%d? %d?)", clusters, newclusters));
+if(chatty) sys->print("clusters %d\n", clusters);
+if(clusters <= 1) raise "trap";
+			}
+
+if(chatty) sys->print("try %d fatbits => %d clusters of %d\n", fatbits, clusters, clustersize);
+			if(clusters < 4087 || fatbits > 12)
+				break;
+			fatbits = 16;
+		}
+		if(clusters >= 65527)
+			fatal("disk too big; implement fat32");
+
+		putshort(b[DB_SECTSIZE: ], secsize);
+		b[DB_CLUSTSIZE] = byte clustersize;
+		putshort(b[DB_NRESRV: ], nresrv);
+		b[DB_NFATS] = byte 2;
+		putshort(b[DB_ROOTSIZE: ], rootfiles);
+		if(volsecs < (1<<16))
+			putshort(b[DB_VOLSIZE: ], volsecs);
+		b[DB_MEDIADESC] = byte t.media;
+		putshort(b[DB_FATSIZE: ], fatsecs);
+		putshort(b[DB_TRKSIZE: ], t.sectors);
+		putshort(b[DB_NHEADS: ], t.heads);
+		putlong(b[DB_NHIDDEN: ], int disk.offset);
+		putlong(b[DB_BIGVOLSIZE: ], volsecs);
+
+		#
+		# Extended BIOS Parameter Block
+		#
+		if(t.media == 16rF8)
+			dno := getdriveno(disk);
+		else
+			dno = 0;
+if(chatty) sys->print("driveno = %ux\n", dno);
+		b[DB_DRIVENO] = byte dno;
+		b[DB_BOOTSIG] = byte 16r29;
+		x := int (disk.offset + big b[DB_NFATS]*big fatsecs + big nresrv);
+		putlong(b[DB_VOLID:], x);
+if(chatty) sys->print("volid = %ux\n", x);
+		b[DB_LABEL:] = label;
+		r := sys->aprint("FAT%d    ", fatbits);
+		if(len r > DB_TYPESIZE)
+			r = r[0:DB_TYPESIZE];
+		b[DB_TYPE:] = r;
+	}
+
+	b[secsize-2] = byte Disks->Magic0;
+	b[secsize-1] = byte Disks->Magic1;
+
+	if(commit){
+		if(sys->seek(disk.wfd, big 0, 0) < big 0)
+			fatal(sys->sprint("seek to boot sector: %r\n"));
+		if(sys->write(disk.wfd, b, secsize) != secsize)
+			fatal(sys->sprint("writing to boot sector: %r"));
+	}
+
+	#
+	# if we were only called to write the PBS, leave now
+	#
+	if(dofat == 0)
+		return;
 
 	#
 	#  allocate an in memory fat
 	#
-	fat = array[fatsecs*t.bytes] of byte;
+	if(sys->seek(disk.wfd, big (nresrv*secsize), 0) < big 0)
+		fatal(sys->sprint("seek to fat: %r"));
+if(chatty) sys->print("fat @%buX\n", sys->seek(disk.wfd, big 0, 1));
+	fat = array[fatsecs*secsize] of {* => byte 0};
 	if(fat == nil)
 		fatal("out of memory");
-	memset(fat, 0, fatsecs*t.bytes);
 	fat[0] = byte t.media;
 	fat[1] = byte 16rff;
 	fat[2] = byte 16rff;
 	if(fatbits == 16)
 		fat[3] = byte 16rff;
 	fatlast = 1;
-	if (sys->seek(fd, big 2*big fatsecs*big t.bytes, 1) < big 0)
-		fatal(sys->sprint("seek to 2 fats: %r"));	# 2 fats
+	if(sys->seek(disk.wfd, big (2*fatsecs*secsize), 1) < big 0)	# 2 fats
+		fatal(sys->sprint("seek to root: %r"));
+if(chatty) sys->print("root @%buX\n", sys->seek(disk.wfd, big 0, 1));
 
 	#
 	#  allocate an in memory root
 	#
-	root = array[rootsecs*t.bytes] of byte;
-	if(root == nil)
-		fatal("out of memory");
-	memset(root, 0, rootsecs*t.bytes);
-	if (sys->seek(fd, big rootsecs*big t.bytes, 1) < big 0)
-		fatal(sys->sprint("seek to root: %r"));		# rootsecs
+	root = array[rootsecs*secsize] of {* => byte 0};
+	if(sys->seek(disk.wfd, big (rootsecs*secsize), 1) < big 0)		# rootsecs
+		fatal(sys->sprint("seek to files: %r"));
+if(chatty) sys->print("files @%buX\n", sys->seek(disk.wfd, big 0, 1));
 
 	#
 	# Now positioned at the Files Area.
 	# If we have any arguments, process 
 	# them and write out.
 	#
-	for(i = 0; arg != nil; arg = tl arg){
-		if(i >= rootsecs*t.bytes)
+	for(p := 0; arg != nil; arg = tl arg){
+		if(p >= rootsecs*secsize)
 			fatal("too many files in root");
 		#
 		# Open the file and get its length.
 		#
-		if((sysfd = sys->open(hd arg, Sys->OREAD)) == nil)
+		if((sysfd := sys->open(hd arg, Sys->OREAD)) == nil)
 			fatal(sys->sprint("open %s: %r", hd arg));
-		(err, d) = sys->fstat(sysfd);
-		if(err < 0)
+		(ok, d) := sys->fstat(sysfd);
+		if(ok < 0)
 			fatal(sys->sprint("stat %s: %r", hd arg));
-		sys->print("Adding file %s, length %bd\n", hd arg, d.length);
+		if(d.length >= big 16r7FFFFFFF)
+			fatal(sys->sprint("file %s too big (%bd bytes)", hd arg, d.length));
+		if(commit)
+			sys->print("Adding file %s, length %bd\n", hd arg, d.length);
 
+		x: int;
 		length = d.length;
 		if(length > big 0){
 			#
@@ -434,19 +585,21 @@ dosfs(cfd : ref Sys->FD, label : string, arg : list of string)
 			#
 			# Read the file and write it out to the Files Area.
 			#
-			length += big t.bytes*big clustersize - big 1;
-			length /= big t.bytes*big clustersize;
-			length *= big t.bytes*big clustersize;
-			if(length > big 16r7fffffff)	# for now
-				fatal("file too big");
-			if((b = array[int length] of byte) == nil)
-				fatal("out of memory");
-	
-			if(sys->read(sysfd, b, int d.length) < 0)
+			length += big (secsize*clustersize - 1);
+			length /= big (secsize*clustersize);
+			length *= big (secsize*clustersize);
+			fbuf := array[int length] of byte;
+			if((nr := sys->read(sysfd, fbuf, int d.length)) != int d.length){
+				if(nr >= 0)
+					sys->werrstr("short read");
 				fatal(sys->sprint("read %s: %r", hd arg));
-			memset(b[int d.length : ], 0, int (length-d.length));
-			if (sys->write(fd, b, int length) != int length)
+			}
+			for(; nr < len fbuf; nr++)
+				fbuf[nr] = byte 0;
+if(chatty) sys->print("%q @%buX\n", d.name, sys->seek(disk.wfd, big 0, 1));
+			if(commit && writen(disk.wfd, fbuf, len fbuf) != len fbuf)
 				fatal(sys->sprint("write %s: %r", hd arg));
+			fbuf = nil;
 
 			#
 			# Allocate the FAT clusters.
@@ -455,9 +608,9 @@ dosfs(cfd : ref Sys->FD, label : string, arg : list of string)
 			# the cluster allocation.
 			# Save the starting cluster.
 			#
-			length /= big t.bytes*big clustersize;
+			length /= big (secsize*clustersize);
 			x = clustalloc(Sof);
-			for(n = 0; n < int length-1; n++)
+			for(n := 0; n < int length-1; n++)
 				clustalloc(0);
 			clustalloc(Eof);
 		}
@@ -467,51 +620,47 @@ dosfs(cfd : ref Sys->FD, label : string, arg : list of string)
 		#
 		# Add the filename to the root.
 		#
-		addrname(root[i : ], d, x, hd arg);
-		i += DD_SIZE;
+sys->fprint(sys->fildes(2), "add %s at clust %ux\n", d.name, x);
+		addrname(root[p:], d, hd arg, x);
+		p += DD_SIZE;
 	}
 
 	#
 	#  write the fats and root
 	#
-	if (sys->seek(fd, big t.bytes, 0) < big 0)
-		fatal(sys->sprint("seek to fat1: %r"));
-	if (sys->write(fd, fat, fatsecs*t.bytes) != fatsecs*t.bytes)
-		fatal(sys->sprint("writing fat #1: %r"));
-	if (sys->write(fd, fat, fatsecs*t.bytes) != fatsecs*t.bytes)
-		fatal(sys->sprint("writing fat #2: %r"));
-	if (sys->write(fd, root, rootsecs*t.bytes) != rootsecs*t.bytes)
-		fatal(sys->sprint("writing root: %r"));
-
-	if(fflag){
-		if (sys->seek(fd, big t.bytes*big t.sectors*big t.heads*big t.tracks-big 1, 0) < big 0)
-			;
-		if (sys->write(fd, array of byte "9", 1) != 1)
-			;
+	if(commit){
+		if(sys->seek(disk.wfd, big (nresrv*secsize), 0) < big 0)
+			fatal(sys->sprint("seek to fat #1: %r"));
+		if(sys->write(disk.wfd, fat, fatsecs*secsize) < 0)
+			fatal(sys->sprint("writing fat #1: %r"));
+		if(sys->write(disk.wfd, fat, fatsecs*secsize) < 0)
+			fatal(sys->sprint("writing fat #2: %r"));
+		if(sys->write(disk.wfd, root, rootsecs*secsize) < 0)
+			fatal(sys->sprint("writing root: %r"));
 	}
 }
 
 #
 #  allocate a cluster
 #
-clustalloc(flag : int) : int
+clustalloc(flag: int): int
 {
-	o, x : int;
+	o, x: int;
 
 	if(flag != Sof){
 		if (flag == Eof)
 			x =16rffff;
 		else
-			x = (fatlast+1);
+			x = fatlast+1;
 		if(fatbits == 12){
 			x &= 16rfff;
 			o = (3*fatlast)/2;
 			if(fatlast & 1){
-				fat[o] = byte (((int fat[o])&16r0f) | (x<<4));
+				fat[o] = byte ((int fat[o] & 16r0f) | (x<<4));
 				fat[o+1] = byte (x>>4);
 			} else {
 				fat[o] = byte x;
-				fat[o+1] = byte (((int fat[o+1])&16rf0) | ((x>>8) & 16r0F));
+				fat[o+1] = byte ((int fat[o+1] & 16rf0) | ((x>>8) & 16r0F));
 			}
 		} else {
 			o = 2*fatlast;
@@ -522,48 +671,37 @@ clustalloc(flag : int) : int
 		
 	if(flag == Eof)
 		return 0;
-	else
-		return ++fatlast;
+	if(++fatlast >= clusters)
+		fatal(sys->sprint("data does not fit on disk (%d %d)", fatlast, clusters));
+	return fatlast;
 }
 
-putname(p : string, buf : array of byte)
+putname(p: string, buf: array of byte)
 {
-	i, j : int;
-
-	j = -1;
-	for (i = 0; i < len p; i++) {
-		if (p[i] == '/' || p[i] == '\\')
-			j = i;
+	memset(buf[DD_NAME: ], ' ', DD_NAMESIZE+DD_EXTSIZE);
+	for(i := 0; i < DD_NAMESIZE && i < len p && p[i] != '.'; i++){
+		c := p[i];
+		if(c >= 'a' && c <= 'z')
+			c += 'A'-'a';
+		buf[DD_NAME+i] = byte c;
 	}
-	p = p[j+1 : ];
-	memset(buf[DD_NAME : ], ' ', DD_NAMESIZE+DD_EXTSIZE);
-	for(i = 0; i < DD_NAMESIZE && i < len p; i++){
-		if(p[i] == '.')
+	for(i = 0; i < len p; i++)
+		if(p[i] == '.'){
+			p = p[i+1:];
+			for(i = 0; i < DD_EXTSIZE && i < len p; i++){
+				c := p[i];
+				if(c >= 'a' && c <= 'z')
+					c += 'A'-'a';
+				buf[DD_EXT+i] = byte c;
+			}
 			break;
-		if (p[i] >= 'a' && p[i] <= 'z')
-			p[i] += 'A'-'a';
-		buf[DD_NAME+i] = byte p[i];
-	}
-	for (i = 0; i < len p; i++) {
-		if (p[i] == '.')
-			break;
-	}
-	if(p[i] == '.'){
-		p = p[i+1 : ];
-		for(i = 0; i < DD_EXTSIZE && i < len p; i++) {
-			if (p[i] >= 'a' && p[i] <= 'z')
-				p[i] += 'A'-'a';
-			buf[DD_EXT+i] = byte p[i];
 		}
-	}
 }
 
-puttime(buf : array of byte)
+puttime(buf: array of byte)
 {
-	t : ref Daytime->Tm = getlocaltime();
-	x : int;
-
-	x = (t.hour<<11) | (t.min<<5) | (t.sec>>1);
+	t := daytime->local(daytime->now());
+	x := (t.hour<<11) | (t.min<<5) | (t.sec>>1);
 	buf[DD_TIME+0] = byte x;
 	buf[DD_TIME+1] = byte (x>>8);
 	x = ((t.year-80)<<9) | ((t.mon+1)<<5) | t.mday;
@@ -571,10 +709,19 @@ puttime(buf : array of byte)
 	buf[DD_DATE+1] = byte (x>>8);
 }
 
-addrname(buf : array of byte, dir : Sys->Dir, start : int, nm : string)
+addrname(buf: array of byte, dir: Sys->Dir, name: string, start: int)
 {
-	putname(nm, buf);
-	buf[DD_ATTR] = byte DRONLY;
+	s := name;
+	for(i := len s; --i >= 0;)
+		if(s[i] == '/'){
+			s = s[i+1:];
+			break;
+		}
+	putname(s, buf);
+	if(s == "9load")
+		buf[DD_ATTR] = byte DSYSTEM;
+	else
+		buf[DD_ATTR] = byte 0;
 	puttime(buf);
 	buf[DD_START+0] = byte start;
 	buf[DD_START+1] = byte (start>>8);
@@ -584,31 +731,25 @@ addrname(buf : array of byte, dir : Sys->Dir, start : int, nm : string)
 	buf[DD_LENGTH+3] = byte (dir.length>>24);
 }
 
-getlocaltime() : ref Daytime->Tm
-{
-	return daytime->local(daytime->now());
-}
-
-memset(d : array of byte, v : int, n : int)
+memset(d: array of byte, v: int, n: int)
 {
 	for (i := 0; i < n; i++)
 		d[i] = byte v;
 }
 
-memmove(d : array of byte, s : array of byte, n : int)
+memmove(d: array of byte, s: array of byte, n: int)
 {
-	for (i := 0; i < n; i++) 
-		d[i] = s[i];
+	d[0:] = s[0:n];
 }
 
-putshort(b : array of byte, v : int)
+putshort(b: array of byte, v: int)
 {
 	b[1] = byte (v>>8);
 	b[0] = byte v;
 }
 
-putlong(b : array of byte, v : int)
+putlong(b: array of byte, v: int)
 {
 	putshort(b, v);
-	putshort(b[2 : ], v>>16);
+	putshort(b[2: ], v>>16);
 }

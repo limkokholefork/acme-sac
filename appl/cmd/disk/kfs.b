@@ -1384,7 +1384,7 @@ rcreate(cp: ref Chan, f: ref Tmsg.Create): ref Rmsg
 	return ref Rmsg.Create(f.tag, qid, cp.msize-IOHDRSZ);
 }
 
-dirread(nil: ref Chan, f: ref Tmsg.Read, file: ref File, d: ref Dentry): ref Rmsg
+dirread(cp: ref Chan, f: ref Tmsg.Read, file: ref File, d: ref Dentry): ref Rmsg
 {
 	p1: ref Iobuf;
 	d1: ref Dentry;
@@ -1392,6 +1392,7 @@ dirread(nil: ref Chan, f: ref Tmsg.Read, file: ref File, d: ref Dentry): ref Rms
 	count := f.count;
 	data := array[count] of byte;
 	offset := f.offset;
+	iounit := cp.msize-IOHDRSZ;
 
 	# Pick up where we left off last time if nothing has changed,
 	# otherwise must scan from the beginning.

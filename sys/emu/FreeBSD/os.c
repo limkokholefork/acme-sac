@@ -17,6 +17,7 @@ enum
 {
 	DELETE  = 0x7F,
 	NSTACKSPERALLOC = 16,
+	X11STACK=	256*1024
 };
 char *hosttype = "FreeBSD";
 
@@ -60,7 +61,8 @@ pexit(char *msg, int t)
 	kstack = p->kstack;
 	free(p->prog);
 	free(p);
-	stackfreeandexit(kstack);
+	if(kstack != nil)
+		stackfreeandexit(kstack);
 }
 
 void
@@ -223,7 +225,11 @@ kproc(char *name, void (*func)(void*), void *arg, int flags)
 	procs.tail = p;
 	unlock(&procs.l);
 
-	p->kstack = stackalloc(p, &tos);
+	if(flags & KPX11){
+		p->kstack = nil;	/* never freed; also up not defined */
+		tos = (char*)mallocz(X11STACK, 0) + X11STACK - sizeof(void*);
+	}else
+		p->kstack = stackalloc(p, &tos);
 	pid = rfork_thread(RFPROC|RFMEM|RFNOWAIT, tos, tramp, p);
 	if(pid < 0)
 		panic("ourfork");
@@ -501,7 +507,7 @@ stackalloc(Proc *p, void **tos)
 	rv = stacklist.free;
 	stacklist.free = *(void **)rv;
 	unlock(&stacklist.l);
-	*tos = rv + KSTACK - sizeof(Proc*);
+	*tos = rv + KSTACK - sizeof(void*);
 	*(Proc **)rv = p;
 	return rv;
 }

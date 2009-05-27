@@ -1,4 +1,4 @@
-implement Calculator;
+implement Calc;
 
 include "sys.m";
 	sys: Sys;
@@ -15,7 +15,7 @@ include "rand.m";
 include "daytime.m";
 	daytime: Daytime;
 
-Calculator: module
+Calc: module
 {
 	init: fn(nil: ref Draw->Context, argv: list of string);
 };

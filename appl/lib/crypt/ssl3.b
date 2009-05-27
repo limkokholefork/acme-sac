@@ -618,6 +618,7 @@ Context.read(ctx: self ref Context, a: array of byte, n: int): int
 		got := 0;
 		if(q.fragment) {
 			d := (hd q.data).data;
+			m := q.e - q.b;
 			i := q.e - q.fragment;
 			if(q.fragment > n) {
 				a[0:] = d[i:i+n];
@@ -1420,7 +1421,7 @@ set_cipher_algs(ctx: ref Context) : string
 
 	algspec := "alg";
 
-	case ctx.sel_ciph.bulk_cipher_algorithm {
+	case enc := ctx.sel_ciph.bulk_cipher_algorithm {
 	SSL_NULL_CIPHER =>
 		algspec += " clear";
 	SSL_RC4 => 	# stream cipher
@@ -1437,7 +1438,7 @@ set_cipher_algs(ctx: ref Context) : string
 		e = "ssl3: encrypt method: unknown";
 	}
 
-	case ctx.sel_ciph.mac_algorithm {
+	case mac := ctx.sel_ciph.mac_algorithm {
 	SSL_NULL_MAC =>
 		algspec += " clear";
 	SSL_MD5 =>
@@ -2487,7 +2488,7 @@ do_cert_request(hm: ref Handshake.CertificateRequest, ctx: ref Context)
 	ctx.status |= CLIENT_AUTH;
 }
 
-dn_cmp(nil, nil: list of array of byte): int
+dn_cmp(a, b: list of array of byte): int
 {
 	return -1;
 }
@@ -4883,7 +4884,7 @@ v2calc_keys(ciph: ref CipherSpec, ms, cr, sr: array of byte)
 	cw_mac, sw_mac, cw_key, sw_key,	cw_IV, sw_IV: array of byte;
 
 	# TODO: check the size of key block if IV exists
-	(mkeylen, nil, keyarglen) := v2suite_more(ciph);
+	(mkeylen, ckeylen, keyarglen) := v2suite_more(ciph);
 	kblen := 2*mkeylen;
 	if(kblen%Keyring->MD5dlen != 0) {
 		if(SSL_DEBUG)

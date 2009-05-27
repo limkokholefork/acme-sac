@@ -17,8 +17,6 @@ include "bufio.m";
 	bufio: Bufio;
 	Iobuf: import bufio;
 
-include "keyring.m";	# temporary: fix spki.m
-
 include "sexprs.m";
 
 Maxtoken: con 1024*1024;	# should be more than enough

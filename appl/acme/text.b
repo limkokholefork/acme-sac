@@ -727,9 +727,9 @@ Text.complete(t: self ref Text): string
 		dir = dir + "/" + path;
 		(dir, nil) = lookx->cleanname(dir, len dir);
 	}
-	c := complete->complete(dir, str);
+	(c, err) := complete->complete(dir, str);
 	if(c == nil){
-		warning(nil, sprint("error attempting complete: %r\n"));
+		warning(nil, sprint("error attempting complete: %s\n", err));
 		return nil;
 	}
 	if(!c.advance){
@@ -744,7 +744,7 @@ Text.complete(t: self ref Text): string
 			match = ": no matches in:";
 			
 		warning(nil, sprint("%s%s%s*%s\n",dir, s, str, match));
-		for(i=0; i<c.nfile; i++)
+		for(i=0; i<c.nmatch; i++)
 			warning(nil, sprint(" %s\n", c.filename[i]));
 	}
 

@@ -59,10 +59,16 @@ Usb: module
 
 	Endpt: adt {
 		addr: int;
-		attr: int;
+		d2h:	int;
+		attr:	int;
+		etype:	int;
+		isotype:	int;
 		maxpkt: int;
 		interval: int;
 	};
+
+	Econtrol, Eiso, Ebulk, Eintr: con iota;	# Endpt.etype
+	Eunknown, Easync, Eadapt, Esync: con iota;	# Endpt.isotype
 	
 	NendPt: con 16;
 	

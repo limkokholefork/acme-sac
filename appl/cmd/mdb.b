@@ -369,9 +369,8 @@ init(nil: ref Draw->Context, argv: list of string)
 
 link()
 {
-	if(m == nil || m.magic == 0) {
+	if(m == nil || m.magic == 0)
 		return;
-	}
 
 	for(i := 0; i < m.lsize; i++) {
 		l := m.links[i];
@@ -382,9 +381,8 @@ link()
 
 imports()
 {
-	if(m == nil || m.magic == 0) {
+	if(m == nil || m.magic == 0)
 		return;
-	}
 
 	mi := m.imports;
 	for(i := 0; i < len mi; i++) {
@@ -398,9 +396,8 @@ imports()
 
 handlers()
 {
-	if(m == nil || m.magic == 0) {
+	if(m == nil || m.magic == 0)
 		return;
-	}
 
 	hs := m.handlers;
 	for(i := 0; i < len hs; i++) {
@@ -426,9 +423,8 @@ handlers()
 
 desc()
 {
-	if(m == nil || m.magic == 0) {
+	if(m == nil || m.magic == 0)
 		return;
-	}
 
 	for(i := 0; i < m.tsize; i++) {
 		h := m.types[i];
@@ -442,9 +438,8 @@ desc()
 
 hdr()
 {
-	if(m == nil || m.magic == 0) {
+	if(m == nil || m.magic == 0)
 		return;
-	}
 	s := sprint("%.8ux Version %d Dis VM\n", m.magic, m.magic - XMAGIC + 1);
 	s += sprint("%.8ux Runtime flags %s\n", m.rt, rtflag(m.rt));
 	s += sprint("%8d bytes per stack extent\n\n", m.ssize);
@@ -483,9 +478,8 @@ rtflag(flag: int): string
 
 das()
 {
-	if(m == nil || m.magic == 0) {
+	if(m == nil || m.magic == 0)
 		return;
-	}
 
 	for(i := dot;  count-- > 0 && i < m.isize; i++) {
 		if(i % 10 == 0)
@@ -496,9 +490,8 @@ das()
 
 dat()
 {
-	if(m == nil || m.magic == 0) {
+	if(m == nil || m.magic == 0)
 		return;
-	}
 	print("	var @mp, %d\n", m.types[0].size);
 
 	s := "";
@@ -537,9 +530,8 @@ dat()
 
 mapstr(s: string): string
 {
-	for(i := 0; i < len s; i++) {
+	for(i := 0; i < len s; i++)
 		if(s[i] == '\n')
 			s = s[0:i] + "\\n" + s[i+1:];
-	}
 	return s;
 }

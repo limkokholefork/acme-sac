@@ -70,6 +70,7 @@ killpid(pid: string, msg: array of byte, sbok: int): int
 	n := sys->write(fd, msg, len msg);
 	if(n < 0) {
 		err := sys->sprint("%r");
+		elen := len err;
 		if(sbok || err != "thread exited")
 			sys->fprint(stderr, "kill: cannot kill %s: %r\n", pid);
 		return 0;

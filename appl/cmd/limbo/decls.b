@@ -159,8 +159,7 @@ checkrefs(d: ref Decl)
 				warn(d.src.start, declconv(d)+" not referenced");
 		Dlocal or
 		Darg =>
-			if(!d.refs && d.sym != nil
-				&& d.sym.name != nil && d.sym.name[0] != '.')
+			if(!d.refs && d.sym != nil && d.sym.name != nil && d.sym.name[0] != '.')
 				warn(d.src.start, declconv(d)+" not referenced");
 		Dconst =>
 			if(superwarn && !d.refs && d.sym != nil)

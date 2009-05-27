@@ -43,7 +43,7 @@ init(f: Authio): string
 
 version := 1;
 
-interaction(nil: list of ref Attr, io: ref IO): string
+interaction(attrs: list of ref Attr, io: ref IO): string
 {
 	return p9any(io);
 }
@@ -219,7 +219,6 @@ authdial(netroot: string, dom: string): ref Sys->FD
 		# if that didn't work, just try the IP domain
 		if(p == nil)
 			p = csgetvalue(netroot, "dom", dom, "auth");
-sys->print("authdom/dom %q, auth %q\n", dom, p);
 		if(p == nil)
 			p = "$auth";	# temporary ...
 		if(p == nil){
@@ -230,4 +229,9 @@ sys->print("authdom/dom %q, auth %q\n", dom, p);
 		p = "$auth";	# look for one relative to my machine
 	(nil, conn) := sys->dial(netmkaddr(p, netroot, "ticket"), nil);
 	return conn.dfd;
+}
+
+keycheck(nil: ref Authio->Key): string
+{
+	return nil;
 }

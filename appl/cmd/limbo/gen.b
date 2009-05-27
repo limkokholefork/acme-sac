@@ -562,7 +562,6 @@ foldbranch(in: ref Inst)
 				next := in.next;
 				*in = *b;
 				in.next = next;
-				# b.reach = byte 1;
 				continue;
 			}
 			foldbranch(in.branch);

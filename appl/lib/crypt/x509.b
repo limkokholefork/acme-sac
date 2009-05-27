@@ -20,7 +20,7 @@ include "asn1.m";
 
 include "keyring.m";
 	keyring				: Keyring;
-	MD4, MD5, SHA1, IPint, DESstate	: import keyring;
+	IPint, DESstate	: import keyring;
 
 include "security.m";
 	random				: Random;
@@ -525,8 +525,8 @@ parse:
 
 		if(len el == 3){	# ssl3.b uses CertificateInfo; others use Certificate  (TO DO: fix this botch)
 			certinfo := hd el;
-
-
+			sigalgid := hd tl el;
+			sigbits := hd tl tl el;
 
 			# certificate info is another ASN1 sequence
 			(ok, el) = certinfo.is_seq();
@@ -3158,7 +3158,7 @@ parse:
 		(err, all) := asn1->decode(ext.value);
 		if(err != "")
 			break parse;
-		(ok, nil, code) := all.is_bitstring();
+		(ok, un_used_bits, code) := all.is_bitstring();
 		if(!ok)
 			break parse;
 		# no harm to ignore unused bits

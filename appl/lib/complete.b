@@ -1,10 +1,14 @@
 implement Complete;
 
+# Limbo translation by caerwyn of libcomplete on Plan 9
+# Subject to the Lucent Public License 1.02
+
 include "sys.m";
 	sys: Sys;
-	open, read, print, fprint, dirread, OREAD, FD, Dir, DMDIR: import sys;
+
 include "string.m";
 	str: String;
+
 include "complete.m";
 
 include "readdir.m";
@@ -20,30 +24,26 @@ init()
 
 longestprefixlength(a, b: string, n: int): int
 {
-	for(i := 0; i < n; i++){
+	for(i := 0; i < n; i++)
 		if(a[i] != b[i])
 			break;
-	}
 	return i;
 }
 
-blankcompletion: Completion;
-
-complete(dir, s: string): ref Completion
+complete(dir, s: string): (ref Completion, string)
 {
-
 	if(str->splitl(s, "/").t1 != nil)
-		return nil;
+		return (nil, "slash character in name argument to complete()");
 
-	fd := open(dir, OREAD);
-	if(fd == nil)
-		return nil;
+	(da, n) := readdir->init(dir, Readdir->COMPACT);
+	if(n < 0)
+		return (nil, sys->sprint("%r"));
+	if(n == 0)
+		return (nil, nil);
 
-	(da, n) := readdir->readall(fd, 0);
-	if(n <= 0)
-		return nil;
+	readdir = nil;
 
-	c := ref blankcompletion;
+	c := ref Completion(0, 0, nil, 0, nil);
 
 	name := array[n] of string;
 	mode := array[n] of int;
@@ -60,6 +60,8 @@ complete(dir, s: string): ref Completion
 		}
 
 	if(nfile > 0){
+		# report interesting results
+		# trim length back to longest common initial string
 		for(i = 1; i < nfile; i++)
 			minlen = longestprefixlength(name[0], name[i], minlen);
 
@@ -67,13 +69,14 @@ complete(dir, s: string): ref Completion
 		c.advance = c.complete || (minlen > length);
 		c.str = name[0][length:minlen];
 		if(c.complete){
-			if(mode[0]&DMDIR)
+			if(mode[0]&Sys->DMDIR)
 				c.str[minlen++ - length] = '/';
 			else
 				c.str[minlen++ - length] = ' ';
 		}
 		c.nmatch = nfile;
 	}else{
+		# no match: return all names
 		for(i = 0; i < n; i++){
 			name[i] = da[i].name;
 			mode[i] = da[i].mode;
@@ -83,9 +86,8 @@ complete(dir, s: string): ref Completion
 	}
 	c.filename = name;
 	for(i = 0; i < nfile; i++)
-		if(mode[i] & DMDIR)
-			c.filename[i][len c.filename[i]] = '/';
+		if(mode[i] & Sys->DMDIR)
+			c.filename[i] += "/";
 
-	c.nfile = nfile;
-	return c;
+	return (c, nil);
 }

@@ -550,6 +550,7 @@ cpshow(p: Prof, v: int): int
 	i: int;
 
 	cleare();
+	tot := p.total;
 	fullhdr := v&FULLHDR;
 	freq := v&FREQUENCY;
 	for(ml := p.mods; ml != nil; ml = tl ml){
@@ -963,7 +964,7 @@ write(f: string, s: string): int
 		return -1;
 	}
 	b := array of byte s;
-	if(sys->write(fd, b, len b) != len b){
+	if((n := sys->write(fd, b, len b)) != len b){
 		error(sys->sprint("cannot write %s to file %s", s, f));
 		return -1;
 	}
@@ -1171,6 +1172,7 @@ memshow(p: Prof, v: int): int
 	i: int;
 
 	cleare();
+	tot := p.total;
 	if(p.total == 0 && p.totals[0] == 0)
 		return 0;
 	verbose := v&VERBOSE;

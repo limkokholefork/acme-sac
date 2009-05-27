@@ -12,15 +12,16 @@ int	SYS_SLEEP = 2;
 int SOCK_SELECT = 3;
 #define	MAXSLEEPERS	1500
 
-extern			int	cflag;
+extern	int	cflag;
 
-DWORD			PlatformId;
-DWORD			consolestate;
-static			char*	path;
-static			HANDLE	kbdh = INVALID_HANDLE_VALUE;
-static			HANDLE	conh = INVALID_HANDLE_VALUE;
-static			HANDLE	errh = INVALID_HANDLE_VALUE;
-static			int sleepers = 0;
+DWORD	PlatformId;
+DWORD	consolestate;
+static	char*	path;
+static	HANDLE	kbdh = INVALID_HANDLE_VALUE;
+static	HANDLE	conh = INVALID_HANDLE_VALUE;
+static	HANDLE	errh = INVALID_HANDLE_VALUE;
+static	int	donetermset = 0;
+static	int sleepers = 0;
 
 	wchar_t	*widen(char *s);
 	char		*narrowen(wchar_t *ws);
@@ -31,7 +32,7 @@ static			int sleepers = 0;
 	char*	runestoutf(char*, Rune*, int);
 	int		runescmp(Rune*, Rune*);
 
-_declspec(thread)       Proc    *up;
+__declspec(thread)       Proc    *up;
 
 HANDLE	ntfd2h(int);
 int	nth2fd(HANDLE);
@@ -65,23 +66,23 @@ pfree(Proc *p)
 	}
 	free(e->user);
 	free(p->prog);
+	CloseHandle((HANDLE)p->os);
 	free(p);
 }
-
-static ulong erendezvous(void*, ulong);
 
 void
 osblock(void)
 {
-	erendezvous(up, 0);
+	if(WaitForSingleObject((HANDLE)up->os, INFINITE) != WAIT_OBJECT_0)
+		panic("osblock failed");
 }
 
 void
 osready(Proc *p)
 {
-	erendezvous(p, 0);
+	if(SetEvent((HANDLE)p->os) == FALSE)
+		panic("osready failed");
 }
-
 
 void
 pexit(char *msg, int t)
@@ -107,8 +108,6 @@ tramp(LPVOID p)
 {
 	// install our own exception handler
 	// replacing all others installed on this thread
-/* putting assembler here means this doesn't get registered as a safe handler
-    so i'm commenting it out and using the ExceptionHandlerFilter instead.
 	DWORD handler = (DWORD)Exhandler;
 	_asm {
 		mov eax,handler
@@ -117,17 +116,13 @@ tramp(LPVOID p)
 		push eax
 		mov fs:[0],esp
 	}
-*/	
+		
 	up = p;
 	up->func(up->arg);
 	pexit("", 0);
-	// should never get here but tidy up anyway
-/*
-	_asm {
-		mov fs:[0],-1
-		add esp, 8
-	}
-*/
+	/* not reached */
+	for(;;)
+		panic("tramp");
 	return 0;
 }
 
@@ -143,6 +138,12 @@ kproc(char *name, void (*func)(void*), void *arg, int flags)
 	p = newproc();
 	if(p == nil){
 		print("out of kernel processes\n");
+		return -1;
+	}
+	p->os = CreateEvent(NULL, FALSE, FALSE, NULL);
+	if(p->os == NULL){
+		pfree(p);
+		print("can't allocate os event\n");
 		return -1;
 	}
 		
@@ -240,7 +241,7 @@ readkbd(void)
 void
 cleanexit(int x)
 {
-	/* sleep(2); */		/* give user a chance to see message */
+	sleep(2);		/* give user a chance to see message */
 	termrestore();
 	ExitProcess(x);
 }
@@ -356,11 +357,14 @@ termset(void)
 {
 	DWORD flag;
 
-	if(conh != INVALID_HANDLE_VALUE)
+	if(donetermset)
 		return;
+	donetermset = 1;
 	conh = GetStdHandle(STD_OUTPUT_HANDLE);
 	kbdh = GetStdHandle(STD_INPUT_HANDLE);
 	errh = GetStdHandle(STD_ERROR_HANDLE);
+	if(errh == INVALID_HANDLE_VALUE)
+		errh = conh;
 
 	// The following will fail if kbdh not from console (e.g. a pipe)
 	// in which case we don't care
@@ -419,7 +423,7 @@ libinit(char *imod)
 	gethostname(sys, sizeof(sys));
 	kstrdup(&ossysname, sys);
 //	if(sflag == 0)
-		SetUnhandledExceptionFilter((LPTOP_LEVEL_EXCEPTION_FILTER)TrapHandler);
+//		SetUnhandledExceptionFilter((LPTOP_LEVEL_EXCEPTION_FILTER)TrapHandler);
 
 	path = getenv("PATH");
 	if(path == nil)
@@ -435,7 +439,7 @@ libinit(char *imod)
 		lasterror = GetLastError();	
 		if(PlatformId == VER_PLATFORM_WIN32_NT || lasterror != ERROR_NOT_LOGGED_ON)
 			print("cannot GetUserName: %d\n", lasterror);
-	} else {
+	}else{
 		uns = narrowen(wuname);
 		snprint(uname, sizeof(uname), "%s", uns);
 		free(uns);
@@ -443,85 +447,6 @@ libinit(char *imod)
 	kstrdup(&eve, uname);
 
 	emuinit(imod);
-}
-
-enum
-{
-	NHLOG	= 7,
-	NHASH	= (1<<NHLOG)
-};
-
-typedef struct Tag Tag;
-struct Tag
-{
-	void*	tag;
-	ulong	val;
-	HANDLE	pid;
-	Tag*	next;
-};
-
-static	Tag*	ht[NHASH];
-static	Tag*	ft;
-static	Lock	hlock;
-static	int	nsema;
-
-static ulong
-erendezvous(void *tag, ulong value)
-{
-	int h;
-	ulong rval;
-	Tag *t, **l, *f;
-
-
-	h = (ulong)tag & (NHASH-1);
-
-	lock(&hlock);
-	l = &ht[h];
-	for(t = ht[h]; t; t = t->next) {
-		if(t->tag == tag) {
-			rval = t->val;
-			t->val = value;
-			t->tag = 0;
-			unlock(&hlock);
-			if(SetEvent(t->pid) == FALSE)
-				panic("Release failed\n");
-			return rval;		
-		}
-	}
-
-	t = ft;
-	if(t == 0) {
-		t = malloc(sizeof(Tag));
-		if(t == nil)
-			panic("rendezvous: no memory");
-		t->pid = CreateEvent(0, 0, 0, 0);
-	}
-	else
-		ft = t->next;
-
-	t->tag = tag;
-	t->val = value;
-	t->next = *l;
-	*l = t;
-	unlock(&hlock);
-
-	if(WaitForSingleObject(t->pid, INFINITE) != WAIT_OBJECT_0)
-		panic("WaitForSingleObject failed\n");
-
-	lock(&hlock);
-	rval = t->val;
-	for(f = *l; f; f = f->next) {
-		if(f == t) {
-			*l = f->next;
-			break;
-		}
-		l = &f->next;
-	}
-	t->next = ft;
-	ft = t;
-	unlock(&hlock);
-
-	return rval;
 }
 
 void
@@ -570,12 +495,15 @@ close(int fd)
 int
 read(int fd, void *buf, uint n)
 {
-	if(fd == 0){
-		if(!ReadFile(kbdh, buf, n, &n, NULL))
-			return -1;
-		return n;
-	}
-	if(!ReadFile(ntfd2h(fd), buf, n, &n, NULL))
+	HANDLE h;
+
+	if(fd == 0)
+		h = kbdh;
+	else
+		h = ntfd2h(fd);
+	if(h == INVALID_HANDLE_VALUE)
+		return -1;
+	if(!ReadFile(h, buf, n, &n, NULL))
 		return -1;
 	return n;
 }
@@ -583,18 +511,18 @@ read(int fd, void *buf, uint n)
 int
 write(int fd, void *buf, uint n)
 {
-	if(fd == 1){
-		if(conh == INVALID_HANDLE_VALUE){
+	HANDLE h;
+
+	if(fd == 1 || fd == 2){
+		if(!donetermset)
 			termset();
-			if(conh == INVALID_HANDLE_VALUE)
-				return -1;
-		}
-		if(!WriteFile(conh, buf, n, &n, NULL))
+		if(fd == 1)
+			h = conh;
+		else
+			h = errh;
+		if(h == INVALID_HANDLE_VALUE)
 			return -1;
-		return n;
-	}
-	if(fd == 2){
-		if(!WriteFile(errh, buf, n, &n, NULL))
+		if(!WriteFile(h, buf, n, &n, NULL))
 			return -1;
 		return n;
 	}
@@ -734,19 +662,6 @@ tm2sec(SYSTEMTIME *tm)
 	secs += tm->wSecond;
 
 	return secs;
-}
-
-long
-time(long *tp)
-{
-	SYSTEMTIME tm;
-	long t;
-
-	GetSystemTime(&tm);
-	t = tm2sec(&tm);
-	if(tp != nil)
-		*tp = t;
-	return t;
 }
 
 /*

@@ -208,6 +208,28 @@ execute(ctxt: ref Draw->Context, cmd : string, argl : list of string, ci: chan o
 	c->init(ctxt, argl);
 }
 
+# run(ctxt: ref Draw->Context, cmd : string, argl : list of string): int
+# {
+# 	file := cmd;
+# 	if(len file<4 || file[len file-4:]!=".dis")
+# 		file += ".dis";
+# 	c := load Command file;
+# 	if(c == nil) {
+# 		err := sys->sprint("%r");
+# 		if(file[0]!='/' && file[0:2]!="./"){
+# 			c = load Command "/dis/"+file;
+# 			if(c == nil)
+# 				err = sys->sprint("%r");
+# 		}
+# 		if(c == nil){
+# 			sys->fprint(stderr, "mprof: %s: %s\n", cmd, err);
+# 			return -1;
+# 		}
+# 	}
+# 	c->init(ctxt, argl);
+# 	return 0;
+# }
+
 openwait(pid : int) : ref Sys->FD
 {
 	w := sys->sprint("#p/%d/wait", pid);

@@ -85,7 +85,7 @@ init(nil: ref Draw->Context, args: list of string)
 			else
 				matches = e.find(attr);
 			for(; matches != nil; matches = tl matches){
-				(nil, attrs) := hd matches;
+				(line, attrs) := hd matches;
 				if(attrs != nil)
 					printvals(attrs, all);
 				if(!all)

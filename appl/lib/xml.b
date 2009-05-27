@@ -243,7 +243,6 @@ getparcel(x: ref Parser): ref Parcel
 		return p;
 	}exception e{
 	"sax:*" =>
-			e = nil;
 			return ref Parcel.Error(x.loc, x.errormsg);
 	}
 }

@@ -80,6 +80,7 @@ regquery(server: string, addr: string, namesonly: int)
 		sys->fprint(sys->fildes(2), "regquery: can't open %s: %r\n", server);
 		raise "fail:open";
 	}
+	stdout := sys->fildes(1);
 	b := array of byte addr;
 	if(sys->write(fd, b, len b) >= 0){
 		sys->seek(fd, big 0, Sys->SEEKSTART);

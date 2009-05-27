@@ -83,6 +83,7 @@ csquery(server: string, addr: string)
 		sys->fprint(sys->fildes(2), "csquery: can't open %s: %r\n", server);
 		raise "fail:open";
 	}
+	stdout := sys->fildes(1);
 	b := array of byte addr;
 	if(sys->write(cs, b, len b) > 0){
 		sys->seek(cs, big 0, Sys->SEEKSTART);

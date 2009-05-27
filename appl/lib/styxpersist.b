@@ -215,7 +215,7 @@ handlermsg(rm: ref Rmsg, tm: ref Tmsg): string
 	Walk =>
 		fid := getfid(m.fid);
 		qids: array of Sys->Qid;
-
+		n := 0;
 		pick r := rm {
 		Walk =>
 			qids = r.qids;
@@ -477,7 +477,7 @@ resurrectfid(procid: int, fid: ref Fid, root: ref Root): string
 		root.qid = qid;
 	}
 	root.attached <-= 1;
-	(err, nil) := walk(procid, root.fid, fid.fid, fid.path, root.qid);
+	(err, qid) := walk(procid, root.fid, fid.fid, fid.path, root.qid);
 	if(err != nil)
 		return err;
 	if(fid.state == OPEN && (err = openfid(procid, fid)) != nil){

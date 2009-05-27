@@ -31,7 +31,7 @@ init(nil: ref Draw->Context, argv: list of string)
 	devdraw := "/dev";
 	mntwm := "/mnt/wm";
 	arg->init(argv);
-	arg->setusage("wmimport [-d /dev/draw] [-w /mnt/wm] cmd [arg...]");
+	arg->setusage("wmimport [-d /dev] [-w /mnt/wm] cmd [arg...]");
 	while((opt := arg->opt()) != 0){
 		case opt{
 		'd' =>

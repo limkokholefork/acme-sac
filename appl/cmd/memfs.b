@@ -217,7 +217,7 @@ memfs(maxsz : int, tc : chan of ref Tmsg, srv : ref Styxserver, sync: chan of in
 			c.mode = tm.mode;
 			c.qid.vers = mf.qid.vers;
 			mf.nopen++;
-			if (tm.mode & OTRUNC) {
+			if ((tm.mode & OTRUNC) && !(mf.perm & Sys->DMAPPEND)) {
 				# OTRUNC cannot be set for a directory
 				# always at least one blk so don't need to check fs limit
 				freeblks += (len mf.data);

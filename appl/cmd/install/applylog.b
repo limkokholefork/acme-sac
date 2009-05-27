@@ -135,7 +135,7 @@ init(nil: ref Draw->Context, args: list of string)
 	f = bufio->fopen(sys->fildes(0), Sys->OREAD);
 	while((log = readlog(f)) != nil)
 		if(log.seq > minseq)
-			updatelog(updates, log);
+			update(updates, updates.look(log.path), log);
 	updates.sort(Byseq);
 	if(debug){
 		sys->print("	SEQUENCED UPDATES\n");
@@ -290,15 +290,6 @@ replaylog(db: ref Db, log: ref Entry)
 		error(sys->sprint("bad log entry: %bd %bd", log.seq>>32, log.seq & big 16rFFFFFFFF));
 	}
 	update(db, e, log);
-}
-
-#
-# run through the new section of the server log,
-# building up a state that eliminates redundant actions
-#
-updatelog(db: ref Db, log: ref Entry)
-{
-	update(db, db.look(log.path), log);
 }
 
 #

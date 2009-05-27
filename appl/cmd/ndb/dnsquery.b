@@ -87,6 +87,7 @@ dnsquery(server: string, query: string)
 		sys->fprint(sys->fildes(2), "dnsquery: can't open %s: %r\n", server);
 		raise "fail:open";
 	}
+	stdout := sys->fildes(1);
 	for(i := len query; --i >= 0 && query[i] != ' ';)
 		{}
 	if(i < 0){
@@ -125,7 +126,7 @@ hastail(s: string, t: string): int
 
 addr2arpa(a: string): string
 {
-	(nil, flds) := sys->tokenize(a, ".");
+	(nf, flds) := sys->tokenize(a, ".");
 	rl: list of string;
 	for(; flds != nil; flds = tl flds)
 		rl = hd flds :: rl;

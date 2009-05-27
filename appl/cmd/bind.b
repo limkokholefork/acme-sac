@@ -1,62 +1,66 @@
 implement Bind;
 
 include "sys.m";
-include "draw.m";
-include "arg.m";
+	sys: Sys;
 
-FD: import Sys;
-Context: import Draw;
+include "draw.m";
 
 Bind: module
 {
-	init:	fn(ctxt: ref Context, args: list of string);
+	init:	fn(ctxt: ref Draw->Context, args: list of string);
 };
 
-sys: Sys;
-copt: int;
-stderr: ref FD;
+stderr: ref Sys->FD;
 
-init(nil: ref Context, args: list of string)
+usage()
+{
+	sys->fprint(stderr, "usage: bind [-a|-b|-c|-ac|-bc] [-q] source target\n");
+	raise "fail:usage";
+}
+
+init(nil: ref Draw->Context, args: list of string)
 {
 	sys = load Sys Sys->PATH;
 
 	stderr = sys->fildes(2);
-	arg := load Arg Arg->PATH;
-	if(arg == nil){
-		sys->fprint(stderr, "bind: can't load %s: %r\n", Arg->PATH);
-		raise "fail:load";
+	flags := 0;
+	qflag := 0;
+	if(args != nil)
+		args = tl args;
+	while(args != nil && (a := hd args) != "" && a[0] == '-'){
+		args = tl args;
+		if(a == "--")
+			break;
+		for(o := 1; o < len a; o++)
+			case a[o] {
+			'a' =>
+				flags |= Sys->MAFTER;
+			'b' =>
+				flags |= Sys->MBEFORE;
+			'c' =>
+				flags |= Sys->MCREATE;
+			'q' =>
+				qflag = 1;
+			* =>
+				usage();
+			}
 	}
-
-	flags := sys->MREPL;
-	arg->init(args);
-	while((o := arg->opt()) != 0)
-		case o {
-		'a' =>
-			flags = sys->MAFTER;
-		'b' =>
-			flags = sys->MBEFORE;
-		'c' =>
-			copt++;	
-		* =>
-			usage();
-		}
-	argv := arg->argv();
-	arg = nil;
-
-	if(copt)
-		flags |= sys->MCREATE;
-
-	if(len argv != 2)
+	if(len args != 2 || flags&Sys->MAFTER && flags&Sys->MBEFORE)
 		usage();
 
-	if(sys->bind(hd argv, hd tl argv, flags) < 0) {
-		sys->fprint(stderr, "bind: cannot bind %s onto %s: %r\n", hd argv, hd tl argv);
+	f1 := hd args;
+	f2 := hd tl args;
+	if(sys->bind(f1, f2, flags) < 0){
+		if(qflag)
+			exit;
+		#  try to improve the error message
+		err := sys->sprint("%r");
+		if(sys->stat(f1).t0 < 0)
+			sys->fprint(stderr, "bind: %s: %r\n", f1);
+		else if(sys->stat(f2).t0 < 0)
+			sys->fprint(stderr, "bind: %s: %r\n", f2);
+		else
+			sys->fprint(stderr, "bind: cannot bind %s onto %s: %s\n", f1, f2, err);
 		raise "fail:bind";
 	}
-}
-
-usage()
-{
-	sys->fprint(stderr, "usage: bind [-a|-b|-c|-ac|-bc] source target\n");
-	raise "fail:usage";
 }

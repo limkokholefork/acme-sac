@@ -388,10 +388,14 @@ fncom(decl: ref Decl)
 			scom(n.left);
 	}
 	pushblock();
-	in := genrawop(src, IRET, nil, nil, nil);
+	valued := decl.ty.tof != tnone;
+	if(valued)
+		in := genrawop(src, IRAISE, nil, nil, nil);
+	else
+		in = genrawop(src, IRET, nil, nil, nil);
 	popblock();
 	reach(decl.pc);
-	if(in.reach != byte 0 && decl.ty.tof != tnone)
+	if(valued && in.reach != byte 0)
 		error(src.start, "no return at end of function " + dotconv(decl));
 	# decl.endpc = lastinst;
 	if(labdep != 0)
@@ -1140,7 +1144,7 @@ rewritecomm(n, comm, slot: ref Node): (ref Node, ref Node)
 		}
 	}
 	if(n.right == comm && n.op == Oas && comm.op == Orcv
-	&& sumark(n.left).addable < Rcant)
+	&& sumark(n.left).addable < Rcant && (n.left.op != Oname || n.left.decl != nildecl))
 		adr = n.left;
 	if(adr != nil){
 		p := genrawop(comm.left.src, ILEA, adr, nil, slot);

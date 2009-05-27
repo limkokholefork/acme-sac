@@ -61,7 +61,7 @@ init(ctxt: ref Draw->Context, argv: list of string)
 		'v' =>
 			verbose = 1;
 		'a' =>
-			algs = arg->earg() :: algs;
+			alg := arg->earg() :: algs;
 		'f' =>
 			keyfile = arg->earg();
 			if (! (keyfile[0] == '/' || (len keyfile > 2 &&  keyfile[0:2] == "./")))
@@ -267,7 +267,7 @@ netmkaddr(addr, net, svc: string): string
 {
 	if(net == nil)
 		net = "net";
-	(n, nil) := sys->tokenize(addr, "!");
+	(n, l) := sys->tokenize(addr, "!");
 	if(n <= 1){
 		if(svc== nil)
 			return sys->sprint("%s!%s", net, addr);

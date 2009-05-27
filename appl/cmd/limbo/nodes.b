@@ -402,15 +402,14 @@ folds(n: ref Node): ref Node
 	Oeq or
 	Oleq or
 	Ogeq =>
-		n.c.val = big 1;
+		n.c = ref Const(big 1, 0.0);
 	Osub =>
-		n.c.val = big 0;
-		n.c.rval = 0.0;
+		n.c = ref Const(big 0, 0.0);
 	Oxor or
 	Oneq or
 	Olt or
 	Ogt =>
-		n.c.val = big 0;
+		n.c = ref Const(big 0, 0.0);
 	Oand or
 	Oor or
 	Oandand or

@@ -192,10 +192,12 @@ runcmd(ctxt: ref Draw->Context, argv: list of string, stdin: ref Sys->FD,
 	sync <-= 0;
 	sh := load Sh Sh->PATH;
 	e := sh->run(ctxt, argv);
-	if(e != nil){
-		sys->fprint(stderr(), 
-			"styxlisten: command exited with error: %s\n", e);
-		kill(<-lsync, "kill");		# kill listener, as command has exited
+	kill(<-lsync, "kill");		# kill listener, as command has exited
+	if(verbose){
+		if(e != nil)
+			sys->fprint(stderr(), "styxlisten: command exited with error: %s\n", e);
+		else
+			sys->fprint(stderr(), "styxlisten: command exited\n");
 	}
 }
 
