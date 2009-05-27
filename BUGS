@@ -1,0 +1,131 @@
+BUGS and suggested enhancements
+
+emu
+	sys->stat of large files (test was 8GB) produces incorrect file size.
+Irc 
+	• pasting a large block only sends the first line to the channel
+	• still something odd about noscroll behaviour
+	• non threadsafe use of bufio between infothread and mainwin
+	• implement redial
+	• list on plumb channel for irc channel urls
+
+Charon
+	• rewrite forms handling: come up with something much better
+	• plumb images to external prog (the new wm/view)
+	• cleanup IMG text to be single glyph with superscript
+	• add standalone charon script
+	• remove tk support altogether. than remove libtk and /man/9
+
+Acme
+	• Crashes when Debug opens lots of windows,
+		writes invalid addresses to addr file.
+	• allow acme:sac to also run under wm
+	• middle-click sh commands that include comments causes
+		sh to give parse errors. e.g. man 1 bind # bind(1)
+		The problem is just the newline is missing
+	• 'Look args' doesn't work if text is already selected within the Body.
+	• mouse chording command args in client windows, like irc,
+		doesn't work because of the round trip
+	• when window opens that should have expanded tag it
+		only has one line until the window is moved.
+	• right-click on /mnt/acme/1 or other acme served file will freeze acme
+	• arrow keys don't work in tags
+
+Debug
+	• implement breakpoints
+	• provide nice acme stack navigation without having to stop the proc
+	• plumb filenames to full filname path and location of step
+
+Mail/Mailpop3
+	• quote "From " when saving mail
+	• Mailpop3 hangs. probably a race condition somewhere
+	• use factotum for pop password
+	• use default direct /mail/box/user not current directory [FIXED  for Mailpop3]
+	• pop3 can't handle large messages, runs out of heap.
+	• with ssl working it should really be part of factotum
+	• merge Sascha's changes to Reply
+	• autocomplete email addresses
+	• listen on plumb for email addresses to mailto
+	• merge in rfc822.b library
+
+Calendar
+	• access to Schedule needs to be locked.
+	• print events for current week
+	• use better defaults so schedule file already exists is mounted
+
+sendmail.b
+	• need "send" client to append to other user's mailboxes
+	if no '@' and user's mailbox exists, then append.
+	• add ssl3 and send mail to gmail
+
+daytime.b
+	the string2tm doesn't work on the rfc822 dates in Mail
+
+httpd
+	• connection keep-alive hangs when interacting through
+	telnet. probably need to replace bufio in the implementation.
+	• test download of ranges.
+	• cleanup directory. move CGI stuff out of there.
+
+rpc
+	• refactor disk/kfscmd, factotum/rpc, ndb/dnsquery, etc.
+
+
+factotum
+	• acme client to get authinfo dialog/feedkey
+	• rework all commands that take password to use factotum
+	• passwordsafe replacement as acme client using factotum
+
+styxpersist.b
+	• doesn't work
+	• develop further to include lookup of registry, 
+		lookup using virgil maintain.
+	• look at more recent (iwp9 2006) work done on p9p 
+		for persistent connections
+
+sort
+	• runs out of memory.
+	• do more testing and add options to external sort /appl/mapreduce/sort.b
+
+Acme clients
+	juke
+	pivotTable
+	Search
+	dialog/feedkey
+	autocomplete -- type in the tag line, and the window contents 
+		refresh with matching words. like google suggest.
+	ctl-space for java object interfaces
+	AST client (really? do we really want to go down this path?)
+
+Chat
+	mount -C rc4_256 -k caerwyn.canto tcp!canto.hopto.org!6683 /n/chat
+	causes mount: mount failed: i/o on hungup channel
+			58 "Sh":fail:mount failed
+	first few attempts but works afterward
+
+man pages
+	Calendar
+	Chat
+	Irc
+	Debug
+	stackv
+	Sql
+	charon acme client
+	remove unused man pages
+	remove tk /man/9
+	remove prefab, wm, other unused stuff
+	rebuild INDEX using inferno only tools
+	remove from /man/3 that only apply to native
+	missing sys-byte2char(2)
+	use Salva's man script instead of /appl/cmd/man.b
+	
+web hosting
+	create acme sac web page like plan9port with full man pages and source
+	navigable online.
+
+windows host
+	icons for Acme.exe
+	
+Port from plan9/p9p
+	spell
+	sort options
