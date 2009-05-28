@@ -170,7 +170,7 @@ printwords(words: chan of ref Word)
 			nsp := nspaceafter(w.text);
 			if(col+nsp+len nw.text > extraindent+length)
 				break;	# fold line
-			if(!join && n != 0 && nw.bol)
+			if(!join && nw.bol)
 				break;
 			for(j:=0; j<nsp; j++)
 				bout.putc(' ');	# emit space; another word will follow

@@ -142,7 +142,7 @@ optnl:  # null
 EPERM: con "permission denied";
 EPIPE: con "write on closed pipe";
 
-SHELLRC: con "lib/profile";
+#SHELLRC: con "lib/profile";
 LIBSHELLRC: con "/lib/sh/profile";
 BUILTINPATH: con "/dis/sh";
 
@@ -252,8 +252,8 @@ loop: while (argv != nil && hd argv != nil && (hd argv)[0] == '-') {
 		runscript(ctxt, LIBSHELLRC, nil, 0);
 
 	if (argv == nil) {
-		if (opts.lflag)
-			runscript(ctxt, SHELLRC, nil, 0);
+#		if (opts.lflag)
+#			runscript(ctxt, SHELLRC, nil, 0);
 		if (isconsole(sys->fildes(0)))
 			interactive |= ctxt.INTERACTIVE;
 		ctxt.setoptions(interactive, 1);
@@ -286,7 +286,7 @@ system(drawctxt: ref Draw->Context, cmd: string): string
 		return Context.new(drawctxt).run(ref Listnode(n, nil) :: nil, 0);
 	} exception e {
 	"fail:*" =>
-		return e[5:];
+		return failurestatus(e);
 	}
 }
 
@@ -297,7 +297,7 @@ run(drawctxt: ref Draw->Context, argv: list of string): string
 		return Context.new(drawctxt).run(stringlist2list(argv), 0);
 	} exception e {
 	"fail:*" =>
-		return e[5:];
+		return failurestatus(e);
 	}
 }
 
@@ -319,7 +319,7 @@ runscript(ctxt: ref Context, path: string, args: list of ref Listnode, reporterr
 			runfile(ctxt, fd, path, args);
 		else if (reporterr)
 			ctxt.fail("bad script path", sys->sprint("sh: cannot open %s: %r", path));
-	} exception e {
+	} exception {
 	"fail:*" =>
 		if(!reporterr)
 			return;
@@ -362,7 +362,7 @@ runfile(ctxt: ref Context, fd: ref Sys->FD, path: string, args: list of ref List
 						laststatus = walk(ctxt, n, 0);
 					} exception e2 {
 					"fail:*" =>
-						laststatus = e2[5:];
+						laststatus = failurestatus(e2);
 					}
 				} else
 					laststatus = walk(ctxt, n, 0);
@@ -375,7 +375,7 @@ runfile(ctxt: ref Context, fd: ref Sys->FD, path: string, args: list of ref List
 			raise "fail:" + laststatus;
 		ctxt.pop();
 	}
-	exception e {
+	exception {
 	"fail:*" =>
 		ctxt.pop();
 		raise;
@@ -884,7 +884,7 @@ runexternal(ctxt: ref Context, args: list of ref Listnode, last: int): string
 				EPIPE =>
 					return EPIPE;
 				"fail:*" =>
-					return e[5:];
+					return failurestatus(e);
 				}
 			}
 			extstart := chan of int;
@@ -909,6 +909,16 @@ runexternal(ctxt: ref Context, args: list of ref Listnode, last: int): string
 	} while (pathlist != nil && nonexistent(err));
 	diagnostic(ctxt, sys->sprint("%s: %s", progname, err));
 	return err;
+}
+
+failurestatus(e: string): string
+{
+	s := e[5:];
+	while(s != nil && (s[0] == ' ' || s[0] == '\t'))
+		s = s[1:];
+	if(s != nil)
+		return s;
+	return "failed";
 }
 
 runhashpling(ctxt: ref Context, fd: ref Sys->FD,
@@ -964,7 +974,7 @@ runblock(ctxt: ref Context, args: list of ref Listnode, last: int): string
 		status := walk(ctxt, cmd, last);
 		ctxt.pop();
 		return status;
-	} exception e{
+	} exception {
 	"fail:*" =>
 		ctxt.pop();
 		raise;
@@ -976,7 +986,7 @@ runblock(ctxt: ref Context, args: list of ref Listnode, last: int): string
 trybuiltin(ctxt: ref Context, args: list of ref Listnode, lseq: int)
 		: (int, string)
 {
-	(n, bmods) := findbuiltin(ctxt.env.builtins, (hd args).word);
+	(nil, bmods) := findbuiltin(ctxt.env.builtins, (hd args).word);
 	if (bmods == nil)
 		return (0, nil);
 	return (1, (hd bmods)->runbuiltin(ctxt, myself, args, lseq));
@@ -1002,7 +1012,7 @@ externalexec(mod: Command,
 	{
 		mod->init(drawcontext, argv);
 	}
-	exception e{
+	exception {
 	EPIPE =>
 		raise "fail:" + EPIPE;
 	}
@@ -1119,7 +1129,7 @@ waitfor(ctxt: ref Context, pids: list of int): string
 		(who, line, s) := parsewaitstatus(ctxt, string buf[0:n]);
 		if (s != nil) {
 			if (len s >= 5 && s[0:5] == "fail:")
-				s = s[5:];
+				s = failurestatus(s);
 			else
 				diagnostic(ctxt, line);
 		}
@@ -2015,10 +2025,8 @@ builtin_load(ctxt: ref Context, args: list of ref Listnode, nil: int): string
 	if (tl args == nil || (hd tl args).word == nil)
 		builtinusage(ctxt, "load path...");
 	args = tl args;
-	path := (hd args).word;
 	if (args == nil)
 		builtinusage(ctxt, "load path...");
-	status := "";
 	for (; args != nil; args = tl args) {
 		s := loadmodule(ctxt, (hd args).word);
 		if (s != nil)
@@ -2051,7 +2059,7 @@ builtin_run(ctxt: ref Context, args: list of ref Listnode, nil: int): string
 	} exception e {
 	"fail:*" =>
 		ctxt.pop();
-		return e[5:];
+		return failurestatus(e);
 	}
 }
 
