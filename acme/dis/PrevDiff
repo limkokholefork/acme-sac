@@ -5,7 +5,7 @@ cd /mnt/acme/$acmewin
 {
 	echo -n 'addr=dot' >ctl
 	(a b) := `cat 
-	echo -n '/^[^\-<>].*\n/' > addr
+	echo -n '-/^[^\-<>].*\n/' > addr
 	echo -n 'dot=addr' > ctl
 	echo -n show > ctl
 	(f1 cmd f2) := `{getline data}
