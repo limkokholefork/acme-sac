@@ -1,10 +1,13 @@
 <../../../mkconfig
 
+DIRS=\
+	prep\
+
 TARG=\
 	kfs.dis\
+	mbr.dis\
 	mkext.dis\
 	mkfs.dis\
-	part.dis\
 	kfscmd.dis\
 	format.dis\
 	ftl.dis\
@@ -16,6 +19,7 @@ SYSMODULES=\
 	bufio.m\
 	string.m\
 
-DISBIN=$ROOT/dis/disk
+DISBIN=/dis/disk
 
-<$ROOT/mkfiles/mkdis
+</mkfiles/mkdis
+</mkfiles/mksubdirs
