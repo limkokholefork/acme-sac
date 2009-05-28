@@ -91,10 +91,18 @@ Setting
 .I n
 to values larger than 1 enables increasingly detailed traces of the compiler.
 .TP
-.BI \-d
+.BI \-d " daemon"
 Run 
 .I emu
-as a server.
+as a server, invoking
+.I daemon
+instead of
+.BR /dis/emuinit.dis ,
+and disabling
+input from
+.B cons
+(see
+.IR cons (3)).
 .TP
 .BI \-g Xsize x Ysize
 Define screen width and height in pixels.
@@ -119,7 +127,7 @@ will serve as its root.
 The default value is
 .B /usr/inferno
 on most systems, but
-.BR \eusers\einferno
+.BR \einferno
 on Windows.
 .TP
 .B \-s
@@ -180,6 +188,26 @@ Print version data: edition and revision date.
 Options may also be set in the host operating system's environment variable
 .BR EMU ;
 they are overridden by options supplied on the command line.
+.PP
+.I Emu
+finds the host system directory that will serve as its Inferno root directory
+as the last value found as follows:
+it is the value built-in to the executable, by default; or
+the value of the host system's environment variable
+.BR INFERNO ;
+or the value of the environment variable
+.BR ROOT ;
+or the value of a
+.B -r
+option in the environment variable
+.BR EMU ;
+or the
+.I rootpath
+set by a
+.B -r
+option to the
+.I emu
+command itself.
 .SH EXAMPLE
 To start
 .B wm/logon

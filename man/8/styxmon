@@ -28,6 +28,20 @@ and
 .B -t
 options restrict the messages printed to R-messages
 and T-messages respectively.
+.SH EXAMPLE
+Mount an instance of
+.IR export (4)
+of the current name space through
+.I styxmon
+on
+.B /n/remote
+to monitor all access to it through that name:
+.IP
+.EX
+mount {styxmon {export /}} /n/remote
+ls /n/remote
+cp /n/remote/lib/unicode /n/remote/dev/null
+.EE
 .SH SOURCE
 .B /appl/cmd/styxmon.b
 .SH SEE ALSO

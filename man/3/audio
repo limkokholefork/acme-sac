@@ -29,95 +29,76 @@ Reads return lines of the form
 .B "\fIsource\fP [in out] left \fIvalue\fP right \fIvalue\fP"
 .TP
 .B "\fIsource\fP in left \fIvalue\fP right \fIvalue\fP out left \fIvalue\fP right \fIvalue\fP"
-The qualifiers 
-.B in
-, 
-.B out 
-and 
-.B left
-, 
-.B right 
+The qualifiers
+.BR in ,
+.B out
+and
+.BR left ,
+.B right
 are omitted if they
 are not applicable or if the input/output and/or left/right values are
 the same.
-The 
-.I source 
-is one of 
-.B audio
-, 
-.B aux1
-, 
-.B aux2
-, 
-.B line
-, 
+The
+.I source
+is one of
+.BR audio ,
+.BR aux1 ,
+.BR aux2 ,
+.BR line ,
+.BR mono ,
+.BR mic ,
+.BR rate ,
+.B chans
+or
+.BR bits .
+If
+.I source
+is one of the ports
+.BR audio ,
+.BR aux1 ,
+.BR aux2 ,
+.BR line ,
 .B mono
-, 
-.B mic
-, 
-.B rate
-, 
-.B chans 
-or 
-.B bits.
-If 
-.I source 
-is one of the ports 
-.B audio
-,
-.B aux1
-, 
-.B aux2
-, 
-.B line
-, 
-.B mono 
-or 
-.B mic, 
-.I value 
+or
+.BR mic ,
+.I value
 represents
 the volume
-on a scale of 0 (quiet) to 100 (loud). The default volume is 50 for the 
-.B audio 
+on a scale of 0 (quiet) to 100 (loud). The default volume is 50 for the
+.B audio
 port and 0 for the
-remainder. If the 
-.I source 
-is 
-.B rate
-, 
-.I value 
-represents the 
-rate at which the data was recorded in Hz. The default is 22050.
-If the 
-.I source 
-is 
-.B chans
-, 
+remainder. If the
+.I source
+is
+.BR rate ,
 .I value
-is the number of channels of audio data - 2 (the default) for stereo, otherwise mono. If the 
-.I source 
-is 
-.B bits
-, 
-.I value 
-is one of 4, 8 or 16, the sample size in bits. 
+represents the
+rate at which the data was recorded in Hz. The default is 22050.
+If the
+.I source
+is
+.BR chans ,
+.I value
+is the number of channels of audio data - 2 (the default) for stereo, otherwise mono. If the
+.I source
+is
+.BR bits ,
+.I value
+is one of 4, 8 or 16, the sample size in bits.
 .TP
 .B [in out] enc \fIformat\fP
-Outputs the recording format on the input and/or output channels. 
-.I Format 
-is one of 
-.B ulaw
-, 
-.B alaw
-, 
-.B pcm
-, 
-.B pcm16 
-or 
+Outputs the recording format on the input and/or output channels.
+.I Format
+is one of
+.BR ulaw ,
+.BR alaw ,
+.BR pcm ,
+.B pcm16
+or
 .B adpcm
 .TP
 .B loop \fIvalue\fP
-.I Value 
+.I Value
 is 0 or 1 to disable or enable loopback respectively.
 .PP
 Writes control the device with strings of a similar format as that for reads.
@@ -129,13 +110,13 @@ Writes control the device with strings of a similar format as that for reads.
 .B "\fIsource\fP [in out] left \fIvalue\fP right \fIvalue\fP"
 .TP
 .B "\fIsource\fP in left \fIvalue\fP right \fIvalue\fP out left \fIvalue\fP right \fIvalue\fP"
-Set the corresponding value/volume for the particular 
-.I source. 
+Set the corresponding value/volume for the particular
+.I source.
 The same conventions apply
-as in the read case above. The default value of 
-.I source 
-is 
-.B audio.
+as in the read case above. The default value of
+.I source
+is
+.BR audio .
 .TP
 .B reset
 Set all attributes to their default value.
@@ -145,28 +126,22 @@ Enable (1) or disable (0) loopback mode.
 .TP
 .B [in out] enc \fIformat\fP
 Set the recording format on the input and/or output channels to
-.I format. 
-.I Format 
-is one of 
-.B ulaw
-, 
-.B alaw
-, 
-.B pcm
-, 
-.B adpcm.
+.I format.
+.I Format
+is one of
+.BR ulaw ,
+.BR alaw ,
+.BR pcm ,
+.BR adpcm .
 .TP
 .B [left right] dev \fIinput\fP
-Set the input source of the left and/or right ADCs. 
-.I Input 
-is one of 
-.B mic
-, 
-.B line
-, 
-.B aux1
-, 
-.B loop.
+Set the input source of the left and/or right ADCs.
+.I Input
+is one of
+.BR mic ,
+.BR line ,
+.BR aux1 ,
+.BR loop .
 .SH SOURCE
 .B /emu/port/devaudio*.c
 .br

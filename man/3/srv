@@ -37,12 +37,18 @@ If mode
 .B Sys->DMEXCL
 is thereby set, the file becomes exclusive-use and can be opened by
 only one process at a time.
+The file length and
+mode bit
+.B Sys->DMAPPEND
+may also be set by
+.B wstat
+but are not interpreted by the system.
 .PP
 Files may be removed, directly using
 .IR sys-remove (2)
 (and thus
 .IR rm (1)),
-and indirectly by opening them with mode
+or indirectly by opening them with mode
 .B Sys->ORCLOSE
 (see
 .IR sys-open (2)).
@@ -80,4 +86,3 @@ is conventionally bound by various applications
 .IR sys-file2chan (2)
 .SH BUGS
 A client with a read or write pending can remain blocked if the server exits before reply.
-

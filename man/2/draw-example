@@ -44,7 +44,7 @@ init(nil: ref Draw->Context, nil: list of string)
 	#
 	# Paint the screen red.
 	#
-	disp.draw(disp.r, red, nil, disp.r.min, Draw->SoverD);
+	disp.draw(disp.r, red, nil, disp.r.min);
 	sys->sleep(5000);
 
 	#
@@ -54,12 +54,12 @@ init(nil: ref Draw->Context, nil: list of string)
 		disp.chans, 1, Draw->Black);
 	texture.clipr = ((-10000,-10000),(10000,10000));
 	# put something in the texture
-	texture.draw(((0,0),(1,3)), white, nil, (0,0), Draw->SoverD);
-	texture.draw(((0,0),(2, 1)), white, nil, (0,0), Draw->SoverD);
+	texture.draw(((0,0),(1,3)), white, nil, (0,0));
+	texture.draw(((0,0),(2, 1)), white, nil, (0,0));
 	# use texture as both source and mask to let
 	# destination colour show through
 	disp.draw(((100,100),(200,300)), texture,
-		texture, (0,0), Draw->SoverD);
+		texture, (0,0));
 	sys->sleep(5000);
 
 	#
@@ -69,9 +69,9 @@ init(nil: ref Draw->Context, nil: list of string)
 	stipple := display.newimage(((0,0),(2,2)),
 				disp.chans, 1, Draw->Transparent);
 	stipple.draw(((0,0),(1,1)), display.opaque,
-				nil, (0,0), Draw->SoverD);
+				nil, (0,0));
 	disp.draw(((100,100),(300,250)), white,
-				stipple, (0,0), Draw->SoverD);
+				stipple, (0,0));
 	sys->sleep(5000);
 
 	#
@@ -79,7 +79,7 @@ init(nil: ref Draw->Context, nil: list of string)
 	#
 	font := Font.open(display, "*default*");
 	disp.text((100,310), texture, (0,0), font,
-			"Hello world", Draw->SoverD);
+			"Hello world");
 	sys->sleep(5000);
 
 	#
@@ -88,8 +88,8 @@ init(nil: ref Draw->Context, nil: list of string)
 	delight := display.open("/icons/delight.bit");
 	piccenter := delight.r.min.add(delight.r.max).div(2);
 	disp.fillellipse((250,250), 150, 50,
-		delight, piccenter, Draw->SoverD);
-	disp.ellipse((250,250), 150, 50, 3, yellow, (0,0), Draw->SoverD);
+		delight, piccenter);
+	disp.ellipse((250,250), 150, 50, 3, yellow, (0,0));
 	sys->sleep(5000);
 
 	#
@@ -102,7 +102,7 @@ init(nil: ref Draw->Context, nil: list of string)
 	brush := display.newimage(((0,0),(2*dx+1,2*dy+1)), disp.chans,
                                0, Draw->Black);
 	brush.fillellipse((dx,dy), dx, dy, display.white,
-				(0,0), Draw->SoverD);
+				(0,0));
 	for(x:=delight.r.min.x; x<delight.r.max.x; x++){
 		y := (x-piccenter.x)*(x-piccenter.x)/80;
 		y += 2*dy+1;	# so whole brush is visible at top
@@ -110,7 +110,7 @@ init(nil: ref Draw->Context, nil: list of string)
 		yy := y+(250-piccenter.y)-dy;
 		disp.gendraw(((xx,yy),(xx+2*dx+1,yy+2*dy+1)),
                        delight, (x-dx, y-dy), brush,
-			(0,0), Draw->SoverD);
+			(0,0));
 	}
 }
 .EE

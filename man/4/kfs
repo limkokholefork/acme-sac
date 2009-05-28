@@ -35,6 +35,11 @@ option causes the file system to be reset to an initially empty state
 (`reamed').
 Permission checking is turned off, to allow any desired permissions and
 file ownership to be set.
+(In other words, the
+.B -W
+and
+.B -P
+options are also set by default.)
 The file system block size is set to the
 .IR bsize
 given by the

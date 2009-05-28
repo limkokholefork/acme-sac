@@ -15,6 +15,7 @@ IPaddr: adt {
    mask:    fn(nil: self IPaddr, m: IPaddr): IPaddr;
    isv4:    fn(nil: self IPaddr): int;
    ismulticast: fn(nil: self IPaddr): int;
+   isvalid: fn(nil: self IPaddr): int;
 
    v4:      fn(nil: self IPaddr): array of byte;
    v6:      fn(nil: self IPaddr): array of byte;
@@ -255,6 +256,11 @@ Return true if
 .I ip
 is a multicast or broadcast address.
 .TP
+.IB ip .isvalid()
+Return true if
+.I ip
+is not the zero address in either IPv4 or IPv6 address space
+.TP
 .IB ip .text()
 Return a textual representation of the address
 .I ip
@@ -286,6 +292,8 @@ values, mainly for common IPv4 addresses:
 (loopback in IPv6),
 .B noaddr
 (all zero address, used before a node has an address),
+.B v4noaddr
+(all zero address with IPv4 prefix),
 and
 .B allbits
 (address of all 1 bits).

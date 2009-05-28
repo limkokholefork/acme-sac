@@ -1,6 +1,6 @@
 .TH CALC 1
 .SH NAME
-calc \- interactive floating point mathematics calculator
+calc \- calculator language
 .SH SYNOPSIS
 .B calc
 [
@@ -17,8 +17,8 @@ calc \- interactive floating point mathematics calculator
 ]
 .SH DESCRIPTION
 .I Calc
-interprets a simple language for floating point arithmetic
-with limbo-like syntax and
+interprets a simple language for floating-point arithmetic
+with Limbo-like syntax and
 functions.
 .PP
 If no
@@ -39,9 +39,9 @@ Statements, typically assignments and function
 definitions, produce no output unless they explicitly call
 .IR print .
 .PP
-Comments begin with # and extend to the end of the line as in limbo.
+Comments begin with # and extend to the end of the line as in Limbo.
 .PP
-Numbers may have a base specified using C or limbo syntax.
+Numbers may have a base specified using C or Limbo syntax.
 .PP
 Variable names have the usual syntax, including 
 .LR _ .
@@ -67,7 +67,7 @@ and
 .BR Nan (NaN)
 are predefined.
 .PP
-Expressions are formed with these limbo-like operators, listed by
+Expressions are formed with these Limbo-like operators, listed by
 decreasing precedence.
 .TP
 .B ! ~ + - ++ --
@@ -109,7 +109,7 @@ current scope. In either case,
 .B :=
 always forces a new declaration.
 .PP
-The extra non-limbo operators are factorial (! when postfix), integer division (//),
+The extra non-Limbo operators are factorial (! when postfix), integer division (//),
 conditional (? and :) comma (,), logical equivalence (<->), implication (->), reverse implication (<-), nand (↑) and nor (↓).
 .PP
 Unary operators, assignment operators, **, ? and : are right associative as usual.
@@ -168,7 +168,7 @@ For example
 .sp
 gives the value 2.7182818284590455 .
 .PP
-Simple definite integration can be done :-
+Simple definite integration can be done:
 .sp
 .EX
 	integral(x = -1.96, 1.96, exp(-0.5*x*x)/sqrt(2*Pi))
@@ -178,7 +178,7 @@ outputs 0.9500042096998785 .
 ∫ may be used in place of integral.
 .PP
 For the sake of completeness, the derivative of a function at a given
-point can be calculated :-
+point can be calculated:
 .sp
 .EX
 	differential(x=1, x*x+5*x+6)
@@ -228,7 +228,7 @@ string constants such as
 reads in a list of values interactively. The list of variables to assign
 these values should follow.
 .PP
-Other files may be read in using the limbo include statement.
+Other files may be read in using the Limbo include statement.
 .PP
 Control flow statements are
 .BR break ,
@@ -261,12 +261,12 @@ fn ack(a, b)
 for(i = 0; i < 4; i++)
 	for(j = 0; j < 4; j++){
 		n = 0
-		print "ack(", i, ",", j, ")=", ack(i, j), "\n"
-		print n, " calls", "\n"
+		print "ack(", i, ",", j, ")=", ack(i, j), "\en"
+		print n, " calls", "\en"
 	}
 .EE
 .SH SOURCE
 .B /appl/cmd/calc.b
 .SH "SEE ALSO"
 .IR fc (1),
-.IR math (2)
+.IR math-intro (2)
