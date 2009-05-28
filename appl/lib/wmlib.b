@@ -77,7 +77,7 @@ wmproxy(display: ref Display, dir: string, wc: chan of (ref Draw->Context, strin
 		wc <-= (nil, sys->sprint("cannot load %s: %r", Wmsrv->PATH));
 		return;
 	}
-	sys->pctl(Sys->NEWPGRP|Sys->NEWFD, 1 :: 2 :: nil);
+	sys->pctl(Sys->NEWFD, 1 :: 2 :: nil);
 
 	(wm, join, req) := wmsrv->init();
 	if(wm == nil){
@@ -452,7 +452,6 @@ bplong(d: array of byte, o: int, x: int)
 	d[o+2] = byte (x >> 16);
 	d[o+3] = byte (x >> 24);
 }
-
 
 ptrproc(sync: chan of int, fd: ref Sys->FD, ptr: chan of ref Draw->Pointer)
 {

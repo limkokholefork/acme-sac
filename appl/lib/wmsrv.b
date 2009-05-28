@@ -92,7 +92,7 @@ wm(ctlio: ref Sys->FileIO,
 		c.stop = chan of int;
 		spawn childminder(c, rc);
 
-	(nil, nil, fid, rc) := <-ctlio.read =>
+	(nil, nbytes, fid, rc) := <-ctlio.read =>
 		if(rc == nil)
 			break;
 		c := findfid(clients, fid);
@@ -103,6 +103,7 @@ wm(ctlio: ref Sys->FileIO,
 				chan of string,
 				nil,
 				0,
+				nil,
 				nil,
 				nil,
 

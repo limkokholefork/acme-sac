@@ -38,4 +38,4 @@ bind -c $lhome $home
 bind -bc $home/tmp /tmp
 
 cd $home
-# run $home/lib/profile
+run $home/lib/profile

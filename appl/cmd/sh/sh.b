@@ -1,6 +1,5 @@
 implement Sh;
 
-#line	2	"sh.y"
 include "sys.m";
 	sys: Sys;
 	sprint: import sys;
@@ -77,13 +76,11 @@ YYEOFCODE: con 1;
 YYERRCODE: con 2;
 YYMAXDEPTH: con 200;
 
-#line	140	"sh.y"
 
 
 EPERM: con "permission denied";
 EPIPE: con "write on closed pipe";
 
-SHELLRC: con "lib/profile";
 LIBSHELLRC: con "/lib/sh/profile";
 BUILTINPATH: con "/dis/sh";
 
@@ -193,8 +190,6 @@ loop: while (argv != nil && hd argv != nil && (hd argv)[0] == '-') {
 		runscript(ctxt, LIBSHELLRC, nil, 0);
 
 	if (argv == nil) {
-		if (opts.lflag)
-			runscript(ctxt, SHELLRC, nil, 0);
 		if (isconsole(sys->fildes(0)))
 			interactive |= ctxt.INTERACTIVE;
 		ctxt.setoptions(interactive, 1);
@@ -205,7 +200,6 @@ loop: while (argv != nil && hd argv != nil && (hd argv)[0] == '-') {
 	}
 }
 
-# XXX should this refuse to parse a non braced-block?
 parse(s: string): (ref Node, string)
 {
 	initialise();
@@ -227,7 +221,7 @@ system(drawctxt: ref Draw->Context, cmd: string): string
 		return Context.new(drawctxt).run(ref Listnode(n, nil) :: nil, 0);
 	} exception e {
 	"fail:*" =>
-		return e[5:];
+		return failurestatus(e);
 	}
 }
 
@@ -238,7 +232,7 @@ run(drawctxt: ref Draw->Context, argv: list of string): string
 		return Context.new(drawctxt).run(stringlist2list(argv), 0);
 	} exception e {
 	"fail:*" =>
-		return e[5:];
+		return failurestatus(e);
 	}
 }
 
@@ -251,7 +245,6 @@ isconsole(fd: ref Sys->FD): int
 	return d1.dtype == d2.dtype && d1.qid.path == d2.qid.path;
 }
 
-# run commands from file _path_
 runscript(ctxt: ref Context, path: string, args: list of ref Listnode, reporterr: int)
 {
 	{
@@ -260,7 +253,7 @@ runscript(ctxt: ref Context, path: string, args: list of ref Listnode, reporterr
 			runfile(ctxt, fd, path, args);
 		else if (reporterr)
 			ctxt.fail("bad script path", sys->sprint("sh: cannot open %s: %r", path));
-	} exception e {
+	} exception {
 	"fail:*" =>
 		if(!reporterr)
 			return;
@@ -268,8 +261,6 @@ runscript(ctxt: ref Context, path: string, args: list of ref Listnode, reporterr
 	}
 }
 
-# run commands from the opened file fd.
-# if interactive is non-zero, print a command prompt at appropriate times.
 runfile(ctxt: ref Context, fd: ref Sys->FD, path: string, args: list of ref Listnode)
 {
 	ctxt.push();
@@ -303,7 +294,7 @@ runfile(ctxt: ref Context, fd: ref Sys->FD, path: string, args: list of ref List
 						laststatus = walk(ctxt, n, 0);
 					} exception e2 {
 					"fail:*" =>
-						laststatus = e2[5:];
+						laststatus = failurestatus(e2);
 					}
 				} else
 					laststatus = walk(ctxt, n, 0);
@@ -316,7 +307,7 @@ runfile(ctxt: ref Context, fd: ref Sys->FD, path: string, args: list of ref List
 			raise "fail:" + laststatus;
 		ctxt.pop();
 	}
-	exception e {
+	exception {
 	"fail:*" =>
 		ctxt.pop();
 		raise;
@@ -344,10 +335,6 @@ Redirlist: adt {
 	r: list of Redirword;
 };
 
-# a hack so that the structure of walk() doesn't change much
-# to accomodate echo|wc&
-# transform the above into {echo|wc}$*&
-# which should amount to exactly the same thing.
 pipe2cmd(n: ref Node): ref Node
 {
 	if (n == nil || n.ntype != n_PIPE)
@@ -355,10 +342,6 @@ pipe2cmd(n: ref Node): ref Node
 	return mk(n_ADJ, mk(n_BLOCK,n,nil), mk(n_VAR,ref Node(n_WORD,nil,nil,"*",nil),nil));
 }
 
-# walk a node tree.
-# last is non-zero if this walk is the last action
-# this shell process will take before exiting (i.e. redirections
-# don't require a new process to avoid side effects)
 walk(ctxt: ref Context, n: ref Node, last: int): string
 {
 	if (DEBUG) debug(sprint("walking: %s", cmd2string(n)));
@@ -481,7 +464,6 @@ makeredir(f: string, mode: int, fd: int): Redirword
 	return Redirword(nil, f, Redir(mode, fd, -1));
 }
 
-# expand substitution operators in a node list
 glom(ctxt: ref Context, n: ref Node, redirs: ref Redirlist, onto: list of ref Listnode)
 		: list of ref Listnode
 {
@@ -613,9 +595,6 @@ subsbuiltin(ctxt: ref Context, n: ref Node): list of ref Listnode
 	return (hd bmods)->runsbuiltin(ctxt, myself, cmd);
 }
 
-#
-# backquote substitution (could be done in a builtin)
-#
 
 getbq(nil: ref Context, fd: ref Sys->FD, seps: string): list of ref Listnode
 {
@@ -657,15 +636,11 @@ bq(ctxt: ref Context, cmd: list of ref Listnode, seps: string): (list of ref Lis
 	return (bqlist, nil);
 }
 
-# get around compiler temporaries bug
 rdir(fd: ref Sys->FD): ref Redirlist
 {
 	return  ref Redirlist(Redirword(fd, nil, Redir(Sys->OWRITE, 1, -1)) :: nil);
 }
 
-#
-# concatenation
-#
 
 concatwords(p1, p2: ref Listnode): ref Listnode
 {
@@ -704,12 +679,6 @@ Expropagate: adt {
 	name: string;
 };
 
-# run an asynchronous process, first redirecting its I/O
-# as specified in _redirs_.
-# it sends its process ID down _startchan_ before executing.
-# it has to jump through one or two hoops to make sure
-# Sys->FD ref counting is done correctly. this code
-# is more sensitive than you might think.
 runasync(ctxt: ref Context, copyenv: int, argv: list of ref Listnode, redirs: ref Redirlist,
 		startchan: chan of (int, ref Expropagate))
 {
@@ -746,7 +715,6 @@ runasync(ctxt: ref Context, copyenv: int, argv: list of ref Listnode, redirs: re
 	}
 }
 
-# run a synchronous process
 runsync(ctxt: ref Context, argv: list of ref Listnode,
 		redirs: ref Redirlist, last: int): string
 {
@@ -770,7 +738,6 @@ runsync(ctxt: ref Context, argv: list of ref Listnode,
 	}
 }
 
-# path is prefixed with: "/", "#", "./" or "../"
 absolute(p: string): int
 {
 	if (len p < 2)
@@ -825,7 +792,7 @@ runexternal(ctxt: ref Context, args: list of ref Listnode, last: int): string
 				EPIPE =>
 					return EPIPE;
 				"fail:*" =>
-					return e[5:];
+					return failurestatus(e);
 				}
 			}
 			extstart := chan of int;
@@ -850,6 +817,16 @@ runexternal(ctxt: ref Context, args: list of ref Listnode, last: int): string
 	} while (pathlist != nil && nonexistent(err));
 	diagnostic(ctxt, sys->sprint("%s: %s", progname, err));
 	return err;
+}
+
+failurestatus(e: string): string
+{
+	s := e[5:];
+	while(s != nil && (s[0] == ' ' || s[0] == '\t'))
+		s = s[1:];
+	if(s != nil)
+		return s;
+	return "failed";
 }
 
 runhashpling(ctxt: ref Context, fd: ref Sys->FD,
@@ -905,19 +882,17 @@ runblock(ctxt: ref Context, args: list of ref Listnode, last: int): string
 		status := walk(ctxt, cmd, last);
 		ctxt.pop();
 		return status;
-	} exception e{
+	} exception {
 	"fail:*" =>
 		ctxt.pop();
 		raise;
 	}
 }
 
-# return (ok, val) where ok is non-zero is builtin was found,
-# val is return status of builtin
 trybuiltin(ctxt: ref Context, args: list of ref Listnode, lseq: int)
 		: (int, string)
 {
-	(n, bmods) := findbuiltin(ctxt.env.builtins, (hd args).word);
+	(nil, bmods) := findbuiltin(ctxt.env.builtins, (hd args).word);
 	if (bmods == nil)
 		return (0, nil);
 	return (1, (hd bmods)->runbuiltin(ctxt, myself, args, lseq));
@@ -943,7 +918,7 @@ externalexec(mod: Command,
 	{
 		mod->init(drawcontext, argv);
 	}
-	exception e{
+	exception {
 	EPIPE =>
 		raise "fail:" + EPIPE;
 	}
@@ -960,8 +935,6 @@ dup(ctxt: ref Context, fd1, fd2: int): int
 	return sys->dup(fd1, fd2);
 }
 
-# with thanks to tiny/sh.b
-# return error status if redirs failed
 doredirs(ctxt: ref Context, redirs: ref Redirlist): list of int
 {
 	if (redirs.r == nil)
@@ -1030,9 +1003,6 @@ doredirs(ctxt: ref Context, redirs: ref Redirlist): list of int
 	return ctxt.waitfd.fd :: keepfds;
 }
 
-#
-# waiter utility routines
-#
 
 waitfd(): ref Sys->FD
 {
@@ -1060,7 +1030,7 @@ waitfor(ctxt: ref Context, pids: list of int): string
 		(who, line, s) := parsewaitstatus(ctxt, string buf[0:n]);
 		if (s != nil) {
 			if (len s >= 5 && s[0:5] == "fail:")
-				s = s[5:];
+				s = failurestatus(s);
 			else
 				diagnostic(ctxt, line);
 		}
@@ -1116,9 +1086,6 @@ diagnostic(ctxt: ref Context, s: string)
 		sys->fprint(stderr(), "sh: %s\n", s);
 }
 
-#
-# Sh environment stuff
-#
 
 Context.new(drawcontext: ref Draw->Context): ref Context
 {
@@ -1214,7 +1181,6 @@ Context.get(ctxt: self ref Context, name: string): list of ref Listnode
 	return nil;
 }
 
-# return the whole environment.
 Context.envlist(ctxt: self ref Context): list of (string, list of ref Listnode)
 {
 	t := array[ENVHASHSIZE] of list of ref Var;
@@ -1364,10 +1330,6 @@ hashfn(s: string, n: int): int
 	return (h & 16r7fffffff) % n;
 }
 
-# the following two functions cheat by getting the caller
-# to calculate the actual hash function. this is to avoid
-# the hash function being calculated once in every scope
-# of a context until the variable is found (or stored).
 hashfind(ht: array of list of ref Var, idx: int, n: string): ref Var
 {
 	for (ent := ht[idx]; ent != nil; ent = tl ent)
@@ -1395,8 +1357,6 @@ copylocalenv(e: ref Localenv): ref Localenv
 	return ref Localenv(nvars, nil, flags);
 }
 
-# make new local environment. if it's got no pushed levels,
-# then get all variables from the global environment.
 newlocalenv(pushed: ref Localenv): ref Localenv
 {
 	e := ref Localenv(array[ENVHASHSIZE] of list of ref Var, pushed, 0);
@@ -1450,10 +1410,6 @@ removebuiltin(b: ref Builtins, name: string, mod: Shellbuiltin)
 	}
 }
 
-# add builtin; if it already exists, then replace it. if mod is nil then remove it.
-# builtins that refer to myselfbuiltin are special - they
-# are never removed, neither are they entirely replaced, only covered.
-# no external module can redefine the name "builtin"
 addbuiltin(b: ref Builtins, name: string, mod: Shellbuiltin)
 {
 	if (mod == nil || (name == "builtin" && mod != myselfbuiltin))
@@ -1561,9 +1517,6 @@ setenv(name: string, val: list of ref Listnode)
 	env->setenv(name, quoted(val, 1));
 }
 
-#
-# globbing and general wildcard handling
-#
 
 containswildchar(s: string): int
 {
@@ -1581,7 +1534,6 @@ containswildchar(s: string): int
 	return 0;
 }
 
-# remove GLOBs, and quote other wildcard characters
 patquote(word: string): string
 {
 	outword := "";
@@ -1601,7 +1553,6 @@ patquote(word: string): string
 	return outword;
 }
 
-# get rid of GLOB characters
 deglob(s: string): string
 {
 	j := 0;
@@ -1617,7 +1568,6 @@ deglob(s: string): string
 	return s[0:j];
 }
 
-# expand wildcards in _nl_
 glob(nl: list of ref Listnode): list of ref Listnode
 {
 	new: list of ref Listnode;
@@ -1640,11 +1590,7 @@ glob(nl: list of ref Listnode): list of ref Listnode
 	return ret;
 }
 
-#
-# general list manipulation utility routines
-#
 
-# return string equivalent of nl
 list2stringlist(nl: list of ref Listnode): list of string
 {
 	ret: list of string = nil;
@@ -1697,9 +1643,6 @@ revlist(l: list of ref Listnode): list of ref Listnode
 	return t;
 }
 
-#
-# node to string conversion functions
-#
 
 fdassignstr(isassign: int, redir: ref Redir): string
 {
@@ -1765,11 +1708,6 @@ cmd2string(n: ref Node): string
 	return s;
 }
 
-# convert s into a suitable format for reparsing.
-# if glob is true, then GLOB chars are significant.
-# XXX it might be faster in the more usual cases 
-# to run through the string first and only build up
-# a new string once we've discovered it's necessary.
 quote(s: string, glob: int): string
 {
 	needquote := 0;
@@ -1810,9 +1748,6 @@ debug(s: string)
 	if (DEBUG) sys->fprint(stderr(), "%s\n", string sys->pctl(0, nil) + ": " + s);
 }
 
-#
-# built-in commands
-#
 
 initbuiltin(c: ref Context, nil: Sh): string
 {
@@ -1947,19 +1882,13 @@ builtin_loaded(ctxt: ref Context, nil: list of ref Listnode, nil: int): string
 	return nil;
 }
 
-# it's debateable whether this should throw an exception or
-# return a failed exit status - however, most scripts don't
-# check the status and do need the module they're loading,
-# so i think the exception is probably more useful...
 builtin_load(ctxt: ref Context, args: list of ref Listnode, nil: int): string
 {
 	if (tl args == nil || (hd tl args).word == nil)
 		builtinusage(ctxt, "load path...");
 	args = tl args;
-	path := (hd args).word;
 	if (args == nil)
 		builtinusage(ctxt, "load path...");
-	status := "";
 	for (; args != nil; args = tl args) {
 		s := loadmodule(ctxt, (hd args).word);
 		if (s != nil)
@@ -1992,17 +1921,10 @@ builtin_run(ctxt: ref Context, args: list of ref Listnode, nil: int): string
 	} exception e {
 	"fail:*" =>
 		ctxt.pop();
-		return e[5:];
+		return failurestatus(e);
 	}
 }
 
-# four categories:
-# environment variables
-# substitution builtins
-# braced blocks
-# builtins (including those defined by externally loaded modules)
-# or external programs
-# other
 builtin_whatis(ctxt: ref Context, args: list of ref Listnode, nil: int): string
 {
 	if (len args < 2)
@@ -2108,7 +2030,6 @@ whatisit(ctxt: ref Context, el: ref Listnode): string
 	return nil;
 }
 
-# execute a command ignoring names defined by externally defined modules
 builtin_builtin(ctxt: ref Context, args: list of ref Listnode, last: int): string
 {
 	if (len args < 2)
@@ -2219,9 +2140,6 @@ setstatus(ctxt: ref Context, val: string): string
 	return val;
 }
 
-#
-# beginning of parser routines
-#
 
 doparse(l: ref YYLEX, prompt: string, showline: int): (ref Node, string)
 {
@@ -2442,7 +2360,6 @@ YYLEX.lex(l: self ref YYLEX): int
 		l.atendword = endword;
 		l.wasdollar = wasdollar;
 	}
-#	sys->print("token %s\n", tokstr(tok));
 	return tok;
 }
 
@@ -2509,7 +2426,6 @@ YYLEX.getc(lex: self ref YYLEX): int
 	return c;
 }
 
-# read positive decimal number; return -1 if no number found.
 readnum(lex: ref YYLEX): int
 {
 	sum := nc := 0;
@@ -2523,9 +2439,6 @@ readnum(lex: ref YYLEX): int
 	return sum;
 }
 
-# return tuple (toktype, lhs, rhs).
-# -1 signifies no number present.
-# '[' char has already been read.
 readfdassign(lex: ref YYLEX): (int, ref Redir)
 {
 	n1 := readnum(lex);
@@ -2672,7 +2585,6 @@ yystderr: ref YYSys->FD;
 
 YYFLAG: con -1000;
 
-# parser for yacc output
 
 yytokname(yyc: int): string
 {
@@ -2850,7 +2762,6 @@ yystack:
 	
 		yypt := yyp;
 		yyp -= yyr2[yyn];
-#		yyval = yys[yyp+1].yyv;
 		yym := yyn;
 	
 		# consult goto table to find next state
@@ -2863,36 +2774,28 @@ yystack:
 		case yym {
 			
 1=>
-#line	80	"sh.y"
 {yylex.lval.node = yys[yypt-1].yyv.node; return 0;}
 2=>
-#line	81	"sh.y"
 {yylex.lval.node = nil; return 0;}
 5=>
 yyval.node = yys[yyp+1].yyv.node;
 6=>
-#line	85	"sh.y"
 {yyval.node = mkseq(yys[yypt-1].yyv.node, yys[yypt-0].yyv.node); }
 7=>
 yyval.node = yys[yyp+1].yyv.node;
 8=>
-#line	87	"sh.y"
 {yyval.node = mkseq(yys[yypt-1].yyv.node, yys[yypt-0].yyv.node); }
 9=>
-#line	88	"sh.y"
 {yyval.node = yys[yypt-1].yyv.node; }
 10=>
-#line	89	"sh.y"
 {yyval.node = ref Node(n_NOWAIT, yys[yypt-1].yyv.node, nil, nil, nil); }
 11=>
 yyval.node = yys[yyp+1].yyv.node;
 12=>
-#line	91	"sh.y"
 {yyval.node = yys[yypt-1].yyv.node; }
 13=>
 yyval.node = yys[yyp+1].yyv.node;
 14=>
-#line	93	"sh.y"
 {
 		yyval.node = mk(n_ADJ,
 				mk(n_ADJ,
@@ -2905,7 +2808,6 @@ yyval.node = yys[yyp+1].yyv.node;
 15=>
 yyval.node = yys[yyp+1].yyv.node;
 16=>
-#line	103	"sh.y"
 {
 		yyval.node = mk(n_ADJ,
 				mk(n_ADJ,
@@ -2916,75 +2818,56 @@ yyval.node = yys[yyp+1].yyv.node;
 			);
 	}
 17=>
-#line	112	"sh.y"
 {yyval.node = nil;}
 18=>
 yyval.node = yys[yyp+1].yyv.node;
 19=>
-#line	114	"sh.y"
 {yyval.node = ref Node(n_PIPE, yys[yypt-3].yyv.node, yys[yypt-0].yyv.node, nil, yys[yypt-2].yyv.redir); }
 20=>
 yyval.node = yys[yyp+1].yyv.node;
 21=>
-#line	116	"sh.y"
 {yyval.node = mk(n_ADJ, yys[yypt-1].yyv.node, yys[yypt-0].yyv.node); }
 22=>
 yyval.node = yys[yyp+1].yyv.node;
 23=>
 yyval.node = yys[yyp+1].yyv.node;
 24=>
-#line	119	"sh.y"
 {yyval.node = mk(yys[yypt-1].yyv.optype, yys[yypt-2].yyv.node, yys[yypt-0].yyv.node); }
 25=>
-#line	120	"sh.y"
 {yyval.node = mk(yys[yypt-1].yyv.optype, yys[yypt-2].yyv.node, yys[yypt-0].yyv.node); }
 26=>
-#line	121	"sh.y"
 {yyval.node = mk(yys[yypt-0].yyv.optype, yys[yypt-1].yyv.node, nil); }
 27=>
-#line	122	"sh.y"
 {yyval.node = ref Node(n_DUP, nil, nil, nil, yys[yypt-0].yyv.redir); }
 28=>
-#line	123	"sh.y"
 {yyval.node = ref Node(n_REDIR, yys[yypt-0].yyv.node, nil, nil, yys[yypt-1].yyv.redir); }
 29=>
 yyval.node = yys[yyp+1].yyv.node;
 30=>
-#line	125	"sh.y"
 {yyval.node = mk(n_ADJ, yys[yypt-1].yyv.node, yys[yypt-0].yyv.node); }
 31=>
-#line	126	"sh.y"
 {yyval.node = mk(n_ADJ, yys[yypt-1].yyv.node, yys[yypt-0].yyv.node); }
 32=>
-#line	127	"sh.y"
 {yyval.node = nil;}
 33=>
 yyval.node = yys[yyp+1].yyv.node;
 34=>
-#line	129	"sh.y"
 {yyval.node = yys[yypt-0].yyv.node; }
 35=>
-#line	130	"sh.y"
 {yyval.node = mk(n_ADJ, yys[yypt-2].yyv.node, yys[yypt-0].yyv.node); }
 36=>
-#line	131	"sh.y"
 {yyval.node = mk(n_ADJ, yys[yypt-2].yyv.node, yys[yypt-0].yyv.node); }
 37=>
 yyval.node = yys[yyp+1].yyv.node;
 38=>
-#line	133	"sh.y"
 {yyval.node = mk(n_CONCAT, yys[yypt-3].yyv.node, yys[yypt-0].yyv.node); }
 39=>
-#line	134	"sh.y"
 {yyval.node = ref Node(n_WORD, nil, nil, yys[yypt-0].yyv.word, nil); }
 40=>
-#line	135	"sh.y"
 {yyval.node = mk(yys[yypt-1].yyv.optype, yys[yypt-0].yyv.node, nil); }
 41=>
-#line	136	"sh.y"
 {yyval.node = mk(n_LIST, yys[yypt-1].yyv.node, nil); }
 42=>
-#line	137	"sh.y"
 {yyval.node = mk(n_BLOCK, yys[yypt-1].yyv.node, nil); }
 		}
 	}
