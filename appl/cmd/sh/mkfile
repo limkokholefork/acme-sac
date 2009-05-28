@@ -3,7 +3,9 @@
 TARG=sh.dis\
 	arg.dis\
 	expr.dis\
+	mpexpr.dis\
 	file2chan.dis\
+	mload.dis\
 	regex.dis\
 	sexprs.dis\
 	std.dis\
