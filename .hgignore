@@ -18,6 +18,8 @@ sys/libinterp/runt.h
 services/webget/webget.log
 tags
 iacme.exe
+keydb/keys
+keydb/signerkey
 
 syntax: regexp
 ^appl.*\.dis$
