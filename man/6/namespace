@@ -4,12 +4,10 @@ namespace \- name space description file
 .SH DESCRIPTION
 Namespace files describe how to construct a name space from scratch,
 or add to an existing name space.
-The files are interpreted by the
-.B Newns
-module of
+The files are interpreted by
 .IR newns (2),
 invoked by commands such as
-.IR wm (1)
+.IR logon (1)
 and by other system services.
 .PP
 The name space description file contains one or more
@@ -17,6 +15,15 @@ lines each of which specifies one name space operation.
 Empty lines and lines with
 .B #
 as the first non-space character are ignored.
+Environment variables of the form
+.BI $ name
+are expanded within arguments, where
+.I name
+is a string terminated by white space, or one of the characters
+.LR / ,
+.LR . ,
+or
+.LR $ .
 .PP
 The known operations and their arguments are:
 .TP

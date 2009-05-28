@@ -2,16 +2,24 @@
 .SH NAME
 cp, fcp \- copy files
 .SH SYNOPSIS
-.B
-cp
+.B cp
+[
+.B -gux
+]
 .I fromfile tofile
 .br
 .B cp
+[
+.B -gux
+]
 .I fromfile
 \&...
 .I todir
 .br
 .B cp -r
+[
+.B -gux
+]
 .I fromdir
 \&...
 .I todir
@@ -50,7 +58,6 @@ In the first form,
 is any name and
 .I tofile
 is any name except an existing directory.
-.PP
 In the second form, the commands copy one or more
 .I fromfiles
 into
@@ -63,17 +70,26 @@ is equivalent to:
 .IP
 .B "cp f1 dir/f1;  cp f2 dir/f2"
 .PP
-When
-.I cp
-copies the contents of plain (non-directory) files
+.I Cp
+copies the contents of plain (non-directory) file
 .I fromfile
 to
-.IR tofile ,
-the mode and owner of
+.IR tofile .
+The mode and owner of
 .I tofile
-are preserved if it already exists; otherwise the mode of
+are preserved if it already exists; the permissions of
 .I fromfile
-is used.
+is used otherwise.
+The
+.B -x
+option sets the full mode and modified time of
+.I file2
+from
+.IR file1 ;
+.B -g
+sets the group id; and
+.B -u
+sets the group id and user id (which is usually only possible if the file server is in an administrative mode).
 .PP
 The
 .B -r

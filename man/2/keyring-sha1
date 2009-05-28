@@ -136,3 +136,7 @@ kr->sha1(buf, 0, digest, state);
 .B /libcrypt/md5.c
 .br
 .B /libcrypt/sha1.c
+.SH BUGS
+The MD4 algorithm is included only to allow communication with software
+that might still use it; it should not otherwise be used now, because it
+is easily broken.

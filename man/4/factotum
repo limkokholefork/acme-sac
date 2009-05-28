@@ -1,6 +1,6 @@
 .TH FACTOTUM 4
 .SH NAME
-factotum, Feedkey \- authentication agent
+factotum, feedkey \- authentication agent
 .SH SYNOPSIS
 .B auth/factotum
 [
@@ -18,7 +18,7 @@ factotum, Feedkey \- authentication agent
 .IB attribute ?
 .B ...
 .PP
-.B Feedkey
+.B auth/feedkey
 .SH DESCRIPTION
 .I Factotum
 is a user-level file system that
@@ -169,12 +169,13 @@ turns on debugging, written to standard error.
 .PD
 .PP
 .I Feedkey
-is an
-.IR acme (1)
+is a
+.IR wm (1)
 user interface for
 .\" confirming key usage and
-entering new keys.  Once launched 
-it runs in the background
+entering new keys.  It puts its window in the
+.IR wm (1)
+toolbar,
 and waits, reading requests from
 .\" .B confirm
 .\" and
@@ -712,7 +713,5 @@ attributes.
 .\" for WEP encryption with the given password.
 .SH SOURCE
 .B /appl/cmd/auth/factotum
-.br
-.B /appl/acme/acme/bin/Feedkey.b
 .SH SEE ALSO
 .IR factotum (2)

@@ -18,9 +18,9 @@ but it is also possible to import
 .B /prog
 from a remote machine.
 .PP
-Each line of information printed consists of six columns:
+Each line of information printed consists of seven columns:
 the process id, the process group id, the owner of the
-process, the run state of the process, the amount of memory used
+process, cpu time used by the process, the run state of the process, the amount of memory used
 by the process, and the name of the module containing the
 currently running function.
 .SH FILES
@@ -41,3 +41,5 @@ in
 The amount reported as ``memory used'' does not accurately
 reflect the amount of memory referred to by the process,
 because the heap is shared.
+.br
+The cpu time used is currently shown as zero in most hosted implementations.

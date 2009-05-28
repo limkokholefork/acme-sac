@@ -70,4 +70,5 @@ At this point 0 and 1 can calculate the shared secret
 and can use it to encrypt later communications.
 .SH SEE ALSO
 .IR keyring-auth (2),
+.IR keytext (6),
 .IR login (6)
