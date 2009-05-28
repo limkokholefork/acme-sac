@@ -16,6 +16,8 @@ sys/libinterp/mathmod.h
 sys/libinterp/sysmod.h
 sys/libinterp/runt.h
 services/webget/webget.log
+tags
+iacme.exe
 
 syntax: regexp
 ^appl.*\.dis$
