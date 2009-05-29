@@ -36,7 +36,7 @@ ppplog(log: chan of int, errfile: string, pidc: chan of int)
 	connected := 0;
 
     	while ((count := sys->read(src, buf, LOGBUFMAX)) > 0) {
-	    	(nil, toklist) := sys->tokenize(string buf[:count],"\n");
+	    	(n, toklist) := sys->tokenize(string buf[:count],"\n");
 	    	for (;toklist != nil;toklist = tl toklist) {
 			case hd toklist {
 				"no error" =>
@@ -148,7 +148,7 @@ connect(mi: ref Modem->ModemInfo, number: string,
 			logchan <-= s_SuccessScript;
 		}
 
-		modem->close(modemdev);	# keep connection open for ppp mode
+		mc := modem->close(modemdev);	# keep connection open for ppp mode
 		modemdev = nil;
 		modem = nil;	# unload modem module
 

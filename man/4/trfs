@@ -13,7 +13,7 @@ appear on the directory
 .IR mountdir ,
 but every space character in file and directory names viewed through
 .I mountdir
-is made visible as a special `no-break space' character (U+00A0).
+is made visible as a special `space-indicator' character (U+2423).
 Other Inferno applications will not mistake it for the end of a file name,
 and it has some visible representation in most fonts.
 .SH SOURCE

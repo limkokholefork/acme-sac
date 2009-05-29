@@ -5,6 +5,9 @@ DIRS=\
 	crypt\
 	ecmascript\
 	encoding\
+	ida\
+	spki\
+	w3c\
 
 SRC=`{ls *.b}
 TARG=${SRC:%.b=%.dis}
