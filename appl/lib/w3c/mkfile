@@ -3,6 +3,7 @@
 TARG=\
 	css.dis\
 	xpointers.dis\
+	uris.dis\
 
 MODULES=
 

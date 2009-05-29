@@ -20,6 +20,7 @@ tags
 iacme.exe
 keydb/keys
 keydb/signerkey
+tmp/*
 
 syntax: regexp
 ^appl.*\.dis$

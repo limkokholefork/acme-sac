@@ -420,7 +420,7 @@ sendroutes(ifc: ref Ifcaddr, dst: IPaddr, op: int, changes: int)
 	buf[o+2] = byte 0;
 	buf[o+3] = byte 0;
 	o += Riphdrlen;
-#	rips := buf[IP->Udphdrlen+Riphdrlen:];
+	rips := buf[IP->Udphdrlen+Riphdrlen:];
 	if(op == OpRequest){
 		buf[o:] = zeroentry;
 		ip->put4(buf, o+Ometric, HopLimit);
