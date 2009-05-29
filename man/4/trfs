@@ -1,0 +1,27 @@
+.TH TRFS 4
+.SH NAME
+trfs  \-  translate spaces in file names
+.SH SYNOPSIS
+.B trfs
+.I dir
+.I mountpoint
+.SH DESCRIPTION
+.I Trfs
+presents a filtered view of the files under
+.I dir
+at
+.IR mountpoint ,
+replacing spaces in file names with open box character ('␣').
+.SH EXAMPLE
+Access files from the host Windows C: drive.
+.PP
+.EX
+	trfs '#Uc:/' /n/c
+	ls /n/c/Program␣Files
+.EE
+.SH SOURCE
+.B /appl/cmd/trfs.b
+.SH BUGS
+ '␣' present in file names under
+.I dir
+are not escaped.
