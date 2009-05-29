@@ -105,6 +105,12 @@ iso-8859-10=
 	stob=/dis/lib/convcs/cp_stob.dis	arg=/lib/convcs/iso-8859-10.cp
 	btos=/dis/lib/convcs/cp_btos.dis	arg=/lib/convcs/iso-8859-10.cp
 
+l9-iso-8859-15
+latin9=iso-8859-15
+iso-8859-15=
+	desc=Latin-9
+	stob=/dis/lib/convcs/cp_stob.dis	arg=/lib/convcs/iso-8859-15.cp
+	btos=/dis/lib/convcs/cp_btos.dis	arg=/lib/convcs/iso-8859-15.cp
 
 # Traditional Chinese
 big5=
@@ -120,6 +126,24 @@ utf-8=
 	desc='Unicode UTF-8'
 	stob=/dis/lib/convcs/utf8_stob.dis
 	btos=/dis/lib/convcs/utf8_btos.dis
+
+utf16=utf-16
+utf-16=
+	desc='Unicode UTF-16'
+	btos=/dis/lib/convcs/utf16_btos.dis
+	stob=/dis/lib/convcs/utf16_stob.dis
+
+utf16le=utf-16le
+utf-16le=
+	desc='Unicode UTF-16 little endian'
+	btos=/dis/lib/convcs/utf16_btos.dis arg=le
+	stob=/dis/lib/convcs/utf16_stob.dis arg=le
+
+utf16be=utf-16be
+utf-16be=
+	desc='Unicode UTF-16 big endian'
+	btos=/dis/lib/convcs/utf16_btos.dis arg=be
+	stob=/dis/lib/convcs/utf16_stob.dis arg=be
 
 # UTF-7
 #utf-7=
