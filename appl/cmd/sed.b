@@ -558,7 +558,7 @@ trans(ch: int) : string
 	'\\' =>
 		return "\\\\";
 	* =>
-		return sys->sprint("\\u%4x", ch);
+		return sys->sprint("\\u%.4ux", ch);
 	}
 }
 
@@ -818,7 +818,7 @@ substitute(c: ref Sedcom.S, s: string) : (bool, string)
 		}
 		s = s[0:l] + rep + s[r:];
 		start = l + len rep;
-		if((r - l) == 0)
+		if(r == l)
 			start++;
 	} while (c.gfl);
 	return (true, s);

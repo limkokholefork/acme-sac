@@ -14,6 +14,7 @@ cd /mnt/acme/$acmewin
 	f1 = `{cleanname -d $cwd $f1}
 	f2 = `{cleanname -d $cwd $f2}
 	if {~ $cmd a} {l1 = $l1^'+#0'}
+	if {~ $cmd d} {l2 = $l1^'+#0'}
 	highlight $f1 $l1
 	highlight $f2 $l2
 } <> addr

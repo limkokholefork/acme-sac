@@ -1,21 +1,23 @@
-implement trfs;
+implement Trfs;
 
 include "sys.m";
 	sys: Sys;
+
 include "draw.m";
+
 include "styx.m";
 	styx: Styx;
 	Rmsg, Tmsg: import styx;
 
-trfs: module
+Trfs: module
 {
 	init: fn(nil: ref Draw->Context, nil: list of string);
 };
 
 Fid: adt {
-	fid: int;
-	isdir: int;
-	aux: int;
+	fid:	int;
+	isdir:	int;
+	aux:	int;
 };
 
 Table: adt[T] {
@@ -28,23 +30,25 @@ Table: adt[T] {
 	find:	fn(t: self ref Table, id: int): T;
 };
 
+NBspace: con 16r2423;	# Unicode `no-break' space (looks like a faint box in some fonts)
+NBspacelen: con 3;		# length of it in utf-8
+
 msize: int;
 lock: chan of int;
 fids: ref Table[ref Fid];
 tfids: ref Table[ref Fid];
 
-init(nil: ref Draw->Context, argv: list of string)
+init(nil: ref Draw->Context, args: list of string)
 {
 	sys = load Sys Sys->PATH;
-	if((styx = load Styx Styx->PATH) == nil)
-		fatal("can't load " + Styx->PATH);
+	styx = load Styx Styx->PATH;
 	
-	if(len argv != 3){
+	if(len args != 3){
 		sys->fprint(sys->fildes(2), "usage: trfs dir mountpoint\n");
-		exit;
+		raise "fail:usage";
 	}
-	dir := hd tl argv;
-	mntpt := hd tl tl argv;
+	dir := hd tl args;
+	mntpt := hd tl tl args;
 	p := array[2] of ref Sys->FD;
 	q := array[2] of ref Sys->FD;
 	fids = Table[ref Fid].new(11, nil);
@@ -73,7 +77,7 @@ trfsin(cfd, sfd: ref Sys->FD)
 			fid := ref Fid(m.fid, 0, 0);
 			fids.add(m.fid, fid);
 			addtfid(m.tag, fid);
-			m.name = tr(m.name, '␣', ' ');
+			m.name = tr(m.name, NBspace, ' ');
 		Open =>
 			fid := ref Fid(m.fid, 0, 0);
 			fids.add(m.fid, fid);
@@ -82,16 +86,16 @@ trfsin(cfd, sfd: ref Sys->FD)
 			fid := fids.find(m.fid);
 			addtfid(m.tag, fid);
 			if(fid.isdir){
-				m.count /= 3;
+				m.count /= NBspacelen;	# translated strings might grow by this much
 				if(m.offset == big 0)
 					fid.aux = 0;
 				m.offset -= big fid.aux;
 			}
 		Walk =>
 			for(i:=0; i<len m.names; i++)
-				m.names[i] = tr(m.names[i], '␣', ' ');
+				m.names[i] = tr(m.names[i], NBspace, ' ');
 		Wstat =>
-			m.stat.name = tr(m.stat.name, '␣', ' ');
+			m.stat.name = tr(m.stat.name, NBspace, ' ');
 		}
 		sys->write(sfd, t.pack(), t.packedsize());
 	}
@@ -100,11 +104,12 @@ trfsin(cfd, sfd: ref Sys->FD)
 trfsout(cfd, sfd: ref Sys->FD)
 {
 	b := array[Styx->MAXFDATA] of byte;
-	
 	while((r := Rmsg.read(sfd, msize)) != nil){
 		pick m := r {
 		Version =>
 			msize = m.msize;
+			if(msize > len b)
+				b = array[msize] of byte;	# a bit more than needed but doesn't matter
 		Create or
 		Open =>
 			fid := deltfid(m.tag);
@@ -112,23 +117,21 @@ trfsout(cfd, sfd: ref Sys->FD)
 		Read =>
 			fid := deltfid(m.tag);
 			if(fid.isdir){
-				d: Sys->Dir;
-				n, bs, ds: int;
-				
-				bs = 0;
-				for(n = 0; n<len m.data; n+=ds){
-					(ds, d) = styx->unpackdir(m.data[n:]);
+				bs := 0;
+				for(n := 0; n < len m.data; ){
+					(ds, d) := styx->unpackdir(m.data[n:]);
 					if(ds <= 0)
 						break;
-					d.name = tr(d.name, ' ', '␣');
+					d.name = tr(d.name, ' ', NBspace);
 					b[bs:] = styx->packdir(d);
 					bs += styx->packdirsize(d);
+					n += ds;
 				}
 				fid.aux += bs-n;
-				m.data = b[:bs];
+				m.data = b[0:bs];
 			}
 		Stat =>
-			m.stat.name = tr(m.stat.name, ' ', '␣');
+			m.stat.name = tr(m.stat.name, ' ', NBspace);
 		}
 		sys->write(cfd, r.pack(), r.packedsize());
 	}
@@ -161,21 +164,16 @@ Table[T].add(t: self ref Table[T], id: int, x: T): int
 
 Table[T].del(t: self ref Table[T], id: int): T
 {
-	r: T;
-	slot := id % len t.items;
-	
 	p: list of (int, T);
-	r = nil;
+	slot := id % len t.items;
 	for(q := t.items[slot]; q != nil; q = tl q){
 		if((hd q).t0 == id){
-			p = join(p, tl q);
-			r = (hd q).t1;
-			break;
+			t.items[slot] = join(p, tl q);
+			return (hd q).t1;
 		}
 		p = hd q :: p;
 	}
-	t.items[slot] = p;
-	return r;
+	return t.nilval;
 }
 
 Table[T].find(t: self ref Table[T], id: int): T
@@ -188,8 +186,6 @@ Table[T].find(t: self ref Table[T], id: int): T
 
 join[T](x, y: list of (int, T)): list of (int, T)
 {
-	if(len x > len y)
-		(x, y) = (y, x);
 	for(; x != nil; x = tl x)
 		y = hd x :: y;
 	return y;
@@ -213,5 +209,5 @@ deltfid(t: int): ref Fid
 fatal(s: string)
 {
 	sys->fprint(sys->fildes(2), "trfs: %s: %r\n", s);
-	exit;
+	raise "fail:error";
 }
