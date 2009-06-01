@@ -165,7 +165,8 @@ doexec(w: ref Win, cmd: string): int
 			-2 =>
 				;
 			-1 or 0 =>
-				w.wwritebody(sys->sprint("    %s   %s\n", allsyms[n].name, allsyms[n].kind));
+				w.wwritebody(sprint("file:%s\n", allsyms[n].file));				
+				w.wwritebody(sys->sprint("\t%s   %s\n\n", allsyms[n].name, allsyms[n].kind));
 				cursyms = allsyms[n] :: cursyms;
 			1 or 2 =>
 				break;
