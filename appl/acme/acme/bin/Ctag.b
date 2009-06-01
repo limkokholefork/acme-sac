@@ -37,7 +37,7 @@ Symbol: adt {
 
 Obj: adt {
 	name: string;
-	syms: list of Symbol;
+	syms: list of ref Symbol;
 };
 
 Srcfile: adt {
@@ -47,8 +47,11 @@ Srcfile: adt {
 
 classes: list of ref Obj;
 srcfiles: list of ref Srcfile;
+allsyms: array of ref  Symbol;
+nsyms := 0;
 
 curfiles: list of ref Srcfile;
+cursyms: list of ref Symbol;
 
 tagsfile: string;
 
@@ -77,7 +80,7 @@ init(nil: ref Draw->Context, args: list of string)
 		tagsfile = hd args;
 	
 	in: ref Iobuf;
-	
+	allsyms = array[1024] of ref Symbol;
 	if(tagsfile != nil)
 		in = bufio->open(tagsfile, Bufio->OREAD);
 	else
@@ -92,7 +95,7 @@ init(nil: ref Draw->Context, args: list of string)
 	}
 	w := Win.wnew();
 	w.wname("+Ctag");
-	w.wtagwrite("Get File");
+	w.wtagwrite("Get File Symbol ");
 	w.wclean();
 	spawn mainwin(w);
 }
@@ -142,6 +145,7 @@ doexec(w: ref Win, cmd: string): int
 			return 1;
 		}
 		curfiles = nil;
+		cursyms = nil;
 		for(l := srcfiles; l != nil; l = tl l){
 			sf := hd l;
 			# sys->print("%s\n", sf.name);
@@ -150,6 +154,25 @@ doexec(w: ref Win, cmd: string): int
 				curfiles = sf :: curfiles;
 			}
 		}
+	"Symbol" =>
+		n := bsearch(arg);
+		if(cursyms == nil)
+			w.wreplace(",", "");
+		curfiles = nil;
+		while(n < nsyms){
+			nn := acomp(arg, allsyms[n].name);
+			case nn {
+			-2 =>
+				;
+			-1 or 0 =>
+				w.wwritebody(sys->sprint("    %s   %s\n", allsyms[n].name, allsyms[n].kind));
+				cursyms = allsyms[n] :: cursyms;
+			1 or 2 =>
+				break;
+			}
+			n++;
+		}
+		return 1;
 	* =>
 		return 0;
 	}
@@ -162,6 +185,15 @@ dolook(w: ref Win, pat: string): int
 	obj := "";
 	if(w.data == nil)
 		w.data = w.openfile("data");
+	if(cursyms != nil){
+		for(l := cursyms; l != nil; l = tl l){
+			o := hd l;
+			if(o.name == pat){
+				highlight(names->cleanname(names->rooted(cwd, o.file)), o.addr);
+				return 1;
+			}
+		}
+	}
 	for(;;){
 		w.wsetaddr("-1", 0);
 		if((nb := sys->read(w.data, buf, 1)) > 0){
@@ -266,7 +298,7 @@ parseline(s: string)
 	(typ, rest) = nextok(rest);
 	
 	file = fixfilename(file);
-	symbol := Symbol(sym, file, fixpattern(re), cmd);
+	symbol := ref Symbol(sym, file, fixpattern(re), cmd);
 	if(typ != nil){
 		f := looksrc(file);
 		o := look(f, typ);
@@ -276,6 +308,9 @@ parseline(s: string)
 		o := look(f, "file:" + file);
 		o.syms = symbol :: o.syms;
 	}
+	if(nsyms > (len allsyms - 1))
+		allsyms = (array[len allsyms * 2] of ref Symbol)[0:] = allsyms[:];
+	allsyms[nsyms++] = symbol;
 #	sys->print("%s, %s\n", sym, typ);
 }
 
@@ -301,9 +336,9 @@ looksrc(name: string): ref Srcfile
 	return o;
 }
 
-reverse(l: list of Symbol): list of Symbol
+reverse(l: list of ref Symbol): list of ref Symbol
 {
-	nl : list of Symbol;
+	nl : list of ref Symbol;
 	for(; l != nil; l = tl l)
 		nl = hd l :: nl;
 	return nl;
@@ -401,3 +436,50 @@ highlight(f: string, addr: string): int
 	return 1;
 }
 
+bsearch(name: string): int
+{
+	bot := 0;
+	top := nsyms;
+	for(;;){
+		mid := (top+bot)/2;
+		n := acomp(name, allsyms[mid].name);
+		if(n < 0)
+			top = mid - 1;
+		else if (n > 0)
+			bot = mid + 1;
+		if(n == 0 || bot > top)
+			break;
+	}
+	return bot;
+}
+
+#
+#	acomp(s, t) returns:
+#		-2 if s strictly precedes t
+#		-1 if s is a prefix of t
+#		0 if s is the same as t
+#		1 if t is a prefix of s
+#		2 if t strictly precedes s
+#  
+acomp(s, t: string): int
+{
+	if(s == t)
+		return 0;
+	l := len s;
+	if(l > len t)
+		l = len t;
+	cs, ct: int;
+	for(i := 0; i < l; i++) {
+		cs = s[i];
+		ct = t[i];
+		if(cs != ct)
+			break;
+	}
+	if(i == len s)
+		return -1;
+	if(i == len t)
+		return 1;
+	if(cs < ct)
+		return -2;
+	return 2;
+}
