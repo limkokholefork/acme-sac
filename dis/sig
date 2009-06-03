@@ -10,7 +10,7 @@ if {no $*} {
 }
 
 for i in $* {
-	files=`{grep -il '[ 	]*'$i':[ 	]*fn\(' /man/2/*}
+	files=`{grep -il '[ 	]*'$i':[ 	]*fn\(' `{look $i /man/index | grep /man/2 | sed 's/^.*[ 	]//' | sort | uniq}}
 	for j in $files {
 		sect=`{basename $j}^'(2)'
 		{echo .nr LL 20i; sed -n '/^.SH SYNOPSIS/,/^.SH.*DESCR/p'  $j} |

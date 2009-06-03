@@ -432,11 +432,12 @@ mktemp(t: array of byte)
 	pid := libc0->s2ab(string sys->pctl(0, nil));
 	for(i := 'a'; i <= 'z'; i++){
 		x[0] = byte i;
-		x = x[1: ];
-		libc0->strncpy(x, pid, libc0->strlen(x));
+		p := x[1: ];
+		libc0->strncpy(p, pid, libc0->strlen(p));
 		(ok, nil) := sys->stat(libc0->ab2s(t));
 		if(ok >= 0)
 			continue;
+		else break;
 	}
 }
 
@@ -2824,7 +2825,7 @@ wtos(w: ref Word, sep: int): array of byte
 
 	buf = newbuf();
 	for(; w != nil; w = w.next){
-		for(cp = w.s; int cp[0]; cp = cp[1: ])
+		for(cp = w.s; cp != nil && int cp[0]; cp = cp[1: ])
 			insert(buf, int cp[0]);
 		if(w.next != nil)
 			insert(buf, sep);
