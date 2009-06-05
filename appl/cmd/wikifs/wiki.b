@@ -217,6 +217,7 @@ getlock(lock:string): ref Sys->FD
 		fd := wcreate(lock, Sys->ORDWR, Sys->DMEXCL|8r666);
 		if(fd != nil)
 			return fd;
+		sys->fprint(sys->fildes(2), "wcreate error: %r\n");
 		sys->sleep(1000/10);
 	}
 	werrstr("couldn't acquire lock");
