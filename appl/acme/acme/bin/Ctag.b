@@ -94,8 +94,8 @@ init(nil: ref Draw->Context, args: list of string)
 		parseline(s);
 	}
 	w := Win.wnew();
-	w.wname("+Ctag");
-	w.wtagwrite("Get File Symbol ");
+	w.wname(names->cleanname(cwd + "/+Ctag"));
+	w.wtagwrite("Get File Tag ");
 	w.wclean();
 	spawn mainwin(w);
 }
@@ -154,7 +154,7 @@ doexec(w: ref Win, cmd: string): int
 				curfiles = sf :: curfiles;
 			}
 		}
-	"Symbol" =>
+	"Tag" =>
 		n := bsearch(arg);
 		if(cursyms == nil)
 			w.wreplace(",", "");
