@@ -162,13 +162,11 @@ doexec(w: ref Win, cmd: string): int
 		while(n < nsyms){
 			nn := acomp(arg, allsyms[n].name);
 			case nn {
-			-2 =>
-				;
 			-1 or 0 =>
 				w.wwritebody(sprint("%s\n", allsyms[n].file));				
 				w.wwritebody(sys->sprint("\t%s   %s\n\n", allsyms[n].name, allsyms[n].kind));
 				cursyms = allsyms[n] :: cursyms;
-			1 or 2 =>
+			-2 or 1 or 2 =>
 				break;
 			}
 			n++;
@@ -437,18 +435,26 @@ highlight(f: string, addr: string): int
 bsearch(name: string): int
 {
 	bot := 0;
+	mid := 0;
+	n := 0;
 	top := nsyms;
 	for(;;){
-		mid := (top+bot)/2;
-		n := acomp(name, allsyms[mid].name);
+		mid = (top+bot)/2;
+		n = acomp(name, allsyms[mid].name);
 		if(n < 0)
 			top = mid - 1;
 		else if (n > 0)
 			bot = mid + 1;
-		if(n == 0 || bot > top)
+		if(n == 0){  # duplicate keys, step backwards.
+			while(n == 0 && mid >= 0)
+				n = acomp(name, allsyms[mid--].name);
+			mid++;
+			break;
+		}
+		if(bot > top)
 			break;
 	}
-	return bot;
+	return mid;
 }
 
 #
@@ -458,7 +464,12 @@ bsearch(name: string): int
 #		0 if s is the same as t
 #		1 if t is a prefix of s
 #		2 if t strictly precedes s
-#  
+#  fix fax 	= 2
+#  fix fi 	= 1
+#  fix fix 	= 0
+#  fix fixx = -1
+#  fix fox 	= -2
+
 acomp(s, t: string): int
 {
 	if(s == t)
