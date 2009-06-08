@@ -165,7 +165,7 @@ doexec(w: ref Win, cmd: string): int
 			-2 =>
 				;
 			-1 or 0 =>
-				w.wwritebody(sprint("file:%s\n", allsyms[n].file));				
+				w.wwritebody(sprint("%s\n", allsyms[n].file));				
 				w.wwritebody(sys->sprint("\t%s   %s\n\n", allsyms[n].name, allsyms[n].kind));
 				cursyms = allsyms[n] :: cursyms;
 			1 or 2 =>
@@ -186,30 +186,27 @@ dolook(w: ref Win, pat: string): int
 	obj := "";
 	if(w.data == nil)
 		w.data = w.openfile("data");
+	#sys->print("pat: %s\n", pat);
+	if(pat[0] == '/')
+		return 0;
+	ok := w.wsetaddr("-/^[a-zA-Z0-9]/", 0);
+	if(ok == 1) {
+		nb := sys->read(w.data, buf, len buf);
+		s := string buf[:nb];
+		for(i := 0; i < len s; i++)
+			if(s[i] == '\n')
+				break;
+		obj = s[:i];
+		#sys->print("obj: %s\n", obj);
+	}
 	if(cursyms != nil){
 		for(l := cursyms; l != nil; l = tl l){
 			o := hd l;
-			if(o.name == pat){
+			if(o.file == obj && o.name == pat){
 				highlight(names->cleanname(names->rooted(cwd, o.file)), o.addr);
 				return 1;
 			}
 		}
-	}
-	for(;;){
-		w.wsetaddr("-1", 0);
-		if((nb := sys->read(w.data, buf, 1)) > 0){
-			if(int buf[0] == '\t' || int buf[0] == '\n')
-				continue;
-			nb = sys->read(w.data, buf[1:], len buf -1);
-			s := string buf[:nb];
-			for(i := 0; i < len s; i++)
-				if(s[i] == '\n')
-					break;
-			obj = s[:i];
-			# sys->print("obj: %s\n", obj);
-			break;
-		}else	
-			break;
 	}
 	for(l := curfiles; l != nil; l = tl l){
 		for(m := (hd l).objs; m != nil; m = tl m){
@@ -224,7 +221,7 @@ dolook(w: ref Win, pat: string): int
 			}
 		}
 	}
-	return 1;
+	return 0;
 }
 
 skip(s, cmd: string): string
@@ -306,7 +303,7 @@ parseline(s: string)
 		o.syms = symbol :: o.syms;
 	}else{
 		f := looksrc(file);
-		o := look(f, "file:" + file);
+		o := look(f, file);
 		o.syms = symbol :: o.syms;
 	}
 	if(nsyms > (len allsyms - 1))
