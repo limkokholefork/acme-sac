@@ -21,6 +21,8 @@ iacme.exe
 keydb/keys
 keydb/signerkey
 tmp/*
+access.log
+httpd.log
 
 syntax: regexp
 ^appl.*\.dis$
