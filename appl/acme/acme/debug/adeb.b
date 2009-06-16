@@ -145,6 +145,8 @@ init(ctxt: ref Draw->Context, nil: list of string)
 attach(pid: int)
 {
 	k := pickup(pid);
+	if(k == nil)
+		return;
 	if(k.w == nil)
 		newwin(k);
 }
