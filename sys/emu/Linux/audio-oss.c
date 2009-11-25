@@ -16,67 +16,50 @@
 #define 	Audio_Ulaw_Val		AFMT_MU_LAW
 #define 	Audio_Alaw_Val		AFMT_A_LAW
 
-#define 	Audio_Max_Queue		8
-
 #include "audio-tbls.c"
 #define	min(a,b)	((a) < (b) ? (a) : (b))
 
+#define DEVAUDIO	"/dev/dsp"
+#define DEVMIXER	"/dev/mixer"
+
+#define DPRINT if(1)print
+
+static struct Audio_fd {
+	int data;	/* dsp data fd */
+	int ctl;	/* mixer fd */
+} afd = {-1, -1};
+
 enum {
 	A_Pause,
-	A_UnPause
-};
-enum {
+	A_UnPause,
 	A_In,
-	A_Out
+	A_Out,
 };
 
+static Audio_t av;
 static QLock inlock;
 static QLock outlock;
 
-static int afd_in = -1;		/* audio fd in */
-static int afd_out = -1;	/* audio fd out */
-static int cfd = -1;		/* control fd */
-
-static int	audio_in_pause = A_UnPause;
-static Audio_t av;
-
 static int audio_open(int omode);
 static int audio_pause(int fd, int f);
-static int audio_flush(int fd, int d);
-static int audio_set_info(int fd, Audio_d *i, int d);
-void audiodevsetvol(int what, int left, int right);
-//static void audio_swap_endian(char*, int);
 
-static void
-dprint (char* fmt, ...){
-	static int debug = 0;
-	static char *progname = __FILE__;
-	va_list args;
-
-	if (debug) {
-		fprint(2, "%s: ", progname);
-		
-		va_start(args, fmt);
-		fprint(2, fmt, args);
-		va_end(args);
-
-		if (fmt[0] != '\0' && fmt[strlen(fmt)-1] == ':')
-			fprint(2, "%s", strerror(errno));
-		fprint(2,"\n");
-	}
+Audio_t*
+getaudiodev(void)
+{
+	return &av;
 }
 
 void 
 audio_file_init ()
 {
-	dprint("audio_file_init %d %d\n", afd_in, afd_out);
-	cfd = -1;
-	cfd = open("/dev/mixer", ORDWR);
-	if(cfd < 0){
+	DPRINT("audio_file_init %d %d\n", afd.data, afd.ctl);
+	afd.ctl = -1;
+	afd.ctl = open(DEVMIXER, ORDWR);
+	if(afd.ctl < 0){
 		// oserror() produces a sigsegv in arm
-		fprint(2, "can't open mixer device: %s\n", strerror(errno));
-		close(cfd);
-		cfd = -1;
+		DPRINT("can't open mixer device: %s\n", strerror(errno));
+		close(afd.ctl);
+		afd.ctl = -1;
 	}
 	
 	audio_info_init(&av);
@@ -85,7 +68,7 @@ audio_file_init ()
 void
 audio_file_open(Chan *c, int omode)
 {
-	dprint("audio_file_open %d %d\n", afd_in, afd_out);
+	DPRINT("audio_file_open %d %d %x\n", afd.data, afd.ctl, omode);
 	switch(omode){
 	case OREAD:
 		qlock(&inlock);
@@ -94,9 +77,9 @@ audio_file_open(Chan *c, int omode)
 			nexterror();
 		}
 
-		if(afd_in >= 0)
+		if(afd.data >= 0)
 			error(Einuse);
-		if((afd_in = audio_open(omode)) < 0)
+		if((afd.data = audio_open(omode)) < 0)
 			oserror();
 
 		poperror();
@@ -108,9 +91,9 @@ audio_file_open(Chan *c, int omode)
 			qunlock(&outlock);
 			nexterror();
 		}
-		if(afd_out >= 0)
+		if(afd.data >= 0)
 			error(Einuse);
-		if((afd_out = audio_open(omode)) < 0)
+		if((afd.data = audio_open(omode)) < 0)
 			oserror();
 		
 		poperror();
@@ -124,17 +107,16 @@ audio_file_open(Chan *c, int omode)
 			qunlock(&outlock);
 			nexterror();
 		}
-		if(afd_in >= 0 || afd_out >= 0)
-			error(Einuse);
 
-		if((afd_in = audio_open(omode)) < 0)
+		if(afd.data >= 0)
+			error(Einuse);
+		if((afd.data = audio_open(omode)) < 0)
 			oserror();
 		if(waserror()){
-			close(afd_in);
-			afd_in = -1;
+			close(afd.data);
+			afd.data = -1;
 			nexterror();
 		}
-		afd_out = afd_in;
 
 		poperror();
 		qunlock(&inlock);
@@ -146,27 +128,25 @@ audio_file_open(Chan *c, int omode)
 void    
 audio_file_close(Chan *c)
 {
-	dprint("audio_file_close %d %d\n", afd_in, afd_out);
+	DPRINT("audio_file_close %d %d\n", afd.data, afd.ctl);
 	switch(c->mode){
 	case OREAD:
 		qlock(&inlock);
-		close (afd_in);
-		afd_in = -1;
+		close (afd.data);
+		afd.data = -1;
 		qunlock(&inlock);
 		break;
 	case OWRITE:
 		qlock(&outlock);
-		close(afd_out);
-		afd_out = -1;
+		close(afd.data);
+		afd.data = -1;
 		qunlock(&outlock);
 		break;
 	case ORDWR:
 		qlock(&inlock);
 		qlock(&outlock);
-		close(afd_in);
-		//close(afd_out);
-		afd_in = -1;
-		afd_out = -1;
+		close(afd.data);
+		afd.data = -1;
 		qunlock(&inlock);
 		qunlock(&outlock);
 		break;
@@ -174,19 +154,19 @@ audio_file_close(Chan *c)
 
 }
 
-long    
+long
 audio_file_read(Chan *c, void *va, long count, vlong offset)
 {
 	long ba, status, chunk, total;
 
-	dprint("audio_file_read %d %d\n", afd_in, afd_out);
+	DPRINT("audio_file_read %d %d\n", afd.data, afd.ctl);
 	qlock(&inlock);
 	if(waserror()){
 		qunlock(&inlock);
 		nexterror();
 	}
 
-	if(afd_in < 0)
+	if(afd.data < 0)
 		error(Eperm);
 
 	/* check block alignment */
@@ -195,13 +175,13 @@ audio_file_read(Chan *c, void *va, long count, vlong offset)
 	if(count % ba)
 		error(Ebadarg);
 		
-	if(!audio_pause(afd_in, A_UnPause))
+	if(!audio_pause(afd.data, A_UnPause))
 		error(Eio);
 	
 	total = 0;
 	while (total < count) {
 		chunk = count - total;
-		status = read (afd_in, va + total, chunk);
+		status = read (afd.data, va + total, chunk);
 		if (status < 0)
 			error(Eio);
 		total += status;
@@ -222,14 +202,14 @@ audio_file_write(Chan *c, void *va, long count, vlong offset)
 	long status = -1;
 	long ba, total, chunk, bufsz;
 	
-	dprint("audio_file_write %d %d\n", afd_in, afd_out);
+	DPRINT("audio_file_write %d %d\n", afd.data, afd.ctl);
 	qlock(&outlock);
 	if(waserror()){
 		qunlock(&outlock);
 		nexterror();
 	}
 	
-	if(afd_out < 0)
+	if(afd.data < 0)
 		error(Eperm);
 	
 	/* check block alignment */
@@ -246,7 +226,7 @@ audio_file_write(Chan *c, void *va, long count, vlong offset)
 
 	while(total < count) {
 		chunk = min(bufsz, count - total);
-		status = write(afd_out, va, chunk);
+		status = write(afd.data, va, chunk);
 		if(status <= 0)
 			error(Eio);
 		total += status;
@@ -267,7 +247,7 @@ audio_ctl_write(Chan *c, void *va, long count, vlong offset)
 	tmpav.in.flags = 0;
 	tmpav.out.flags = 0;
 	
-	dprint ("audio_ctl_write %X %X %X\n", afd_in, afd_out);
+	DPRINT ("audio_ctl_write %X %X\n", afd.data, afd.ctl);
 	if (!audioparse(va, count, &tmpav))
 		error(Ebadarg);
 
@@ -278,154 +258,172 @@ audio_ctl_write(Chan *c, void *va, long count, vlong offset)
 	}
 
 	/* afd needs to be opened to issue a write to /dev/audioctl */
-	if (afd_in == -1 && afd_out == -1){
+	if (afd.data == -1){
 		force_open=1;
-		afd_in = afd_out = open("/dev/dsp", O_RDONLY|O_NONBLOCK);
+		afd.data = open(DEVAUDIO, O_RDONLY|O_NONBLOCK);
 	}
 
-	if (afd_in >= 0 && (tmpav.in.flags & AUDIO_MOD_FLAG)) {
-		if (!audio_pause(afd_in, A_Pause))
+	if (afd.data < 0)
+		error(Ebadarg);
+
+	if (tmpav.in.flags & AUDIO_MOD_FLAG) {
+		if (!audio_pause(afd.data, A_Pause))
 			error(Ebadarg);
-		if (!audio_flush(afd_in, A_In))
-			error(Ebadarg);
-		if (!audio_set_info(afd_in, &tmpav.in, A_In))
+		if (!audio_set_info(afd.data, &tmpav.in, A_In))
 			error(Ebadarg);
 	}
 	poperror();
 	qunlock(&inlock);
-	
-	qlock(&outlock);
-	if (waserror()) {
-		qunlock(&outlock);
-		nexterror();
-	}
-	
-	if (afd_out >= 0 && (tmpav.out.flags & AUDIO_MOD_FLAG)){
-		if (!audio_pause(afd_out, A_Out))
-			error(Ebadarg);
-		if (!audio_set_info(afd_out, &tmpav.out, A_Out))
-			error(Ebadarg);
-	}
-	poperror();
-	qunlock(&outlock);
 
 	tmpav.in.flags = 0;
-	tmpav.out.flags = 0;
-
+	
 	av = tmpav;
 	if (force_open) {
-		close(afd_in);
-		afd_in = -1;
-		afd_out = -1;
+		close(afd.data);
+		afd.data = -1;
 	}
 	return count;
 }
 
+/* Linux/OSS specific stuff */
+
 static int
+choosefmt(Audio_d *i)
+{
+	int newbits, newenc;
+	
+	newbits = i->bits;
+	newenc = i->enc;
+	switch (newenc) {
+	case Audio_Alaw_Val:
+		if (newbits == 8)
+			return AFMT_A_LAW;
+		break;
+	case Audio_Ulaw_Val:
+		if (newbits == 8)
+			return AFMT_MU_LAW;
+		break;
+	case Audio_Pcm_Val:
+		if (newbits == 8)
+			return AFMT_U8;
+		else if (newbits == 16)
+			return AFMT_S16_LE;
+		break;
+	}
+	return -1;
+}
+
+static int
+setvolume(int fd, int what, int left, int right)
+{
+	int can, v;
+	
+	if(fd < 0)
+		error("audio device not open");
+
+	if(ioctl(fd, SOUND_MIXER_READ_DEVMASK, &can) < 0)
+		can = ~0;
+
+	DPRINT("setvolume fd%d %X can mix 0x%X (mask %X)\n", fd, what, (can & (1<<what)), can);
+	if(!(can & (1<<what)))
+		return 0;
+	v = left | (right<<8);
+	if(ioctl(afd.ctl, MIXER_WRITE(what), &v) < 0)
+		oserror();
+}
+
+int
 audio_set_info(int fd, Audio_d *i, int d)
 {
-	int status;
-	int	dev, arg, fmtmask;
+	int status, arg;
+	int oldfmt, newfmt;
 	
-	dprint("audio_set_info (%d) %d %d\n", fd, afd_in, afd_out);
+	DPRINT("audio_set_info (%d) %d %d\n", fd, afd.data, afd.ctl);
 	if (fd < 0)
 		return 0;
 
 	/* sample rate */
 	if (i->flags & AUDIO_RATE_FLAG){
 		arg = i->rate;
-		status = ioctl(fd, SNDCTL_DSP_SPEED, &arg);
+		if(ioctl(fd, SNDCTL_DSP_SPEED, &arg) < 0)
+			return 0;
 	}
 	
 	/* channels */
 	if(i->flags & AUDIO_CHAN_FLAG){
 		arg = i->chan;
-		status = ioctl(fd, SNDCTL_DSP_CHANNELS, &arg);
+		if(ioctl(fd, SNDCTL_DSP_CHANNELS, &arg) < 0)
+			return 0;
 	}
 
 	/* precision */
 	if(i->flags & AUDIO_BITS_FLAG){
 		arg = i->bits;
-		status = ioctl(fd, SNDCTL_DSP_SAMPLESIZE, &arg);
+		if(ioctl(fd, SNDCTL_DSP_SAMPLESIZE, &arg) < 0)
+			return 0;
 	}
 	
 	/* encoding */
 	if(i->flags & AUDIO_ENC_FLAG){
-		status = ioctl(fd, SNDCTL_DSP_GETFMTS, &fmtmask);
+		ioctl(fd, SNDCTL_DSP_GETFMTS, &oldfmt);
 
-		arg = i->enc;
-		if (fmtmask && arg)
+		newfmt = choosefmt(i);
+		if(newfmt != oldfmt){
 			status = ioctl(fd, SNDCTL_DSP_SETFMT, &arg);
-		else{ // encoding not supported
-			dprint ("dev %X: enc 0x%X not supported (not in 0x%X)\n",i->dev, i->enc, fmtmask);
+			DPRINT ("enc oldfmt newfmt %x status %d\n", oldfmt, newfmt, status);
 		}
 	}
-	
+
 	/* dev volume */ 
 	if(i->flags & (AUDIO_LEFT_FLAG|AUDIO_VOL_FLAG))
-		audiodevsetvol (i->dev, i->left, i->right);
+		setvolume(afd.ctl, i->dev, i->left, i->right);
 
 	return 1;
 }
 
-Audio_t*
-getaudiodev(void)
+static int
+audio_set_blocking(int fd)
 {
-	dprint("getaudiodev %d %d\n", afd_in, afd_out);
-	return &av;
-}
+	int val;
 
-/* oss specific stuff */
-void
-audiodevsetvol(int what, int left, int right)
-{
-	int can, v;
-	
-	dprint("audiodevsetvol cfd%d what%X left%d right%d\n", cfd, what, left, right);
-	if(cfd < 0)
-		error("audio device not open");
-
-	if(ioctl(cfd, SOUND_MIXER_READ_DEVMASK, &can) < 0)
-		can = ~0;
-
-	dprint("audiodevsetvol %X can mix 0x%X (mask %X)\n",what, (can & (1<<what)), can);
-	if(!(can & (1<<what)))
-		return;
-	v = left | (right<<8);
-	if(ioctl(cfd, MIXER_WRITE(what), &v) < 0)
-		oserror();
-}
-
-static int audio_open (int omode)
-{
-	int fd, val;
-	
-	dprint("audio_open %d %d\n", afd_in, afd_out);
-	/* open non-blocking in case someone already has it open */
-	/* otherwise we would block until they close! */
-	switch (omode){
-	case OREAD:
-		fd = open("/dev/dsp", O_RDONLY|O_NONBLOCK);
-		break;
-	case OWRITE:
-		fd = open("/dev/dsp", O_WRONLY|O_NONBLOCK);
-		break;
-	case ORDWR:
-		fd = open("/dev/dsp", O_RDWR|O_NONBLOCK);
-		break;
-	}
-
-	if(fd < 0)
-		oserror();
-
-	/* change device to be blocking */
 	if((val = fcntl(fd, F_GETFL, 0)) == -1)
 		return 0;
 	
 	val &= ~O_NONBLOCK;
-	if(fcntl(fd, F_SETFL, val) < 0) {
+
+	if(fcntl(fd, F_SETFL, val) < 0)
+		return 0;
+
+	return 1;
+}
+
+static int
+audio_open (int omode)
+{
+	int fd, val;
+	
+	/* open non-blocking in case someone already has it open */
+	/* otherwise we would block until they close! */
+	switch (omode){
+	case OREAD:
+		fd = open(DEVAUDIO, O_RDONLY|O_NONBLOCK);
+		break;
+	case OWRITE:
+		fd = open(DEVAUDIO, O_WRONLY|O_NONBLOCK);
+		break;
+	case ORDWR:
+		fd = open(DEVAUDIO, O_RDWR|O_NONBLOCK);
+		break;
+	}
+
+	DPRINT("audio_open %d\n", fd);
+	if(fd < 0)
+		oserror();
+
+	/* change device to be blocking */
+	if(!audio_set_blocking(fd)) {
 		close(fd);
-		error(Eio);
+		error("cannot set blocking mode");
 	}
 
 	if(!audio_pause(fd, A_Pause)) {
@@ -433,14 +431,9 @@ static int audio_open (int omode)
 		error(Eio);
 	}
 
-	if(!audio_flush(fd, A_In)) {
-		close(fd);
-		error(Eio);
-	}
-
 	/* set audio info */
 	av.in.flags = ~0;
-	av.out.flags = 0;
+	av.out.flags = ~0;
 
 	if(!audio_set_info(fd, &av.in, A_In)) {
 		close(fd);
@@ -453,38 +446,24 @@ static int audio_open (int omode)
 	return fd;
 }
 
-static int audio_pause (int fd, int f)
+static int
+audio_pause(int fd, int f)
 {
-	int status, foo;
+	int status;
+	static int	audio_in_pause = A_UnPause;
 
-	dprint ("audio_pause (%d) %d %d\n", fd, afd_in, afd_out);
+//	DPRINT ("audio_pause (%d) %d %d\n", fd, afd.data, afd.ctl);
 	if (fd < 0)
 		return 0;
 	
-	if (fd == afd_in && audio_in_pause == f)
+	if (fd == afd.data && audio_in_pause == f)
 		return 1;
 
-	// as stated in OSS guide, produces bad sound
-	status = ioctl(fd, SNDCTL_DSP_RESET, &foo);
+	status = ioctl(fd, SNDCTL_DSP_RESET, NULL);
 	if (status < 0)
 		return 0;
-		
+	status = ioctl(fd, SNDCTL_DSP_SYNC, NULL);
 	audio_in_pause = f;
-	return 1;
-}
-
-static int
-audio_flush(int fd, int d)
-{
-	int	foo = 0;
-	int status;
-
-	// as stated in OSS guide, produces bad sound
-	dprint ("audio_flush (%d) %d %d\n", fd, afd_in, afd_out);
-	status = ioctl(fd, SNDCTL_DSP_SYNC, &foo);
-
-	if(status == -1) 
-		return 0;
-	return 1;
 	
+	return 1;
 }
