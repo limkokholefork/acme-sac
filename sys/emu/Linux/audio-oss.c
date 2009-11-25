@@ -22,7 +22,7 @@
 #define DEVAUDIO	"/dev/dsp"
 #define DEVMIXER	"/dev/mixer"
 
-#define DPRINT if(1)print
+#define DPRINT if(0)print
 
 static struct Audio_fd {
 	int data;	/* dsp data fd */

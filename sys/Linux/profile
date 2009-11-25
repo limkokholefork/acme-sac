@@ -1,4 +1,7 @@
 load arg
+load std
+autoload=(std)
+
 
 fn awk {
 	os awk $*
@@ -17,6 +20,7 @@ fn 9c {
 	cwd=`{echo $emuroot ^ `pwd}
 	cc='gcc'
 	cflags=(
+		-m32
 		-O2
 		-c
 		-Wall
@@ -44,7 +48,7 @@ fn 9c {
 
 fn 9l {
 	ld=$cc
-	ldflags=( )
+	ldflags=( -m32 )
 #	syslibs=( -lm -lX11 -lXext)
 	args = $*
 	echo os $ld $ldflags  `{file2root $args} $syslibs
