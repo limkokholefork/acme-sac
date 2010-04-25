@@ -155,6 +155,8 @@ typing : array of byte;
 ntypeb : int;
 ntyper : int;
 ntypebreak : int;
+name : string;
+ctlfd : ref FD;
 
 Q : adt {
 	l : ref Lock;
@@ -175,10 +177,9 @@ newevent(n : int) : ref Event
 main(argv : list of string)
 {
 	program : list of string;
-	fd, ctlfd, eventfd, addrfd, datafd : ref FD;
+	fd, eventfd, addrfd, datafd : ref FD;
 	id : int;
 	c : chan of int;
-	name : string;
 
 	sys->pctl(Sys->NEWPGRP, nil);
 	q.l = Lock.init();
@@ -533,6 +534,7 @@ stdoutx(fd1 : ref FD, afd : ref FD, dfd : ref FD)
 		}
 		if(n > 0){
 			hold[0:] = buf[n:n+npart];
+			n = label(buf, n);
 			buf[n] = byte 0;
 			q.l.lock();
 			str := sprint("#%d", q.p);
@@ -548,6 +550,35 @@ stdoutx(fd1 : ref FD, afd : ref FD, dfd : ref FD)
 			buf[0:] = hold[0:npart];
 		}
 	}
+}
+
+label(b : array of byte, n : int) : int
+{
+	for (el := n-1; el >= 0; el--)
+		if (int b[el] == 16r07)
+			break;
+	if (el < 0)
+		return n;
+	
+	for (sl := el-3; sl >= 0; sl--)
+		if (int b[sl]==16r1B && int b[sl+1]==']' && int b[sl+2]==';')
+			break;
+	if (sl < 0)
+		return n;
+	
+	l := "";
+	for (ni := el-2; ni >= sl; ni--)
+		if (int b[ni]=='/' && int b[ni+1]=='-')
+			break;
+	if (ni >= sl)
+		l = sprint("name %s\n", string b[sl+3:el]);
+	else
+		l = sprint("name %s/-%s\n", string b[sl+3:el], name);
+	al := array of byte l;
+	write(ctlfd, al, len al);
+
+	b[sl:] = b[el+1:n];
+	return n - (el+1-sl);
 }
 
 delete(e : ref Event) : int
