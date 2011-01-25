@@ -925,6 +925,10 @@ Text.typex(t : self ref Text, r : int, echomode : int)
 			t.commit(TRUE);
 			exec->undo(t, TRUE);
 			return;
+		16r13 => # ^S: saves
+			t.commit(TRUE);
+			exec->put(t, nil, nil, 0);
+			return;
 	}
 	if(t.what == Body){
 		seq++;
