@@ -2,6 +2,7 @@ load arg
 load std
 autoload=std
 noexe=()
+#noexe=-E
 
 fn 9c {
 	load arg

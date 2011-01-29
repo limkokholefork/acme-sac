@@ -3,6 +3,6 @@ TARGFILES=\
 #	dirstat-Nt.$O\
 	errstr-Nt.$O\
 #	getuser-Nt.$O\
-#	getwd-Nt.$O\
+	getwd-Nt.$O\
 	setbinmode-Nt.$O\
 	lock-Nt-386.$O\

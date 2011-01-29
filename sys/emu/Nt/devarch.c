@@ -18,8 +18,7 @@ enum{
 	Qarchctl,
 	Qcputype,
 	Qregquery,
-	Qhostmem,
-	Qfullscreen
+	Qhostmem
 };
 
 static
@@ -29,7 +28,6 @@ Dirtab archtab[]={
 	"cputype",	{Qcputype},	0,	0444,
 	"regquery",	{Qregquery}, 0,	0666,
 	"hostmem",	{Qhostmem},	0,	0444,
-	"fullscreen",	{Qfullscreen}, 0,	0666,
 };
 
 typedef struct Value Value;
@@ -66,8 +64,6 @@ static struct {
 } arch;
 
 static	QLock	reglock;
-
-int screentog = 0;
 
 extern wchar_t	*widen(char*);
 static	Value*	getregistry(HKEY, Rune*, Rune*);
@@ -263,17 +259,6 @@ archread(Chan* c, void* a, long n, vlong offset)
 		poperror();
 		free(p);
 		break;
-	case Qfullscreen:
-		p = smalloc(READSTR);
-		if(waserror()){
-			free(p);
-			nexterror();
-		}
-		snprint(p, READSTR, "%d\n", screentog);
-		n = readstr(offset, a, n, p);
-		poperror();
-		free(p);
-		break;
 	default:
 		n=0;
 		break;
@@ -289,53 +274,46 @@ archwrite(Chan* c, void* a, long n, vlong offset)
 	Cmdbuf *cb;
 	Rune *key, *item;
 
-	switch((ulong)c->qid.path){
-	case Qregquery :
-		USED(offset);
-		if(c->aux != nil){
-			free(c->aux);
-			c->aux = nil;
-		}
-		cb = parsecmd(a, n);
-		if(waserror()){
-			free(cb);
-			nexterror();
-		}
-		if(cb->nf < 3)
-			error(Ebadctl);
-		for(i=0; i<nelem(roots); i++)
-			if(strcmp(cb->f[0], roots[i].name) == 0)
-				break;
-		if(i >= nelem(roots))
-			errorf("unknown root: %s", cb->f[0]);
-		key = widen(cb->f[1]);
-		if(waserror()){
-			free(key);
-			nexterror();
-		}
-		item = widen(cb->f[2]);
-		if(waserror()){
-			free(item);
-			nexterror();
-		}
-		v = getregistry(roots[i].root, key, item);
-		if(v == nil)
-			error(up->env->errstr);
-		c->aux = v;
-		poperror();
-		free(item);
-		poperror();
-		free(key);
-		poperror();
-		free(cb);
-		return n;
-	case Qfullscreen:
-		screentog ^= 1;
-		fullscreen(screentog);
-		return n;
-	default:
+	if((ulong)c->qid.path != Qregquery)
 		error(Eperm);
+	USED(offset);
+	if(c->aux != nil){
+		free(c->aux);
+		c->aux = nil;
 	}
+	cb = parsecmd(a, n);
+	if(waserror()){
+		free(cb);
+		nexterror();
+	}
+	if(cb->nf < 3)
+		error(Ebadctl);
+	for(i=0; i<nelem(roots); i++)
+		if(strcmp(cb->f[0], roots[i].name) == 0)
+			break;
+	if(i >= nelem(roots))
+		errorf("unknown root: %s", cb->f[0]);
+	key = widen(cb->f[1]);
+	if(waserror()){
+		free(key);
+		nexterror();
+	}
+	item = widen(cb->f[2]);
+	if(waserror()){
+		free(item);
+		nexterror();
+	}
+	v = getregistry(roots[i].root, key, item);
+	if(v == nil)
+		error(up->env->errstr);
+	c->aux = v;
+	poperror();
+	free(item);
+	poperror();
+	free(key);
+	poperror();
+	free(cb);
+	return n;
 }
 
 Dev archdevtab = {
@@ -434,4 +412,3 @@ getregistry(HKEY root, Rune *keyname, Rune *name)
 	qunlock(&reglock);
 	return val;
 }
-/*http://www.experts-exchange.com/Operating_Systems/MSDOS/Q_20986850.html*/
