@@ -6,6 +6,7 @@ OFILES=\
 	alt.$O\
 	comp-$OBJTYPE.$O\
 	conv.$O\
+	crypt.$O\
 	dec.$O\
 #	dlm-$TARGMODEL.$O\
 	draw.$O\
@@ -41,6 +42,10 @@ MODULES=\
 	/module/math.m\
 	/module/keyring.m\
 	/module/loader.m\
+	/module/ipints.m\
+	/module/crypt.m\
+	keyringif.m\
+
 
 <../mksyslib
 
@@ -51,7 +56,7 @@ sysmod.h:D: $MODULES
 	rm -f $target && limbo -t Sys -I/module /module/runt.m > $target
 
 keyring.h:D: $MODULES
-	rm -f $target && limbo -t Keyring -I/module /module/runt.m > $target
+	rm -f $target && limbo -t Keyring -I/module keyringif.m > $target
 
 drawmod.h:D: $MODULES
 	rm -f $target && limbo -t Draw -I/module /module/runt.m > $target
@@ -62,14 +67,24 @@ mathmod.h:D: $MODULES
 loadermod.h:D: $MODULES
 	rm -f $target && limbo -t Loader -I/module /module/runt.m > $target
 
+ipintsmod.h:D: $MODULES
+	rm -f $target && limbo -t IPints -I/module /module/ipints.m > $target
+
+cryptmod.h:D: $MODULES
+	rm -f $target && limbo -t Crypt -I/module /module/runt.m > $target
+
+keyringif.h:D: $MODULES keyringif.m
+	rm -f $target && limbo -a  -I/module keyringif.m > $target
+
 xec.$O:		optab.h  ../include/pool.h
 draw.$O: 	../include/draw.h ../include/drawif.h
 
 runt.$O:	sysmod.h
 draw.$O:	drawmod.h
 math.$O:	mathmod.h
-keyring.$O:	keyring.h ../libkeyring/keys.h
-ipint.$O:	keyring.h
+keyring.$O:	keyring.h ipint.h keyringif.h
+ipint.$O:	ipint.h ipintsmod.h
+crypt.$O:	ipint.h runt.h cryptmod.h
 loader.$O:	loadermod.h
 math.$O:	../include/mathi.h
 
@@ -89,4 +104,5 @@ kif.$O: kif.c
 #	it works only on UNIX and Plan 9.
 
 nuke:EV:	nuke-std
-	rm -f runt.h sysmod.h drawmod.h prefabmod.h tkmod.h mathmod.h keyring.h readimagemod.h loadermod.h freetypemod.h kif.c
+	rm -f runt.h sysmod.h drawmod.h prefabmod.h tkmod.h mathmod.h keyring.h readimagemod.h loadermod.h freetypemod.h kif.c cryptmod.h keyringif.h ipintsmod.h
+

@@ -1,6 +1,7 @@
 load arg
 load std
 autoload=std
+noexe=()
 
 fn 9c {
 	load arg
@@ -18,7 +19,6 @@ fn 9c {
 		-nologo
 		-W3 
 		-Zi
-		-Yd
 		-MT
 		'-D_WIN32_WINNT=0x0400'
 		-I$cwd
@@ -26,12 +26,10 @@ fn 9c {
 		-I$emuroot\sys\include
 		-I$emuroot\sys\libinterp
 		-I$emuroot\sys\emu\port
-		-I'C:\Program Files\Microsoft Platform SDK\Include'
-		-I'C:\Program Files\Microsoft Visual C++ Toolkit 2003\include'
 		-Fo$cwd\
 		)
 	file=$1
-	os -d $cwd $cc $cflags $flags $file
+	os $noexe -d $cwd $cc $cflags $flags $file | dcr
 }
 
 fn 9l {
@@ -41,8 +39,7 @@ fn 9l {
 		-map
 		$LDFLAGS
 		)
-	syslibs=('/libpath:C:\Program Files\Microsoft Platform SDK\lib'
-	'/libpath:C:\Program Files\Microsoft Visual C++ Toolkit 2003\lib'
+	syslibs=(
 			wsock32.lib 
 			user32.lib 
 			gdi32.lib 
@@ -55,7 +52,7 @@ fn 9l {
 	file=`{cleanname -d `pwd $file}
 	file=`{echo $emuroot ^ $file |sed 's/\//\\/g'}
 	args = ${tl $*}
-	os -d $cwd $ld $ldflags -out:$file $args $syslibs
+	os $noexe -d $cwd $ld $ldflags -out:$file $args $syslibs |dcr
 }
 
 fn file2root {
@@ -74,7 +71,7 @@ fn 9ar {
 	file=`{cleanname -d `pwd $file}
 	file=`{echo $emuroot ^ $file |sed 's/\//\\/g'}
 	args = ${tl $*}
-	os -d $cwd $ar $arflags -out:$file $args
+	os $noexe -d $cwd $ar $arflags -out:$file $args | dcr
 }
 
 bind /sys/Nt/mkconfig /sys/mkconfig

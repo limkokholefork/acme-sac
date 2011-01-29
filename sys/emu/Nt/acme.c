@@ -69,12 +69,16 @@ extern void  drawmodinit(void);
 extern void  mathmodinit(void);
 extern void  srvmodinit(void);
 extern void  keyringmodinit(void);
+extern void  cryptmodinit(void);
+extern void  ipintsmodinit(void);
 void modinit(void){
 	sysmodinit();
 	drawmodinit();
 	mathmodinit();
 	srvmodinit();
 	keyringmodinit();
+	cryptmodinit();
+	ipintsmodinit();
 }
 
 
