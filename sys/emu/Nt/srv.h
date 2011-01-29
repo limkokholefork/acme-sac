@@ -1,5 +1,3 @@
-#pragma hjdicks x4
-#pragma pack x4
 void Srv_init(void*);
 typedef struct F_Srv_init F_Srv_init;
 struct F_Srv_init
@@ -37,5 +35,3 @@ struct F_Srv_ipn2p
 	String*	service;
 };
 #define Srv_PATH "$Srv"
-#pragma pack off
-#pragma hjdicks off

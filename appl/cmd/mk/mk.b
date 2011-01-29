@@ -2815,7 +2815,7 @@ wtos(w: ref Word, sep: int): array of byte
 
 	buf = newbuf();
 	for(; w != nil; w = w.next){
-		for(cp = w.s; int cp[0]; cp = cp[1: ])
+		for(cp = w.s; cp != nil && int cp[0]; cp = cp[1: ])
 			insert(buf, int cp[0]);
 		if(w.next != nil)
 			insert(buf, sep);
