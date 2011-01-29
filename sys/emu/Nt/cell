@@ -48,12 +48,15 @@ mod
 	math
 	srv	srv
 	keyring
+	crypt
+	ipints
 
 port
 	alloc
 	cache
 	chan
 	dev
+	devtab
 	dial
 	dis
 	discall
