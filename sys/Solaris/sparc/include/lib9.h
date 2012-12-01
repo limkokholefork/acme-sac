@@ -33,10 +33,21 @@ typedef unsigned short	Rune;
 typedef long long int	vlong;
 typedef unsigned long long int	uvlong;
 typedef unsigned int u32int;
+typedef uvlong u64int;
+
 typedef unsigned int	mpdigit;	/* for /sys/include/mp.h */
 typedef unsigned short u16int;
 typedef unsigned char u8int;
 typedef unsigned long uintptr;
+
+typedef signed char	int8;
+typedef unsigned char	uint8;
+typedef short	int16;
+typedef unsigned short	uint16;
+typedef int	int32;
+typedef unsigned int	uint32;
+typedef long long	int64;
+typedef unsigned long long	uint64;
 
 #define	USED(x)		if(x){}else{}
 #define	SET(x)
@@ -211,6 +222,11 @@ extern	int	(*doquote)(int);
 /*
  * random number
  */
+extern	int	nrand(int);
+
+/*
+ * random number
+ */
 extern	ulong	truerand(void);
 extern	ulong	ntruerand(ulong);
 
@@ -248,7 +264,7 @@ extern	void	_assert(char*);
 extern	double	charstod(int(*)(void*), void*);
 extern	char*	cleanname(char*);
 extern	double	frexp(double, int*);
-extern	ulong	getcallerpc(void*);
+extern	uintptr	getcallerpc(void*);
 extern	int	getfields(char*, char**, int, int, char*);
 extern	char*	getuser(void);
 extern	char*	getwd(char*, int);
@@ -258,6 +274,8 @@ extern	double	modf(double, double*);
 #define	pow10	infpow10
 extern	double	pow10(int);
 extern	vlong	strtoll(const char*, char**, int);
+#define	qsort	infqsort
+extern	void	qsort(void*, long, long, int (*)(void*, void*));
 extern	uvlong	strtoull(const char*, char**, int);
 extern	void	sysfatal(char*, ...);
 extern	int	dec64(uchar*, int, char*, int);
@@ -448,24 +466,3 @@ extern char *argv0;
 
 #define	setbinmode()
 
-/*
- *	Extensions for emu kernel emulation
- */
-#ifdef	EMU
-
-extern	Proc*	getup();
-#define	up	(getup())
-
-/*
- * This structure must agree with FPsave and FPrestore asm routines
- */
-typedef	struct	FPU	FPU;
-struct FPU
-{
-	ulong	fsr;
-};
-
-typedef sigjmp_buf osjmpbuf;
-#define	ossetjmp(buf)	sigsetjmp(buf, 1)
-
-#endif

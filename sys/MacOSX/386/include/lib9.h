@@ -36,10 +36,21 @@ typedef	long long	vlong;
 typedef	unsigned long long	uvlong;
 typedef ushort		Rune;
 typedef unsigned int	u32int;
+typedef uvlong u64int;
+
 typedef unsigned int	mpdigit;	/* for /sys/include/mp.h */
 typedef unsigned short u16int;
 typedef unsigned char u8int;
 typedef unsigned long uintptr;
+
+typedef signed char	int8;
+typedef unsigned char	uint8;
+typedef short	int16;
+typedef unsigned short	uint16;
+typedef int	int32;
+typedef unsigned int	uint32;
+typedef long long	int64;
+typedef unsigned long long	uint64;
 
 /* handle conflicts with host os libs */
 #define	getwd	infgetwd
@@ -48,7 +59,6 @@ typedef unsigned long uintptr;
 #define panic	infpanic
 #define rint	infrint
 #define	rcmd	infrcmd
-#undef isnan
 #define	pow10	infpow10
 
 #ifndef EMU
@@ -81,6 +91,8 @@ extern	int	cistrcmp(char*, char*);
 extern	char*	cistrstr(char*, char*);
 extern	int	tokenize(char*, char**, int);
 extern	vlong	strtoll(const char*, char**, int);
+#define	qsort	infqsort
+extern	void	qsort(void*, long, long, int (*)(void*, void*));
 
 enum
 {
@@ -273,7 +285,7 @@ extern	void	_assert(char*);
 extern	double	charstod(int(*)(void*), void*);
 extern	char*	cleanname(char*);
 extern	double	frexp(double, int*);
-extern	ulong	getcallerpc(void*);
+extern	uintptr	getcallerpc(void*);
 extern	int	getfields(char*, char**, int, int, char*);
 extern	char*	getuser(void);
 extern	char*	getwd(char*, int);
@@ -297,11 +309,11 @@ extern	int	encodefmt(Fmt*);
  */
 typedef
 struct Lock {
-	ulong	val;
+	int	val;
 	int	pid;
 } Lock;
 
-extern ulong	_tas(ulong*);
+extern int	_tas(int*);
 
 extern	void	lock(Lock*);
 extern	void	unlock(Lock*);
@@ -473,37 +485,3 @@ extern char *argv0;
 
 #define	setbinmode()
 
-/*
- *	Extensions for emu kernel emulation
- */
-#ifdef	EMU
-
-extern Proc *getup(void);
-#define	up	(getup())
-
-/*
- * This structure must agree with FPsave and FPrestore asm routines
- */
-
-// something is at odds between i386/fpu.h and some of the thread headers
-#define fp_control inffp_control
-#define fp_control_t inffp_control_t
-#define fp_status inffp_status
-#define fp_status_t inffp_status_t
-
-#include <architecture/i386/fpu.h>
-
-typedef struct FPU FPU;
-struct FPU
-{
-	fp_state_t	env;
-};
-
-#undef fp_control
-#undef fp_control_t
-#undef fp_status
-#undef fp_status_t
-
-typedef sigjmp_buf osjmpbuf;
-#define	ossetjmp(buf)	sigsetjmp(buf, 1)
-#endif
