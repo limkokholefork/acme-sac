@@ -10,13 +10,6 @@ syntax: glob
 sys/emu/Nt/*.map
 sys/emu/Nt/*.exe
 usr/inferno/tmp/*
-sys/libinterp/cryptmod.h
-sys/libinterp/drawmod.h
-sys/libinterp/ipintsmod.h
-sys/libinterp/keyring.h
-sys/libinterp/mathmod.h
-sys/libinterp/sysmod.h
-sys/libinterp/runt.h
 services/webget/webget.log
 tags
 iacme.exe
