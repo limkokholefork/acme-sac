@@ -10,6 +10,8 @@
 #include	<sys/types.h>
 #include	<sys/stat.h>
 #include	<sys/fcntl.h>
+#include	<sys/socket.h>
+#include	<sys/un.h>
 #include	<utime.h>
 #include	<dirent.h>
 #include	<stdio.h>
@@ -30,6 +32,7 @@ struct Fsinfo
 	int	fd;		/* open files */
 	ulong	offset;	/* offset when reading directory */
 	int	eod;	/* end of directory */
+	int	issocket;
 	QLock	oq;	/* mutex for offset */
 	char*	spec;
 	Cname*	name;	/* Unix's name for file */
@@ -71,7 +74,7 @@ static	User*	newgname(char*);
 
 static	Qid	fsqid(struct stat *);
 static	void	fspath(Cname*, char*, char*);
-static	int	fsdirconv(Chan*, char*, struct stat*, uchar*, int, int);
+static	int	fsdirconv(Chan*, char*, char*, struct stat*, uchar*, int, int);
 static	Cname*	fswalkpath(Cname*, char*, int);
 static	char*	fslastelem(Cname*);
 static	int ingroup(int id, int gid);
@@ -79,10 +82,10 @@ static	void	fsperm(Chan*, int);
 static	long	fsdirread(Chan*, uchar*, int, vlong);
 static	int	fsomode(int);
 static	void	fsremove(Chan*);
+static	vlong osdisksize(int);	/* defined by including file */
 
 /*
- * this crud is to compensate for invalid symbolic links;
- * all you can do is delete them, and good riddance
+ * make invalid symbolic links visible; less confusing, and at least you can then delete them.
  */
 static int
 xstat(char *f, struct stat *sb)
@@ -104,28 +107,31 @@ Chan*
 fsattach(char *spec)
 {
 	Chan *c;
-	struct stat stbuf;
+	struct stat st;
 	static int devno;
 	static Lock l;
 
 	if(!emptystr(spec) && strcmp(spec, "*") != 0)
 		error(Ebadspec);
-	if(stat(rootdir, &stbuf) < 0)
+	if(stat(rootdir, &st) < 0)
 		oserror();
+	if(!S_ISDIR(st.st_mode))
+		error(Enotdir);
 
 	c = devattach('U', spec);
-	c->qid = fsqid(&stbuf);
+	c->qid = fsqid(&st);
 	c->aux = smalloc(sizeof(Fsinfo));
 	FS(c)->dir = nil;
 	FS(c)->de = nil;
 	FS(c)->fd = -1;
-	FS(c)->gid = stbuf.st_gid;
-	FS(c)->uid = stbuf.st_uid;
-	FS(c)->mode = stbuf.st_mode;
+	FS(c)->issocket = 0;
+	FS(c)->gid = st.st_gid;
+	FS(c)->uid = st.st_uid;
+	FS(c)->mode = st.st_mode;
 	lock(&l);
 	c->dev = devno++;
 	unlock(&l);
-	if (!emptystr(spec)){
+	if(!emptystr(spec)){
 		FS(c)->spec = "/";
 		FS(c)->name = newcname(FS(c)->spec);
 	}else
@@ -141,7 +147,7 @@ fswalk(Chan *c, Chan *nc, char **name, int nname)
 	int j;
 	volatile int alloc;
 	Walkqid *wq;
-	struct stat stbuf;
+	struct stat st;
 	char *n;
 	Cname *next;
 	Cname *volatile current;
@@ -182,14 +188,14 @@ fswalk(Chan *c, Chan *nc, char **name, int nname)
 			incref(&next->r);
 			next = addelem(current, n);
 			//print("** ufs walk '%s' -> %s [%s]\n", current->s, n, next->s);
-			if(xstat(next->s, &stbuf) < 0){
+			if(xstat(next->s, &st) < 0){
 				cnameclose(next);
 				if(j == 0)
 					error(Enonexist);
 				strcpy(up->env->errstr, Enonexist);
 				break;
 			}
-			nc->qid = fsqid(&stbuf);
+			nc->qid = fsqid(&st);
 			cnameclose(current);
 			current = next;
 		}
@@ -204,14 +210,16 @@ fswalk(Chan *c, Chan *nc, char **name, int nname)
 	}else if(wq->clone){
 		nc->aux = smalloc(sizeof(Fsinfo));
 		nc->type = c->type;
-		if (nname) {
-			FS(nc)->gid = stbuf.st_gid;
-			FS(nc)->uid = stbuf.st_uid;
-			FS(nc)->mode = stbuf.st_mode;
+		if(nname > 0) {
+			FS(nc)->gid = st.st_gid;
+			FS(nc)->uid = st.st_uid;
+			FS(nc)->mode = st.st_mode;
+			FS(nc)->issocket = S_ISSOCK(st.st_mode);
 		} else {
 			FS(nc)->gid = FS(c)->gid;
 			FS(nc)->uid = FS(c)->uid;
 			FS(nc)->mode = FS(c)->mode;
+			FS(nc)->issocket = FS(c)->issocket;
 		}
 		FS(nc)->name = current;
 		FS(nc)->spec = FS(c)->spec;
@@ -226,19 +234,48 @@ fswalk(Chan *c, Chan *nc, char **name, int nname)
 static int
 fsstat(Chan *c, uchar *dp, int n)
 {
-	struct stat stbuf;
+	struct stat st;
 	char *p;
 
-	if(xstat(FS(c)->name->s, &stbuf) < 0)
-		oserror();
+	if(FS(c)->fd >= 0){
+		if(fstat(FS(c)->fd, &st) < 0)
+			oserror();
+	}else{
+		if(xstat(FS(c)->name->s, &st) < 0)
+			oserror();
+	}
 	p = fslastelem(FS(c)->name);
 	if(*p == 0)
 		p = "/";
 	qlock(&idl);
-	n = fsdirconv(c, p, &stbuf, dp, n, 0);
+	n = fsdirconv(c, FS(c)->name->s, p, &st, dp, n, 0);
 	qunlock(&idl);
 	return n;
 }
+
+static int
+opensocket(char *path)
+{
+	int fd;
+	struct sockaddr_un su;
+	
+	memset(&su, 0, sizeof su);
+	su.sun_family = AF_UNIX;
+	if(strlen(path)+1 > sizeof su.sun_path)
+		error("unix socket name too long");
+	strcpy(su.sun_path, path);
+	if((fd = socket(AF_UNIX, SOCK_STREAM, 0)) < 0)
+		return -1;
+	if(connect(fd, (struct sockaddr*)&su, sizeof su) >= 0)
+		return fd;
+	close(fd);
+	if((fd = socket(AF_UNIX, SOCK_DGRAM, 0)) < 0)
+		return -1;
+	if(connect(fd, (struct sockaddr*)&su, sizeof su) >= 0)
+		return fd;
+	close(fd);
+	return -1;
+}		
 
 static Chan*
 fsopen(Chan *c, int mode)
@@ -277,14 +314,17 @@ fsopen(Chan *c, int mode)
 
 	if(isdir) {
 		FS(c)->dir = opendir(FS(c)->name->s);
-		if(FS(c)->dir == 0)
+		if(FS(c)->dir == nil)
 			oserror();
 		FS(c)->eod = 0;
 	}
 	else {
-		if(mode & OTRUNC)
-			m |= O_TRUNC;
-		FS(c)->fd = open(FS(c)->name->s, m, 0666);
+		if(!FS(c)->issocket){
+			if(mode & OTRUNC)
+				m |= O_TRUNC;
+			FS(c)->fd = open(FS(c)->name->s, m, 0666);
+		}else
+			FS(c)->fd = opensocket(FS(c)->name->s);
 		if(FS(c)->fd < 0)
 			oserror();
 	}
@@ -299,7 +339,7 @@ static void
 fscreate(Chan *c, char *name, int mode, ulong perm)
 {
 	int fd, m, o;
-	struct stat stbuf;
+	struct stat st;
 	Cname *n;
 
 	fsperm(c, 2);
@@ -327,7 +367,7 @@ fscreate(Chan *c, char *name, int mode, ulong perm)
 			oserror();
 		fchmod(fd, perm);
 		fchown(fd, up->env->uid, FS(c)->gid);
-		if(fstat(fd, &stbuf) <0){
+		if(fstat(fd, &st) <0){
 			close(fd);
 			oserror();
 		}
@@ -346,7 +386,7 @@ fscreate(Chan *c, char *name, int mode, ulong perm)
 			oserror();
 		fchmod(fd, perm);
 		fchown(fd, up->env->uid, FS(c)->gid);
-		if(fstat(fd, &stbuf) < 0){
+		if(fstat(fd, &st) < 0){
 			close(fd);
 			oserror();
 		}
@@ -356,13 +396,14 @@ fscreate(Chan *c, char *name, int mode, ulong perm)
 	FS(c)->name = n;
 	poperror();
 
-	c->qid = fsqid(&stbuf);
-	FS(c)->gid = stbuf.st_gid;
-	FS(c)->uid = stbuf.st_uid;
-	FS(c)->mode = stbuf.st_mode;
+	c->qid = fsqid(&st);
+	FS(c)->gid = st.st_gid;
+	FS(c)->uid = st.st_uid;
+	FS(c)->mode = st.st_mode;
 	c->mode = openmode(mode);
 	c->offset = 0;
 	FS(c)->offset = 0;
+	FS(c)->issocket = 0;
 	c->flag |= COPEN;
 }
 
@@ -400,15 +441,16 @@ fsread(Chan *c, void *va, long n, vlong offset)
 		poperror();
 		qunlock(&FS(c)->oq);
 	}else{
-		r = pread(FS(c)->fd, va, n, offset);
-		if(r < 0){
-			if(errno == ESPIPE || errno == EPIPE){
-				r = read(FS(c)->fd, va, n);
-				if(r >= 0)
-					return r;
-			}
-			oserror();
+		if(!FS(c)->issocket){
+			r = pread(FS(c)->fd, va, n, offset);
+			if(r >= 0)
+				return r;
+			if(errno != ESPIPE && errno != EPIPE)
+				oserror();
 		}
+		r = read(FS(c)->fd, va, n);
+		if(r < 0)
+			oserror();
 	}
 	return r;
 }
@@ -418,30 +460,33 @@ fswrite(Chan *c, void *va, long n, vlong offset)
 {
 	long r;
 
-	r = pwrite(FS(c)->fd, va, n, offset);
-	if(r < 0 && (errno == ESPIPE || errno == EPIPE)){
-		r = write(FS(c)->fd, va, n);
-		if(r < 0)
+	if(!FS(c)->issocket){
+		r = pwrite(FS(c)->fd, va, n, offset);
+		if(r >= 0)
+			return r;
+		if(errno != ESPIPE && errno != EPIPE)
 			oserror();
 	}
+	r = write(FS(c)->fd, va, n);
+	if(r < 0)
+		oserror();
 	return r;
 }
 
 static void
 fswchk(Cname *c)
 {
-	struct stat stbuf;
+	struct stat st;
 
-	if(stat(c->s, &stbuf) < 0)
+	if(stat(c->s, &st) < 0)
 		oserror();
 
-	if(stbuf.st_uid == up->env->uid)
-		stbuf.st_mode >>= 6;
-	else
-	if(stbuf.st_gid == up->env->gid || ingroup(up->env->uid, stbuf.st_gid))
-		stbuf.st_mode >>= 3;
+	if(st.st_uid == up->env->uid)
+		st.st_mode >>= 6;
+	else if(st.st_gid == up->env->gid || ingroup(up->env->uid, st.st_gid))
+		st.st_mode >>= 3;
 
-	if(stbuf.st_mode & S_IWOTH)
+	if(st.st_mode & S_IWOTH)
 		return;
 
 	error(Eperm);
@@ -451,18 +496,20 @@ static void
 fsremove(Chan *c)
 {
 	int n;
-	volatile struct { Cname *dir; } dir;
+	Cname *volatile dir;
 
-	dir.dir = fswalkpath(FS(c)->name, "..", 1);
 	if(waserror()){
-		if(dir.dir != nil)
-			cnameclose(dir.dir);
 		fsfree(c);
 		nexterror();
 	}
-	fswchk(dir.dir);
-	cnameclose(dir.dir);
-	dir.dir = nil;
+	dir = fswalkpath(FS(c)->name, "..", 1);
+	if(waserror()){
+		cnameclose(dir);
+		nexterror();
+	}
+	fswchk(dir);
+	cnameclose(dir);
+	poperror();
 	if(c->qid.type & QTDIR)
 		n = rmdir(FS(c)->name->s);
 	else
@@ -478,16 +525,16 @@ fswstat(Chan *c, uchar *buf, int nb)
 {
 	Dir *d;
 	User *p;
-	volatile struct { Cname *ph; } ph;
-	struct stat stbuf;
+	Cname *volatile ph;
+	struct stat st;
 	struct utimbuf utbuf;
 	int tsync;
 
 	if(FS(c)->fd >= 0){
-		if(fstat(FS(c)->fd, &stbuf) < 0)
+		if(fstat(FS(c)->fd, &st) < 0)
 			oserror();
 	}else{
-		if(stat(FS(c)->name->s, &stbuf) < 0)
+		if(stat(FS(c)->name->s, &st) < 0)
 			oserror();
 	}
 	d = malloc(sizeof(*d)+nb);
@@ -504,23 +551,23 @@ fswstat(Chan *c, uchar *buf, int nb)
 	if(!emptystr(d->name) && strcmp(d->name, fslastelem(FS(c)->name)) != 0) {
 		tsync = 0;
 		validname(d->name, 0);
-		ph.ph = fswalkpath(FS(c)->name, "..", 1);
+		ph = fswalkpath(FS(c)->name, "..", 1);
 		if(waserror()){
-			cnameclose(ph.ph);
+			cnameclose(ph);
 			nexterror();
 		}
-		fswchk(ph.ph);
-		ph.ph = fswalkpath(ph.ph, d->name, 0);
-		if(rename(FS(c)->name->s, ph.ph->s) < 0)
+		fswchk(ph);
+		ph = fswalkpath(ph, d->name, 0);
+		if(rename(FS(c)->name->s, ph->s) < 0)
 			oserror();
 		cnameclose(FS(c)->name);
 		poperror();
-		FS(c)->name = ph.ph;
+		FS(c)->name = ph;
 	}
 
-	if(d->mode != ~0 && (d->mode&0777) != (stbuf.st_mode&0777)) {
+	if(d->mode != ~0 && (d->mode&0777) != (st.st_mode&0777)) {
 		tsync = 0;
-		if(up->env->uid != stbuf.st_uid)
+		if(up->env->uid != st.st_uid)
 			error(Eowner);
 		if(FS(c)->fd >= 0){
 			if(fchmod(FS(c)->fd, d->mode&0777) < 0)
@@ -533,19 +580,19 @@ fswstat(Chan *c, uchar *buf, int nb)
 		FS(c)->mode |= d->mode&0777;
 	}
 
-	if(d->atime != ~0 && d->atime != stbuf.st_atime
-		|| d->mtime != ~0 && d->mtime != stbuf.st_mtime) {
+	if(d->atime != ~0 && d->atime != st.st_atime ||
+	   d->mtime != ~0 && d->mtime != st.st_mtime) {
 		tsync = 0;
-		if(up->env->uid != stbuf.st_uid)
+		if(up->env->uid != st.st_uid)
 			error(Eowner);
 		if(d->mtime != ~0)
 			utbuf.modtime = d->mtime;
 		else
-			utbuf.modtime = stbuf.st_mtime;
+			utbuf.modtime = st.st_mtime;
 		if(d->atime != ~0)
 			utbuf.actime  = d->atime;
 		else
-			utbuf.actime = stbuf.st_atime;
+			utbuf.actime = st.st_atime;
 		if(utime(FS(c)->name->s, &utbuf) < 0)	/* TO DO: futimes isn't portable */
 			oserror();
 	}
@@ -560,14 +607,14 @@ fswstat(Chan *c, uchar *buf, int nb)
 		p = name2user(gidmap, d->gid, newgname);
 		if(p == 0)
 			error(Eunknown);
-		if(p->id != stbuf.st_gid) {
-			if(up->env->uid != stbuf.st_uid)
+		if(p->id != st.st_gid) {
+			if(up->env->uid != st.st_uid)
 				error(Eowner);
 			if(FS(c)->fd >= 0){
-				if(fchown(FS(c)->fd, stbuf.st_uid, p->id) < 0)
+				if(fchown(FS(c)->fd, st.st_uid, p->id) < 0)
 					oserror();
 			}else{
-				if(chown(FS(c)->name->s, stbuf.st_uid, p->id) < 0)
+				if(chown(FS(c)->name->s, st.st_uid, p->id) < 0)
 					oserror();
 			}
 			FS(c)->gid = p->id;
@@ -596,45 +643,28 @@ fswstat(Chan *c, uchar *buf, int nb)
 	return nb;
 }
 
-#define	QDEVBITS 4	/* 16 devices should be plenty */
-#define MAXDEV (1<<QDEVBITS)
-#define	QDEVSHIFT	(64-QDEVBITS)
-#define	QINOMASK	(((uvlong)1<<QDEVSHIFT)-1)
-#define QPATH(d,i)      (((uvlong)(d)<<QDEVSHIFT)|((uvlong)(i)&QINOMASK))
-
 static Qid
 fsqid(struct stat *st)
 {
 	Qid q;
-	ulong dev;
-	int idev;
-	static int nqdev = 0;
-	static ulong qdev[MAXDEV];
-	static Lock l;
+	u16int dev;
 
 	q.type = QTFILE;
 	if(S_ISDIR(st->st_mode))
 		q.type = QTDIR;
 
-	dev = st->st_dev;
-	lock(&l);
-	for(idev = 0; idev < nqdev; idev++)
-		if(qdev[idev] == dev)
-			break;
-	if(idev == nqdev) {
-		if(nqdev == MAXDEV) {
-			unlock(&l);
-			error("too many devices");
+	dev = (u16int)st->st_dev;
+	if(dev & 0x8000){
+		static int aware;
+		if(aware==0){
+			aware = 1;
+			fprint(2, "fs: fsqid: top-bit dev: %#4.4ux\n", dev);
 		}
-		qdev[nqdev++] = dev;
+		dev ^= 0x8080;
 	}
-	unlock(&l);
 
-	if(0)	/* we'll just let it be masked off */
-	if((uvlong)st->st_ino & ~QINOMASK)
-		error("inode number too large");
-
-	q.path = QPATH(idev, st->st_ino);
+	q.path = (uvlong)dev<<48;
+	q.path ^= st->st_ino;
 	q.vers = st->st_mtime;
 
 	return q;
@@ -691,8 +721,7 @@ fsperm(Chan *c, int mask)
 */
 	if(FS(c)->uid == up->env->uid)
 		m >>= 6;
-	else
-	if(FS(c)->gid == up->env->gid || ingroup(up->env->uid, FS(c)->gid))
+	else if(FS(c)->gid == up->env->gid || ingroup(up->env->uid, FS(c)->gid))
 		m >>= 3;
 
 	m &= mask;
@@ -707,11 +736,12 @@ isdots(char *name)
 }
 
 static int
-fsdirconv(Chan *c, char *name, struct stat *s, uchar *va, int nb, int indir)
+fsdirconv(Chan *c, char *path, char *name, struct stat *s, uchar *va, int nb, int indir)
 {
 	Dir d;
 	char uidbuf[NUMSIZE], gidbuf[NUMSIZE];
 	User *u;
+	int fd;
 
 	memset(&d, 0, sizeof(d));
 	d.name = name;
@@ -735,6 +765,13 @@ fsdirconv(Chan *c, char *name, struct stat *s, uchar *va, int nb, int indir)
 	d.length = s->st_size;
 	if(d.mode&DMDIR)
 		d.length = 0;
+	else if(S_ISBLK(s->st_mode) && s->st_size == 0){
+		fd = open(path, O_RDONLY);
+		if(fd >= 0){
+			d.length = osdisksize(fd);
+			close(fd);
+		}
+	}
 	d.type = 'U';
 	d.dev = c->dev;
 	if(indir && sizeD2M(&d) > nb)
@@ -747,7 +784,7 @@ fsdirread(Chan *c, uchar *va, int count, vlong offset)
 {
 	int i;
 	long n, r;
-	struct stat stbuf;
+	struct stat st;
 	char path[MAXPATH], *ep;
 	struct dirent *de;
 	static uchar slop[8192];
@@ -770,7 +807,7 @@ fsdirread(Chan *c, uchar *va, int count, vlong offset)
 			if(de->d_ino==0 || de->d_name[0]==0 || isdots(de->d_name))
 				continue;
 			strecpy(ep, path+sizeof(path), de->d_name);
-			if(xstat(path, &stbuf) < 0) {
+			if(xstat(path, &st) < 0) {
 				fprint(2, "dir: bad path %s\n", path);
 				continue;
 			}
@@ -779,7 +816,7 @@ fsdirread(Chan *c, uchar *va, int count, vlong offset)
 				qunlock(&idl);
 				nexterror();
 			}
-			r = fsdirconv(c, de->d_name, &stbuf, slop, sizeof(slop), 1);
+			r = fsdirconv(c, path, de->d_name, &st, slop, sizeof(slop), 1);
 			poperror();
 			qunlock(&idl);
 			if(r <= 0) {
@@ -814,11 +851,11 @@ fsdirread(Chan *c, uchar *va, int count, vlong offset)
 			continue;
 
 		strecpy(ep, path+sizeof(path), de->d_name);
-		if(xstat(path, &stbuf) < 0) {
+		if(xstat(path, &st) < 0) {
 			fprint(2, "dir: bad path %s\n", path);
 			continue;
 		}
-		r = fsdirconv(c, de->d_name, &stbuf, va+i, count-i, 1);
+		r = fsdirconv(c, path, de->d_name, &st, va+i, count-i, 1);
 		if(r <= 0){
 			FS(c)->de = de;
 			break;

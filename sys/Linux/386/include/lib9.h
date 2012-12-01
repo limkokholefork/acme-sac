@@ -1,4 +1,5 @@
 /* define _BSD_SOURCE to use ISO C, POSIX, and 4.3BSD things. */
+#define	USE_PTHREADS
 #ifndef _BSD_SOURCE
 #define _BSD_SOURCE
 #endif
@@ -6,6 +7,9 @@
 #define _LARGEFILE_SOURCE	1
 #define _LARGEFILE64_SOURCE	1
 #define _FILE_OFFSET_BITS 64
+#ifdef USE_PTHREADS
+#define	_REENTRANT	1
+#endif
 #include <features.h>
 #include <sys/types.h>
 #include <stdlib.h>
@@ -256,7 +260,7 @@ extern	vlong	osnsec(void);
 extern	void	_assert(char*);
 extern	double	charstod(int(*)(void*), void*);
 extern	char*	cleanname(char*);
-extern	ulong	getcallerpc(void*);
+extern	uintptr	getcallerpc(void*);
 extern	int	getfields(char*, char**, int, int, char*);
 extern	char*	getuser(void);
 extern	char*	getwd(char*, int);
@@ -264,6 +268,8 @@ extern	double	ipow10(int);
 #define	pow10	infpow10
 extern	double	pow10(int);
 extern	vlong	strtoll(const char*, char**, int);
+#define	qsort	infqsort
+extern	void	qsort(void*, long, long, int (*)(void*, void*));
 extern	uvlong	strtoull(const char*, char**, int);
 extern	void	sysfatal(char*, ...);
 extern	int	dec64(uchar*, int, char*, int);
@@ -454,38 +460,3 @@ extern char *argv0;
 
 #define	setbinmode()
 
-/*
- *	Extensions for emu kernel emulation
- */
-#ifdef	EMU
-
-/*
- * This structure must agree with FPsave and FPrestore asm routines
- */
-typedef struct FPU FPU;
-struct FPU
-{
-	uchar	env[28];
-};
-
-/*
- * Later versions of Linux seemed to need large stack for gethostbyname()
- * so we had this at 128k, which is excessive.  More recently, we've
- * reduced it again after testing stack usage by gethostbyname.
- */
-#define KSTACK (16 * 1024)
-
-static __inline Proc *getup(void) {
-	Proc *p;
-	__asm__(	"movl	%%esp, %%eax\n\t"
-			: "=a" (p)
-	);
-	return *(Proc **)((unsigned long)p & ~(KSTACK - 1));
-};
-
-#define	up	(getup())
-
-typedef sigjmp_buf osjmpbuf;
-#define	ossetjmp(buf)	sigsetjmp(buf, 1)
-
-#endif

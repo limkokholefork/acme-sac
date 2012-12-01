@@ -15,15 +15,13 @@
 #include	"error.h"
 #include <fpuctl.h>
 
+#include <semaphore.h>
+
 #include	<raise.h>
 
 /* glibc 2.3.3-NTPL messes up getpid() by trying to cache the result, so we'll do it ourselves */
 #include	<sys/syscall.h>
 #define	getpid()	syscall(SYS_getpid)
-
-/* temporarily suppress CLONE_PTRACE so it works on broken Linux kernels */
-#undef CLONE_PTRACE
-#define	CLONE_PTRACE	0
 
 enum
 {
@@ -34,126 +32,13 @@ enum
 };
 char *hosttype = "Linux";
 
-extern void unlockandexit(int*);
-extern void executeonnewstack(void*, void (*f)(void*), void*);
-
-static void *stackalloc(Proc *p, void **tos);
-static void stackfreeandexit(void *stack);
+typedef sem_t	Sem;
 
 extern int dflag;
 
 int	gidnobody = -1;
 int	uidnobody = -1;
 static struct 	termios tinit;
-
-void
-pexit(char *msg, int t)
-{
-	Osenv *e;
-	void *kstack;
-
-	lock(&procs.l);
-	if(up->prev)
-		up->prev->next = up->next;
-	else
-		procs.head = up->next;
-
-	if(up->next)
-		up->next->prev = up->prev;
-	else
-		procs.tail = up->prev;
-	unlock(&procs.l);
-
-	if(0)
-		print("pexit: %s: %s\n", up->text, msg);
-
-	e = up->env;
-	if(e != nil) {
-		closefgrp(e->fgrp);
-		closepgrp(e->pgrp);
-		closeegrp(e->egrp);
-		closesigs(e->sigs);
-	}
-	kstack = up->kstack;
-	free(up->prog);
-	free(up);
-	if(kstack != nil)
-		stackfreeandexit(kstack);
-}
-
-void
-tramp(void *arg)
-{
-	Proc *p;
-	p = arg;
-	p->pid = p->sigid = getpid();
-	(*p->func)(p->arg);
-	pexit("{Tramp}", 0);
-}
-
-int
-kproc(char *name, void (*func)(void*), void *arg, int flags)
-{
-	Proc *p;
-	Pgrp *pg;
-	Fgrp *fg;
-	Egrp *eg;
-	void *tos;
-
-	p = newproc();
-	if(0)
-		print("start %s:%#p\n", name, p);
-	if(p == nil)
-		panic("kproc(%s): no memory", name);
-
-	if(flags & KPDUPPG) {
-		pg = up->env->pgrp;
-		incref(&pg->r);
-		p->env->pgrp = pg;
-	}
-	if(flags & KPDUPFDG) {
-		fg = up->env->fgrp;
-		incref(&fg->r);
-		p->env->fgrp = fg;
-	}
-	if(flags & KPDUPENVG) {
-		eg = up->env->egrp;
-		incref(&eg->r);
-		p->env->egrp = eg;
-	}
-
-	p->env->uid = up->env->uid;
-	p->env->gid = up->env->gid;
-	kstrdup(&p->env->user, up->env->user);
-
-	strcpy(p->text, name);
-
-	p->func = func;
-	p->arg = arg;
-
-	if(flags & KPX11){
-		p->kstack = nil;	/* never freed; also up not defined */
-		tos = (char*)mallocz(X11STACK, 0) + X11STACK - sizeof(vlong);
-	}else
-		p->kstack = stackalloc(p, &tos);
-
-	lock(&procs.l);
-	if(procs.tail != nil) {
-		p->prev = procs.tail;
-		procs.tail->next = p;
-	}
-	else {
-		procs.head = p;
-		p->prev = nil;
-	}
-	procs.tail = p;
-	unlock(&procs.l);
-
-	if (__clone(tramp, tos, CLONE_PTRACE|CLONE_VM|CLONE_FS|CLONE_FILES|SIGCHLD, p) <= 0)
-		panic("kproc: clone failed");
-
-	return 0;
-}
 
 static void
 sysfault(char *what, void *addr)
@@ -218,37 +103,6 @@ trapUSR1(int signo)
 		disfault(nil, Eintr);	/* Should never happen */
 }
 
-/* called to wake up kproc blocked on a syscall */
-void
-oshostintr(Proc *p)
-{
-	kill(p->sigid, SIGUSR1);
-}
-
-static void
-trapUSR2(int signo)
-{
-	USED(signo);
-	/* we've done our work of interrupting sigsuspend */
-}
-
-void
-osblock(void)
-{
-	sigset_t mask;
-
-	sigprocmask(SIG_SETMASK, NULL, &mask);
-	sigdelset(&mask, SIGUSR2);
-	sigsuspend(&mask);
-}
-
-void
-osready(Proc *p)
-{
-	if(kill(p->sigid, SIGUSR2) < 0)
-		fprint(2, "emu: osready failed: pid %d: %s\n", p->sigid, strerror(errno));
-}
-
 void
 oslongjmp(void *regs, osjmpbuf env, int val)
 {
@@ -305,10 +159,8 @@ void
 libinit(char *imod)
 {
 	struct sigaction act;
-	sigset_t mask;
 	struct passwd *pw;
 	Proc *p;
-	void *tos;
 	char sys[64];
 
 	setsid();
@@ -324,17 +176,9 @@ libinit(char *imod)
 	if(dflag == 0)
 		termset();
 
-	memset(&act, 0 , sizeof(act));
+	memset(&act, 0, sizeof(act));
 	act.sa_handler = trapUSR1;
 	sigaction(SIGUSR1, &act, nil);
-
-	sigemptyset(&mask);
-	sigaddset(&mask, SIGUSR2);
-	sigprocmask(SIG_BLOCK, &mask, NULL);
-
-	memset(&act, 0 , sizeof(act));
-	act.sa_handler = trapUSR2;
-	sigaction(SIGUSR2, &act, nil);
 
 	act.sa_handler = SIG_IGN;
 	sigaction(SIGCHLD, &act, nil);
@@ -362,7 +206,7 @@ libinit(char *imod)
 	}
 
 	p = newproc();
-	p->kstack = stackalloc(p, &tos);
+	kprocinit(p);
 
 	pw = getpwuid(getuid());
 	if(pw != nil)
@@ -373,7 +217,7 @@ libinit(char *imod)
 	p->env->uid = getuid();
 	p->env->gid = getgid();
 
-	executeonnewstack(tos, emuinit, imod);
+	emuinit(imod);
 }
 
 int
@@ -458,74 +302,4 @@ int
 limbosleep(ulong milsec)
 {
 	return osmillisleep(milsec);
-}
-
-void
-osyield(void)
-{
-	sched_yield();
-}
-
-void
-ospause(void)
-{
-	for(;;)
-		pause();
-}
-
-void
-oslopri(void)
-{
-	setpriority(PRIO_PROCESS, 0, getpriority(PRIO_PROCESS,0)+4);
-}
-
-static struct {
-	Lock l;
-	void *free;
-} stacklist;
-
-static void
-_stackfree(void *stack)
-{
-	*((void **)stack) = stacklist.free;
-	stacklist.free = stack;
-}
-
-static void
-stackfreeandexit(void *stack)
-{
-	lock(&stacklist.l);
-	_stackfree(stack);
-	unlockandexit(&stacklist.l.val);
-}
-
-static void *
-stackalloc(Proc *p, void **tos)
-{
-	void *rv;
-	lock(&stacklist.l);
-	if (stacklist.free == 0) {
-		int x;
-		/*
-		 * obtain some more by using sbrk()
-		 */
-		void *more = sbrk(KSTACK * (NSTACKSPERALLOC + 1));
-		if (more == 0)
-			panic("stackalloc: no more stacks");
-		/*
-		 * align to KSTACK
-		 */
-		more = (void *)((((unsigned long)more) + (KSTACK - 1)) & ~(KSTACK - 1));
-		/*
-		 * free all the new stacks onto the freelist
-		 */
-		for (x = 0; x < NSTACKSPERALLOC; x++)
-			_stackfree((char *)more + KSTACK * x);
-	}
-	rv = stacklist.free;
-	stacklist.free = *(void **)rv;
-	unlock(&stacklist.l);
-	*tos = rv + KSTACK - sizeof(vlong);
-	*(Proc **)rv = p;
-	return rv;
 }
