@@ -18,6 +18,7 @@ keydb/signerkey
 tmp/*
 access.log
 httpd.log
+bin/*
 
 syntax: regexp
 ^appl.*\.dis$
